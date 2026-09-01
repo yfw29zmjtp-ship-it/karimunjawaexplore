@@ -5,7 +5,7 @@
  * Biro Wisata: Invoice, Penawaran, Kalkulasi Harga, Database Customer
  * 
  * Database Local  : adf_sunsea
- * Database Hosting: adfb2574_sunsea
+ * Database Hosting: karw6956_explore (standalone hosting - 1 database dipakai bersama master)
  * 
  * Designed to be hostable independently - all modules are self-contained
  * under modules/sunsea/ with its own layout and design language.
@@ -14,7 +14,7 @@ return [
     'business_id'   => 'sunsea',
     'name'          => 'Explore Karimunjawa',
     'business_type' => 'travel_bureau',
-    'database'      => 'adf_sunsea',
+    'database'      => 'karw6956_explore',
     'logo'          => '', // Place logo in uploads/logos/sunsea.png
 
     'enabled_modules' => [
