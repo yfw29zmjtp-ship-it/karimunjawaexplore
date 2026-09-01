@@ -1,9 +1,7 @@
 ---
 deployment:
   tasks:
-    # Ganti "USERNAME_CPANEL" di bawah dengan username cPanel hosting BARU ini
-    # (lihat di pojok kanan atas cPanel setelah login, atau di URL cPanel-nya).
-    - export DEPLOYPATH=/home/USERNAME_CPANEL/public_html
+    - export DEPLOYPATH=/home/karw6956/public_html
     - /bin/mkdir -p $DEPLOYPATH
     - /bin/cp -R $(pwd)/* $DEPLOYPATH/
     - /bin/cp -R $(pwd)/.[^.]* $DEPLOYPATH/ 2>/dev/null || true
