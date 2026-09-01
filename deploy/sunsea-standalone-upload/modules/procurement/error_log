@@ -1,0 +1,11 @@
+[04-Mar-2026 22:06:43 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 's.supplier_code' in 'SELECT'
+[04-Mar-2026 22:06:55 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 's.supplier_code' in 'SELECT'
+[04-Mar-2026 22:27:55 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 's.supplier_code' in 'SELECT'
+[04-Mar-2026 22:31:46 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 's.supplier_code' in 'SELECT'
+[13-Mar-2026 10:20:08 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'last_login' in 'SET'
+[13-Mar-2026 12:32:49 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 's.supplier_code' in 'SELECT'
+[13-Mar-2026 13:50:02 Asia/Jakarta] CONFIG: Auto-set business_id=2 from active_business_id=bens-cafe
+[17-Mar-2026 11:51:28 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'last_login' in 'SET'
+[17-Mar-2026 11:58:02 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'last_login' in 'SET'
+[17-Mar-2026 12:03:53 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'last_login' in 'SET'
+[10-May-2026 08:52:00 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'last_login' in 'SET'

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Logo Test</title>
+    <style>
+        body { font-family: Arial; padding: 20px; background: #f0f0f0; }
+        .test-box { 
+            background: linear-gradient(135deg, #1e1b4b, #4338ca); 
+            padding: 20px; 
+            margin: 10px 0;
+            border-radius: 8px;
+        }
+        .test-box img { 
+            background: white; 
+            padding: 10px; 
+            border-radius: 8px; 
+            height: 50px;
+        }
+        .info { background: white; padding: 15px; margin: 10px 0; border-radius: 8px; }
+    </style>
+</head>
+<body>
+    <h1>Logo Display Test</h1>
+    
+    <div class="info">
+        <h3>Test 1: Absolute Path (from root)</h3>
+        <div class="test-box">
+            <img src="/narayana/uploads/logos/hotel_logo_1769036600.png" alt="Logo Test 1">
+            <span style="color: white; margin-left: 20px;">Path: /narayana/uploads/logos/hotel_logo_1769036600.png</span>
+        </div>
+    </div>
+    
+    <div class="info">
+        <h3>Test 2: Relative Path</h3>
+        <div class="test-box">
+            <img src="../../uploads/logos/hotel_logo_1769036600.png" alt="Logo Test 2">
+            <span style="color: white; margin-left: 20px;">Path: ../../uploads/logos/hotel_logo_1769036600.png</span>
+        </div>
+    </div>
+    
+    <div class="info">
+        <h3>Test 3: Direct Browser Access</h3>
+        <p>Try opening this URL directly in browser:</p>
+        <a href="/narayana/uploads/logos/hotel_logo_1769036600.png" target="_blank">
+            http://localhost:8080/narayana/uploads/logos/hotel_logo_1769036600.png
+        </a>
+    </div>
+    
+    <div class="info">
+        <h3>Test 4: Check via JavaScript</h3>
+        <button onclick="checkImage()">Test Image Loading</button>
+        <div id="result"></div>
+    </div>
+    
+    <script>
+        function checkImage() {
+            const img = new Image();
+            const resultDiv = document.getElementById('result');
+            
+            img.onload = function() {
+                resultDiv.innerHTML = '<p style="color: green;">✓ Image loaded successfully! Size: ' + 
+                    img.width + 'x' + img.height + 'px</p>';
+            };
+            
+            img.onerror = function() {
+                resultDiv.innerHTML = '<p style="color: red;">✗ Failed to load image!</p>';
+            };
+            
+            img.src = '/narayana/uploads/logos/hotel_logo_1769036600.png';
+        }
+        
+        // Auto-test on page load
+        window.addEventListener('load', function() {
+            console.log('Testing image paths...');
+            
+            const img1 = new Image();
+            img1.onload = () => console.log('✓ Absolute path works');
+            img1.onerror = () => console.error('✗ Absolute path failed');
+            img1.src = '/narayana/uploads/logos/hotel_logo_1769036600.png';
+        });
+    </script>
+</body>
+</html>

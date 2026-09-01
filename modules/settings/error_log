@@ -1,0 +1,109 @@
+[05-Mar-2026 00:57:10 Asia/Jakarta] PHP Warning:  Undefined array key 0 in /home/adfb2574/public_html/modules/settings/index.php on line 298
+[05-Mar-2026 14:10:15 Asia/Jakarta] PHP Warning:  Undefined array key 0 in /home/adfb2574/public_html/modules/settings/index.php on line 298
+[05-Mar-2026 14:12:16 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'last_login' in 'SET'
+[05-Mar-2026 14:12:16 Asia/Jakarta] PHP Warning:  Undefined array key 0 in /home/adfb2574/public_html/modules/settings/index.php on line 298
+[05-Mar-2026 17:27:27 Asia/Jakarta] PHP Warning:  Undefined array key 0 in /home/adfb2574/public_html/modules/settings/index.php on line 298
+[05-Mar-2026 17:31:27 Asia/Jakarta] PHP Warning:  Undefined array key 0 in /home/adfb2574/public_html/modules/settings/index.php on line 298
+[06-Mar-2026 00:17:27 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'last_login' in 'SET'
+[06-Mar-2026 00:17:27 Asia/Jakarta] PHP Warning:  Undefined array key 0 in /home/adfb2574/public_html/modules/settings/index.php on line 298
+[06-Mar-2026 01:05:07 Asia/Jakarta] PHP Warning:  Undefined array key 0 in /home/adfb2574/public_html/modules/settings/index.php on line 298
+[06-Mar-2026 02:16:34 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'last_login' in 'SET'
+[06-Mar-2026 09:14:15 Asia/Jakarta] PHP Warning:  Undefined array key 0 in /home/adfb2574/public_html/modules/settings/index.php on line 298
+[06-Mar-2026 20:56:45 Asia/Jakarta] PHP Warning:  Undefined array key 0 in /home/adfb2574/public_html/modules/settings/index.php on line 298
+[07-Mar-2026 13:16:43 Asia/Jakarta] PHP Warning:  Undefined array key 0 in /home/adfb2574/public_html/modules/settings/index.php on line 298
+[07-Mar-2026 14:40:00 Asia/Jakarta] PHP Warning:  Undefined array key 0 in /home/adfb2574/public_html/modules/settings/index.php on line 298
+[07-Mar-2026 16:09:29 Asia/Jakarta] PHP Warning:  Undefined array key 0 in /home/adfb2574/public_html/modules/settings/index.php on line 298
+[08-Mar-2026 13:05:19 Asia/Jakarta] PHP Warning:  Undefined array key 0 in /home/adfb2574/public_html/modules/settings/index.php on line 298
+[08-Mar-2026 13:26:30 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'last_login' in 'SET'
+[08-Mar-2026 13:27:45 Asia/Jakarta] PHP Warning:  Undefined array key 0 in /home/adfb2574/public_html/modules/settings/index.php on line 298
+[09-Mar-2026 05:42:57 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'last_login' in 'SET'
+[09-Mar-2026 05:42:57 Asia/Jakarta] PHP Warning:  Undefined array key 0 in /home/adfb2574/public_html/modules/settings/index.php on line 298
+[09-Mar-2026 09:58:42 Asia/Jakarta] PHP Warning:  Undefined array key 0 in /home/adfb2574/public_html/modules/settings/index.php on line 298
+[09-Mar-2026 09:58:46 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'transaction_type' in 'ORDER BY'
+[09-Mar-2026 09:58:50 Asia/Jakarta] PHP Warning:  Undefined array key 0 in /home/adfb2574/public_html/modules/settings/index.php on line 298
+[09-Mar-2026 09:58:54 Asia/Jakarta] PHP Warning:  Undefined array key 0 in /home/adfb2574/public_html/modules/settings/index.php on line 298
+[09-Mar-2026 09:58:56 Asia/Jakarta] PHP Warning:  Undefined array key 0 in /home/adfb2574/public_html/modules/settings/index.php on line 298
+[09-Mar-2026 09:58:57 Asia/Jakarta] PHP Warning:  Undefined array key 0 in /home/adfb2574/public_html/modules/settings/index.php on line 298
+[09-Mar-2026 09:58:59 Asia/Jakarta] PHP Warning:  Undefined array key 0 in /home/adfb2574/public_html/modules/settings/index.php on line 298
+[09-Mar-2026 09:58:59 Asia/Jakarta] PHP Warning:  Undefined array key 0 in /home/adfb2574/public_html/modules/settings/index.php on line 298
+[09-Mar-2026 09:59:00 Asia/Jakarta] PHP Warning:  Undefined array key 0 in /home/adfb2574/public_html/modules/settings/index.php on line 298
+[09-Mar-2026 09:59:04 Asia/Jakarta] PHP Warning:  Undefined array key 0 in /home/adfb2574/public_html/modules/settings/index.php on line 298
+[11-Mar-2026 12:57:54 Asia/Jakarta] PHP Warning:  Undefined array key 0 in /home/adfb2574/public_html/modules/settings/index.php on line 298
+[11-Mar-2026 12:58:47 Asia/Jakarta] PHP Warning:  Undefined array key 0 in /home/adfb2574/public_html/modules/settings/index.php on line 298
+[11-Mar-2026 12:58:50 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'business_id' in 'WHERE'
+[11-Mar-2026 12:58:52 Asia/Jakarta] PHP Warning:  Undefined array key 0 in /home/adfb2574/public_html/modules/settings/index.php on line 298
+[11-Mar-2026 13:12:37 Asia/Jakarta] PHP Warning:  Undefined array key 0 in /home/adfb2574/public_html/modules/settings/index.php on line 298
+[11-Mar-2026 13:13:59 Asia/Jakarta] PHP Warning:  Undefined array key 0 in /home/adfb2574/public_html/modules/settings/index.php on line 298
+[11-Mar-2026 14:35:22 Asia/Jakarta] PHP Warning:  Undefined array key 0 in /home/adfb2574/public_html/modules/settings/index.php on line 298
+[11-Mar-2026 14:36:09 Asia/Jakarta] PHP Warning:  Undefined array key 0 in /home/adfb2574/public_html/modules/settings/index.php on line 298
+[11-Mar-2026 14:41:50 Asia/Jakarta] PHP Warning:  Undefined array key 0 in /home/adfb2574/public_html/modules/settings/index.php on line 298
+[11-Mar-2026 14:42:06 Asia/Jakarta] Saving theme: light for user 28
+[11-Mar-2026 14:42:06 Asia/Jakarta] Inserted new theme preference for user 28 as light
+[11-Mar-2026 16:33:50 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'last_login' in 'SET'
+[11-Mar-2026 16:33:50 Asia/Jakarta] PHP Warning:  Undefined array key 0 in /home/adfb2574/public_html/modules/settings/index.php on line 298
+[11-Mar-2026 16:33:54 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'transaction_type' in 'ORDER BY'
+[11-Mar-2026 16:33:56 Asia/Jakarta] PHP Warning:  Undefined array key 0 in /home/adfb2574/public_html/modules/settings/index.php on line 298
+[13-Mar-2026 13:00:53 Asia/Jakarta] PHP Warning:  Undefined array key 0 in /home/adfb2574/public_html/modules/settings/index.php on line 298
+[16-Mar-2026 22:15:33 Asia/Jakarta] PHP Warning:  Undefined array key 0 in /home/adfb2574/public_html/modules/settings/index.php on line 298
+[16-Mar-2026 22:15:42 Asia/Jakarta] Saving theme: light for user 8
+[16-Mar-2026 22:15:42 Asia/Jakarta] Insert Error in table user_preferences: SQLSTATE[23000]: Integrity constraint violation: 1452 Cannot add or update a child row: a foreign key constraint fails (`adfb2574_Adf_Bens`.`user_preferences`, CONSTRAINT `user_preferences_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE)
+[16-Mar-2026 22:15:42 Asia/Jakarta] SQL: INSERT INTO user_preferences (user_id, theme, language) VALUES (:user_id, :theme, :language)
+[16-Mar-2026 22:15:42 Asia/Jakarta] Data: Array
+(
+    [user_id] => 8
+    [theme] => light
+    [language] => id
+)
+
+[16-Mar-2026 22:15:42 Asia/Jakarta] Failed to update user_preferences: SQLSTATE[23000]: Integrity constraint violation: 1452 Cannot add or update a child row: a foreign key constraint fails (`adfb2574_Adf_Bens`.`user_preferences`, CONSTRAINT `user_preferences_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE)
+[16-Mar-2026 22:34:25 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'last_login' in 'SET'
+[16-Mar-2026 22:34:25 Asia/Jakarta] Saving theme: light for user 8
+[16-Mar-2026 22:34:25 Asia/Jakarta] Inserted new theme preference for user 8 as light
+[16-Mar-2026 23:33:30 Asia/Jakarta] PHP Warning:  Undefined array key 0 in /home/adfb2574/public_html/modules/settings/index.php on line 298
+[16-Mar-2026 23:33:35 Asia/Jakarta] Delete Error: SQLSTATE[23000]: Integrity constraint violation: 1451 Cannot delete or update a parent row: a foreign key constraint fails (`adfb2574_Adf_Bens`.`cash_book`, CONSTRAINT `cash_book_ibfk_1` FOREIGN KEY (`division_id`) REFERENCES `divisions` (`id`))
+[16-Mar-2026 23:33:37 Asia/Jakarta] Delete Error: SQLSTATE[23000]: Integrity constraint violation: 1451 Cannot delete or update a parent row: a foreign key constraint fails (`adfb2574_Adf_Bens`.`cash_book`, CONSTRAINT `cash_book_ibfk_1` FOREIGN KEY (`division_id`) REFERENCES `divisions` (`id`))
+[16-Mar-2026 23:33:54 Asia/Jakarta] Delete Error: SQLSTATE[23000]: Integrity constraint violation: 1451 Cannot delete or update a parent row: a foreign key constraint fails (`adfb2574_Adf_Bens`.`cash_book`, CONSTRAINT `cash_book_ibfk_1` FOREIGN KEY (`division_id`) REFERENCES `divisions` (`id`))
+[16-Mar-2026 23:34:44 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'last_login' in 'SET'
+[16-Mar-2026 23:48:17 Asia/Jakarta] PHP Warning:  Undefined array key 0 in /home/adfb2574/public_html/modules/settings/index.php on line 298
+[19-Mar-2026 22:23:18 Asia/Jakarta] PHP Warning:  Undefined array key 0 in /home/adfb2574/public_html/modules/settings/index.php on line 298
+[19-Mar-2026 22:26:12 Asia/Jakarta] CONFIG: Auto-set business_id=2 from active_business_id=bens-cafe
+[19-Mar-2026 22:26:12 Asia/Jakarta] CONFIG: Auto-set business_id=2 from active_business_id=bens-cafe
+[19-Mar-2026 22:34:09 Asia/Jakarta] Cloudinary upload error: HTTP 400 -  - Response: {"error":{"message":"Invalid image file"}}
+[19-Mar-2026 22:34:09 Asia/Jakarta] Cloudinary upload failed, falling back to local storage
+[19-Mar-2026 22:37:57 Asia/Jakarta] Cloudinary upload error: HTTP 400 -  - Response: {"error":{"message":"Invalid image file"}}
+[19-Mar-2026 22:37:57 Asia/Jakarta] Cloudinary upload failed, falling back to local storage
+[19-Mar-2026 22:38:11 Asia/Jakarta] Cloudinary upload error: HTTP 400 -  - Response: {"error":{"message":"Invalid image file"}}
+[19-Mar-2026 22:38:11 Asia/Jakarta] Cloudinary upload failed, falling back to local storage
+[19-Mar-2026 22:38:28 Asia/Jakarta] Cloudinary upload error: HTTP 400 -  - Response: {"error":{"message":"Invalid image file"}}
+[19-Mar-2026 22:38:28 Asia/Jakarta] Cloudinary upload failed, falling back to local storage
+[19-Mar-2026 22:39:18 Asia/Jakarta] Cloudinary upload error: HTTP 400 -  - Response: {"error":{"message":"Invalid image file"}}
+[19-Mar-2026 22:39:18 Asia/Jakarta] Cloudinary upload failed, falling back to local storage
+[19-Mar-2026 22:40:16 Asia/Jakarta] Cloudinary upload error: HTTP 400 -  - Response: {"error":{"message":"Invalid image file"}}
+[19-Mar-2026 22:40:16 Asia/Jakarta] Cloudinary upload failed, falling back to local storage
+[20-Mar-2026 20:31:12 Asia/Jakarta] PHP Warning:  Undefined array key 0 in /home/adfb2574/public_html/modules/settings/index.php on line 298
+[20-Mar-2026 20:31:36 Asia/Jakarta] PHP Warning:  Undefined array key 0 in /home/adfb2574/public_html/modules/settings/index.php on line 298
+[20-Mar-2026 20:32:05 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'last_login' in 'SET'
+[20-Mar-2026 20:34:46 Asia/Jakarta] PHP Warning:  Undefined array key 0 in /home/adfb2574/public_html/modules/settings/index.php on line 298
+[27-Mar-2026 12:10:11 Asia/Jakarta] Saving theme: light for user 30
+[27-Mar-2026 12:10:11 Asia/Jakarta] Inserted new theme preference for user 30 as light
+[27-Mar-2026 12:10:13 Asia/Jakarta] CONFIG: Auto-set business_id=2 from active_business_id=bens-cafe
+[16-Apr-2026 16:36:16 Asia/Jakarta] Saving theme: light for user 11
+[16-Apr-2026 16:36:16 Asia/Jakarta] Inserted new theme preference for user 11 as light
+[23-Apr-2026 08:43:43 Asia/Jakarta] Saving theme: light for user 31
+[23-Apr-2026 08:43:43 Asia/Jakarta] Inserted new theme preference for user 31 as light
+[25-Apr-2026 06:59:01 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'last_login' in 'SET'
+[29-Apr-2026 10:09:33 Asia/Jakarta] Saving theme: light for user 33
+[29-Apr-2026 10:09:33 Asia/Jakarta] Inserted new theme preference for user 33 as light
+[12-May-2026 11:45:10 Asia/Jakarta] Insert Error in table divisions: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry 'PJ' for key 'division_code'
+[12-May-2026 11:45:10 Asia/Jakarta] SQL: INSERT INTO divisions (division_code, division_name, division_type, description, is_active) VALUES (:division_code, :division_name, :division_type, :description, :is_active)
+[12-May-2026 11:45:10 Asia/Jakarta] Data: Array
+(
+    [division_code] => PJ
+    [division_name] => Pajak
+    [division_type] => expense
+    [description] => Pajak Hotel
+    [is_active] => 1
+)
+
+[20-May-2026 10:33:24 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'last_login' in 'SET'
+[25-May-2026 18:58:14 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'last_login' in 'SET'

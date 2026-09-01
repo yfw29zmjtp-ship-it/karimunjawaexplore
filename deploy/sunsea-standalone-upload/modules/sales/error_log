@@ -1,0 +1,27 @@
+[04-Mar-2026 19:49:29 Asia/Jakarta] PHP Warning:  Undefined array key "discount_type" in /home/adfb2574/public_html/modules/sales/add-invoice.php on line 348
+[04-Mar-2026 19:50:24 Asia/Jakarta] PHP Warning:  Undefined array key "discount_type" in /home/adfb2574/public_html/modules/sales/add-invoice.php on line 348
+[06-Mar-2026 16:45:39 Asia/Jakarta] pay-termin: Updated cash_account 20 +24975000.00
+[06-Mar-2026 16:47:49 Asia/Jakarta] pay-termin: Updated cash_account 20 +29970000.00
+[06-Mar-2026 16:47:58 Asia/Jakarta] Query Error: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'adfb2574_cqc.business_settings' doesn't exist
+[06-Mar-2026 16:48:08 Asia/Jakarta] Query Error: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'adfb2574_cqc.business_settings' doesn't exist
+[06-Mar-2026 16:48:41 Asia/Jakarta] Query Error: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'adfb2574_cqc.business_settings' doesn't exist
+[07-Mar-2026 13:32:15 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'status' in 'WHERE'
+[07-Mar-2026 13:33:31 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'status' in 'WHERE'
+[07-Mar-2026 14:03:08 Asia/Jakarta] Query Error: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'adfb2574_cqc.business_settings' doesn't exist
+[07-Mar-2026 14:04:29 Asia/Jakarta] pay-termin: Updated cash_account 20 +2432989.00
+[11-Mar-2026 13:02:35 Asia/Jakarta] pay-termin: Updated cash_account 20 +1110000.00
+[11-Mar-2026 13:04:06 Asia/Jakarta] Query Error: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'adfb2574_cqc.business_settings' doesn't exist
+[11-Mar-2026 13:04:17 Asia/Jakarta] pay-termin: Updated cash_account 20 +2220000.00
+[11-Mar-2026 14:25:41 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'status' in 'WHERE'
+[11-Mar-2026 14:30:36 Asia/Jakarta] pay-termin: Updated cash_account 20 +347851.00
+[13-Mar-2026 12:49:53 Asia/Jakarta] Query Error: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'adfb2574_cqc.business_settings' doesn't exist
+[13-Mar-2026 12:55:22 Asia/Jakarta] Query Error: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'adfb2574_cqc.business_settings' doesn't exist
+[13-Mar-2026 13:00:10 Asia/Jakarta] Query Error: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'adfb2574_cqc.business_settings' doesn't exist
+[13-Mar-2026 13:31:32 Asia/Jakarta] CONFIG: Auto-set business_id=2 from active_business_id=bens-cafe
+[07-Apr-2026 14:07:16 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'status' in 'WHERE'
+[12-Apr-2026 10:29:50 Asia/Jakarta] pay-termin: Updated cash_account 20 +24975000.00
+[12-Apr-2026 10:29:58 Asia/Jakarta] pay-termin: Updated cash_account 20 +62437500.00
+[29-Apr-2026 09:29:32 Asia/Jakarta] Query Error: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'adfb2574_cqc.business_settings' doesn't exist
+[29-Apr-2026 14:54:33 Asia/Jakarta] Query Error: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'adfb2574_cqc.business_settings' doesn't exist
+[29-Apr-2026 14:54:45 Asia/Jakarta] Query Error: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'adfb2574_cqc.business_settings' doesn't exist
+[29-Apr-2026 14:57:00 Asia/Jakarta] Query Error: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'adfb2574_cqc.business_settings' doesn't exist

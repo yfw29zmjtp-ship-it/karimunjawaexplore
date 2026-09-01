@@ -1,0 +1,9 @@
+[05-Mar-2026 19:39:05 Asia/Jakarta] Query Error: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'adfb2574_narayana_hotel.customers' doesn't exist
+[05-Mar-2026 19:39:05 Asia/Jakarta] Query Error: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'adfb2574_narayana_hotel.staff' doesn't exist
+[13-Mar-2026 14:13:09 Asia/Jakarta] Query Error: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'adfb2574_narayana_hotel.customers' doesn't exist
+[13-Mar-2026 14:13:09 Asia/Jakarta] Query Error: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'adfb2574_narayana_hotel.staff' doesn't exist
+[13-Mar-2026 14:13:14 Asia/Jakarta] PHP Warning:  Undefined array key "city" in /home/adfb2574/public_html/modules/database/suppliers.php on line 252
+[13-Mar-2026 14:13:14 Asia/Jakarta] PHP Warning:  Undefined array key "city" in /home/adfb2574/public_html/modules/database/suppliers.php on line 252
+[01-Apr-2026 16:43:39 Asia/Jakarta] Update Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'Array' in 'WHERE'
+[01-Apr-2026 16:45:07 Asia/Jakarta] Update Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'Array' in 'WHERE'
+[07-Apr-2026 23:40:36 Asia/Jakarta] Update Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'Array' in 'WHERE'

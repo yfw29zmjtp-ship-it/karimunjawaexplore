@@ -1,0 +1,12 @@
+[04-Mar-2026 22:05:34 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'pod.unit_of_measure' in 'SELECT'
+[04-Mar-2026 22:06:29 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'pod.unit_of_measure' in 'SELECT'
+[07-Mar-2026 13:52:06 Asia/Jakarta] PHP Warning:  Undefined variable $absoluteLogo in /home/adfb2574/public_html/modules/reports/monthly.php on line 716
+[13-Mar-2026 13:50:04 Asia/Jakarta] PHP Warning:  Undefined variable $absoluteLogo in /home/adfb2574/public_html/modules/reports/monthly.php on line 716
+[13-Mar-2026 13:51:33 Asia/Jakarta] PHP Warning:  Undefined variable $absoluteLogo in /home/adfb2574/public_html/modules/reports/monthly.php on line 716
+[28-Mar-2026 14:52:50 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'last_login' in 'SET'
+[28-Mar-2026 15:47:54 Asia/Jakarta] CONFIG: Auto-set business_id=2 from active_business_id=bens-cafe
+[23-Apr-2026 19:00:49 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'last_login' in 'SET'
+[23-Apr-2026 21:48:21 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'last_login' in 'SET'
+[23-Apr-2026 22:09:31 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'last_login' in 'SET'
+[23-Apr-2026 22:14:34 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'last_login' in 'SET'
+[18-May-2026 20:15:05 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'last_login' in 'SET'

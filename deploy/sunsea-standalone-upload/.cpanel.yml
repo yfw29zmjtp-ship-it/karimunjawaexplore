@@ -1,0 +1,67 @@
+---
+deployment:
+  tasks:
+    # ==========================================
+    # 1. DEPLOY ADF SYSTEM → adfsystem.online
+    # ==========================================
+    - export DEPLOYPATH=/home/adfb2574/public_html
+    - /bin/mkdir -p $DEPLOYPATH
+    - /bin/cp -R $(pwd)/* $DEPLOYPATH/
+    - /bin/cp -R $(pwd)/.[^.]* $DEPLOYPATH/ 2>/dev/null || true
+    # ==========================================
+    # 2. DEPLOY WEBSITE → narayanakarimunjawa.com
+    # ==========================================
+    - export WEBPATH=/home/adfb2574/public_html/narayanakarimunjawa.com
+    - export ALTWEBPATH=/home/adfb2574/narayanakarimunjawa.com
+    - /bin/mkdir -p $WEBPATH
+    - /bin/mkdir -p $ALTWEBPATH 2>/dev/null || true
+    # Deploy to ROOT level
+    - /bin/cp -f $(pwd)/website/public/index.php $WEBPATH/index.php
+    - /bin/cp -f $(pwd)/website/public/.htaccess.production $WEBPATH/.htaccess
+    - /bin/cp -f $(pwd)/website/public/*.php $WEBPATH/ 2>/dev/null || true
+    - /bin/cp -f $(pwd)/website/public/.htaccess.production $WEBPATH/.htaccess 2>/dev/null || true
+    - /bin/cp -f $(pwd)/website/public/robots.txt $WEBPATH/robots.txt 2>/dev/null || true
+    - /bin/cp -f $(pwd)/website/public/sitemap.xml $WEBPATH/sitemap.xml 2>/dev/null || true
+    # API
+    - /bin/mkdir -p $WEBPATH/api
+    - /bin/cp -f $(pwd)/website/public/api/*.php $WEBPATH/api/ 2>/dev/null || true
+    # Assets
+    - /bin/mkdir -p $WEBPATH/assets/css
+    - /bin/mkdir -p $WEBPATH/assets/js
+    - /bin/cp -f $(pwd)/website/public/assets/css/style.css $WEBPATH/assets/css/style.css
+    # Includes
+    - /bin/mkdir -p $WEBPATH/includes
+    - /bin/cp -f $(pwd)/website/public/includes/*.php $WEBPATH/includes/ 2>/dev/null || true
+    # Config
+    - /bin/mkdir -p $WEBPATH/config
+    - /bin/cp -f $(pwd)/website/config/config.php $WEBPATH/config/config.php
+    # Developer panel
+    - /bin/mkdir -p $WEBPATH/developer/includes
+    - /bin/cp -f $(pwd)/website/developer/*.php $WEBPATH/developer/ 2>/dev/null || true
+    - /bin/cp -f $(pwd)/website/developer/includes/*.php $WEBPATH/developer/includes/ 2>/dev/null || true
+    # Deploy ALSO to public/ subdirectory (original repo structure)
+    - /bin/mkdir -p $WEBPATH/public/includes
+    - /bin/mkdir -p $WEBPATH/public/assets/css
+    - /bin/mkdir -p $WEBPATH/public/api
+    - /bin/cp -f $(pwd)/website/public/*.php $WEBPATH/public/ 2>/dev/null || true
+    - /bin/cp -f $(pwd)/website/public/includes/*.php $WEBPATH/public/includes/ 2>/dev/null || true
+    - /bin/cp -f $(pwd)/website/public/assets/css/style.css $WEBPATH/public/assets/css/style.css 2>/dev/null || true
+    - /bin/cp -f $(pwd)/website/public/api/*.php $WEBPATH/public/api/ 2>/dev/null || true
+    # Logs & uploads directories
+    - /bin/mkdir -p $WEBPATH/logs
+    - /bin/mkdir -p $WEBPATH/uploads/hero
+    - /bin/mkdir -p $WEBPATH/uploads/rooms
+    # Fix permissions
+    - /bin/chmod -R 755 $WEBPATH/ 2>/dev/null || true
+    - /bin/find $WEBPATH -type f -name "*.php" -exec /bin/chmod 644 {} \; 2>/dev/null || true
+    - /bin/find $WEBPATH -type f -name "*.css" -exec /bin/chmod 644 {} \; 2>/dev/null || true
+    - /bin/find $WEBPATH -type f -name "*.html" -exec /bin/chmod 644 {} \; 2>/dev/null || true
+
+    # Mirror critical files to alternative addon-domain path (some hosting setups use this path)
+    - /bin/cp -f $(pwd)/website/public/index.php $ALTWEBPATH/index.php 2>/dev/null || true
+    - /bin/cp -f $(pwd)/website/public/.htaccess.production $ALTWEBPATH/.htaccess 2>/dev/null || true
+    - /bin/mkdir -p $ALTWEBPATH/config $ALTWEBPATH/includes $ALTWEBPATH/assets/css $ALTWEBPATH/api 2>/dev/null || true
+    - /bin/cp -f $(pwd)/website/config/config.php $ALTWEBPATH/config/config.php 2>/dev/null || true
+    - /bin/cp -f $(pwd)/website/public/includes/*.php $ALTWEBPATH/includes/ 2>/dev/null || true
+    - /bin/cp -f $(pwd)/website/public/assets/css/style.css $ALTWEBPATH/assets/css/style.css 2>/dev/null || true
+    - /bin/cp -f $(pwd)/website/public/api/*.php $ALTWEBPATH/api/ 2>/dev/null || true

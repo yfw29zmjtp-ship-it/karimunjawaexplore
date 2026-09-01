@@ -1,0 +1,43 @@
+[06-Mar-2026 09:18:23 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'last_login' in 'SET'
+[10-Mar-2026 18:54:36 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'last_login' in 'SET'
+[10-Mar-2026 18:56:41 Asia/Jakarta] Update Error: SQLSTATE[HY093]: Invalid parameter number: mixed named and positional parameters
+[10-Mar-2026 18:57:22 Asia/Jakarta] Update Error: SQLSTATE[HY093]: Invalid parameter number: mixed named and positional parameters
+[11-Mar-2026 14:16:00 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'due_date' in 'WHERE'
+[11-Mar-2026 14:16:00 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'bt.bill_name' in 'SELECT'
+[11-Mar-2026 14:16:07 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'bill_name' in 'SELECT'
+[11-Mar-2026 14:16:14 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'bt.bill_name' in 'ORDER BY'
+[13-Mar-2026 10:07:20 Asia/Jakarta] Update Error: SQLSTATE[HY093]: Invalid parameter number: mixed named and positional parameters
+[13-Mar-2026 10:19:15 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'last_login' in 'SET'
+[13-Mar-2026 10:19:27 Asia/Jakarta] Update Error: SQLSTATE[HY093]: Invalid parameter number: mixed named and positional parameters
+[13-Mar-2026 10:20:22 Asia/Jakarta] Update Error: SQLSTATE[HY093]: Invalid parameter number: mixed named and positional parameters
+[13-Mar-2026 10:30:07 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'last_login' in 'SET'
+[13-Mar-2026 10:35:36 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'last_login' in 'SET'
+[13-Mar-2026 10:48:26 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'last_login' in 'SET'
+[13-Mar-2026 10:48:39 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'last_login' in 'SET'
+[13-Mar-2026 11:02:58 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'last_login' in 'SET'
+[13-Mar-2026 11:02:58 Asia/Jakarta] PHP Deprecated:  Function strftime() is deprecated in /home/adfb2574/public_html/modules/bills/laporan.php on line 27
+[13-Mar-2026 11:03:19 Asia/Jakarta] PHP Deprecated:  Function strftime() is deprecated in /home/adfb2574/public_html/modules/bills/laporan.php on line 27
+[13-Mar-2026 11:09:39 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'last_login' in 'SET'
+[13-Mar-2026 11:09:39 Asia/Jakarta] PHP Deprecated:  Function strftime() is deprecated in /home/adfb2574/public_html/modules/bills/laporan.php on line 27
+[13-Mar-2026 11:12:02 Asia/Jakarta] PHP Deprecated:  Function strftime() is deprecated in /home/adfb2574/public_html/modules/bills/laporan.php on line 27
+[13-Mar-2026 11:15:03 Asia/Jakarta] PHP Deprecated:  Function strftime() is deprecated in /home/adfb2574/public_html/modules/bills/laporan.php on line 27
+[13-Mar-2026 11:35:18 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'last_login' in 'SET'
+[13-Mar-2026 11:35:18 Asia/Jakarta] PHP Deprecated:  Function strftime() is deprecated in /home/adfb2574/public_html/modules/bills/laporan.php on line 27
+[13-Mar-2026 11:50:06 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'last_login' in 'SET'
+[13-Mar-2026 11:50:50 Asia/Jakarta] PHP Deprecated:  Function strftime() is deprecated in /home/adfb2574/public_html/modules/bills/laporan.php on line 27
+[13-Mar-2026 12:00:30 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'last_login' in 'SET'
+[13-Mar-2026 12:08:45 Asia/Jakarta] CONFIG: Auto-set business_id=2 from active_business_id=bens-cafe
+[13-Mar-2026 12:09:18 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'last_login' in 'SET'
+[24-Mar-2026 09:58:00 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'last_login' in 'SET'
+[24-Mar-2026 19:25:10 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'last_login' in 'SET'
+[30-Mar-2026 14:24:31 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'last_login' in 'SET'
+[31-Mar-2026 10:05:29 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'last_login' in 'SET'
+[31-Mar-2026 10:16:19 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'last_login' in 'SET'
+[31-Mar-2026 10:22:30 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'last_login' in 'SET'
+[08-Apr-2026 08:22:55 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'last_login' in 'SET'
+[15-Apr-2026 09:41:01 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'last_login' in 'SET'
+[15-Apr-2026 09:46:30 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'last_login' in 'SET'
+[15-Apr-2026 09:57:21 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'last_login' in 'SET'
+[16-Apr-2026 08:51:04 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'last_login' in 'SET'
+[16-Apr-2026 08:56:19 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'last_login' in 'SET'
+[17-Apr-2026 15:52:20 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'last_login' in 'SET'

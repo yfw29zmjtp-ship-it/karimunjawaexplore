@@ -1,0 +1,11 @@
+---
+deployment:
+  tasks:
+    # Ganti "USERNAME_CPANEL" di bawah dengan username cPanel hosting BARU ini
+    # (lihat di pojok kanan atas cPanel setelah login, atau di URL cPanel-nya).
+    - export DEPLOYPATH=/home/USERNAME_CPANEL/public_html
+    - /bin/mkdir -p $DEPLOYPATH
+    - /bin/cp -R $(pwd)/* $DEPLOYPATH/
+    - /bin/cp -R $(pwd)/.[^.]* $DEPLOYPATH/ 2>/dev/null || true
+    - /bin/chmod -R 755 $DEPLOYPATH/ 2>/dev/null || true
+    - /bin/find $DEPLOYPATH -type f -name "*.php" -exec /bin/chmod 644 {} \; 2>/dev/null || true

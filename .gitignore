@@ -1,0 +1,158 @@
+# =============================================
+# Environment & Secrets
+# =============================================
+.env
+.env.*
+!.env.example
+
+# =============================================
+# Runtime / Logs
+# =============================================
+*.log
+error.log
+
+# =============================================
+# Dependencies & Virtual Environments
+# =============================================
+node_modules/
+# vendor/ is committed to git for reliable deployment on shared hosting
+.venv/
+composer.phar
+
+# =============================================
+# OS / IDE / Editor
+# =============================================
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+*.sublime-*
+
+# =============================================
+# Archives / Binaries
+# =============================================
+*.rar
+*.zip
+*.tar.gz
+*.7z
+
+# =============================================
+# Uploads (user-generated content)
+# =============================================
+uploads/
+!uploads/.gitkeep
+
+# =============================================
+# Database dumps
+# =============================================
+*.sql
+!database/business_template.sql
+!database/user_permissions.sql
+!sql/user-avatars-table.sql
+
+# =============================================
+# Debug / Check / Test / Fix / Diagnostic scripts
+# =============================================
+debug-*.php
+debug_*.php
+check-*.php
+check_*.php
+test-*.php
+test_*.php
+fix-*.php
+fix_*.php
+diag-*.php
+diagnose-*.php
+diagnostic-*.php
+FIX-*.php
+
+# =============================================
+# Setup / Migration / One-off scripts
+# =============================================
+setup-*.php
+add-*.php
+!api/add-*.php
+auto-*.php
+cleanup-*.php
+clear-*.php
+complete-*.php
+convert-*.php
+create-*.php
+!api/create-*.php
+dedupe-*.php
+force-*.php
+insert-*.php
+install-*.php
+migrate-*.php
+rebuild-*.php
+remove-*.php
+repair-*.php
+reset-*.php
+restore-*.php
+sync-*.php
+trigger-*.php
+update-*.php
+verify-*.php
+final-*.php
+instant-*.php
+quick-*.php
+adf-patch.php
+_*.php
+
+# =============================================
+# Backup / Alternate version files
+# =============================================
+*.backup
+*.bak
+*.disabled
+*-backup.php
+*-backup-*.php
+*-old.php
+*-old-*.php
+*-new.php
+*-new-*.php
+
+# Daily automated backup cron script - must stay tracked so it deploys
+!cron-daily-backup.php
+
+# =============================================
+# Security-sensitive / Deploy scripts
+# =============================================
+ftp-test.php
+deploy-webhook.php
+webhook-deploy.php
+git-deploy.php
+force-pull-hosting.php
+upload-ftp.ps1
+upload-manual.bat
+deploy-full.zip
+developer-access.php
+create-developer.php
+login-debug.php
+
+# =============================================
+# Documentation (optional - keep if desired)
+# =============================================
+*.txt
+!README.txt
+
+# =============================================
+# Examples / Tools / Test directories
+# =============================================
+examples/
+tools/
+test/
+sync.php
+
+# =============================================
+# Backup automation secrets (Backblaze B2 keys)
+# =============================================
+config/backup-secrets.php
+
+# =============================================
+# Per-hosting DB override (standalone deployments, e.g. Sunsea)
+# =============================================
+config/local-db-config.php

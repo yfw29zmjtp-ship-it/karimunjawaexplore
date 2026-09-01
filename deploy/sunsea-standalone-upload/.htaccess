@@ -1,0 +1,40 @@
+# =============================================
+# SECURITY HARDENING
+# =============================================
+Options -Indexes
+ServerSignature Off
+
+# Block access to .git directory
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteRule ^.git - [F,L]
+RewriteRule ^.env - [F,L]
+RewriteRule ^\.gitignore$ - [F,L]
+</IfModule>
+
+# Block direct access to sensitive files (NOT webhook - it has PHP-level token auth)
+<FilesMatch "(emergency-deploy\.php|test-cloudinary-upload\.php|\.cpanel\.yml|composer\.json|deploy\.sh|deploy-hosting\.sh|fix-.*\.php)$">
+    <IfModule mod_authz_core.c>
+        Require ip 127.0.0.1
+        Require ip ::1
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order deny,allow
+        Deny from all
+        Allow from 127.0.0.1
+        Allow from ::1
+    </IfModule>
+</FilesMatch>
+
+# Block access to config directory from web
+<IfModule mod_rewrite.c>
+RewriteRule ^config/ - [F,L]
+</IfModule>
+
+# Security Headers
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set X-XSS-Protection "1; mode=block"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>

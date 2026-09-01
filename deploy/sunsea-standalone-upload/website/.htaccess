@@ -1,0 +1,24 @@
+# Redirect all requests to /public subdirectory
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    
+    # If the request is not for a real file or directory...
+    RewriteCond %{REQUEST_URI} !^/public/
+    
+    # Rewrite everything to /public
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
+
+# Block access to sensitive folders at root level
+<IfModule mod_rewrite.c>
+    RewriteRule ^config/ - [F,L]
+    RewriteRule ^logs/ - [F,L]
+    RewriteRule ^api/ - [F,L]
+</IfModule>
+
+# Block access to sensitive files (exclude PHP - handled by public folder rewrite)
+<FilesMatch "\.(sql|log|env|git|md|yml)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+</FilesMatch>

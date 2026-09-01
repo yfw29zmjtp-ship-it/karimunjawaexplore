@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logo Test - Super Simple</title>
+    <style>
+        body { 
+            font-family: Arial; 
+            padding: 20px; 
+            background: #f0f0f0; 
+        }
+        .test-box {
+            background: linear-gradient(135deg, #1e1b4b, #4338ca);
+            padding: 30px;
+            margin: 20px 0;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .test-box img {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            max-height: 80px;
+        }
+        .label {
+            color: white;
+            margin-top: 15px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🏨 Logo Display Test - Super Simple</h1>
+    
+    <div class="test-box">
+        <h2 style="color: white; margin-top: 0;">Logo dengan Relative Path</h2>
+        <img src="../../uploads/logos/logo.png" alt="Logo Relative">
+        <div class="label">Path: ../../uploads/logos/logo.png</div>
+    </div>
+    
+    <div class="test-box">
+        <h2 style="color: white; margin-top: 0;">Logo dengan Absolute Path</h2>
+        <img src="/narayana/uploads/logos/logo.png" alt="Logo Absolute">
+        <div class="label">Path: /narayana/uploads/logos/logo.png</div>
+    </div>
+    
+    <div style="background: white; padding: 20px; border-radius: 10px; margin-top: 20px;">
+        <h3>Direct Links:</h3>
+        <ul>
+            <li><a href="/narayana/uploads/logos/logo.png" target="_blank">Buka logo di tab baru (absolute)</a></li>
+            <li><a href="../../uploads/logos/logo.png" target="_blank">Buka logo di tab baru (relative)</a></li>
+        </ul>
+        
+        <h3>Console Test:</h3>
+        <button onclick="testLogo()" style="background: #4338ca; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">Test Logo Loading</button>
+        <div id="result" style="margin-top: 10px; padding: 10px; background: #f9f9f9; border-radius: 5px;"></div>
+    </div>
+    
+    <script>
+        function testLogo() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Testing...';
+            
+            const img = new Image();
+            img.onload = function() {
+                resultDiv.innerHTML = `
+                    <p style="color: green; font-weight: bold;">✓ Logo berhasil dimuat!</p>
+                    <p>Ukuran: ${this.width} x ${this.height} pixels</p>
+                    <p>Path: ../../uploads/logos/logo.png</p>
+                `;
+            };
+            img.onerror = function() {
+                resultDiv.innerHTML = `
+                    <p style="color: red; font-weight: bold;">✗ Logo GAGAL dimuat!</p>
+                    <p>Coba buka link langsung di atas untuk cek apakah file accessible.</p>
+                `;
+            };
+            img.src = '../../uploads/logos/logo.png';
+        }
+        
+        // Auto test on load
+        window.onload = function() {
+            console.log('Testing logo...');
+            testLogo();
+        };
+    </script>
+</body>
+</html>

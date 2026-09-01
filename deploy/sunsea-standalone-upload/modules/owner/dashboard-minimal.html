@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Owner Dashboard - Minimal Test</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; }
+        
+        .mobile-header {
+            background: linear-gradient(135deg, #1e1b4b, #4338ca);
+            padding: 1rem;
+            color: white;
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .header-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+        
+        .header-subtitle {
+            font-size: 0.875rem;
+            opacity: 0.9;
+        }
+        
+        .logo-img {
+            height: 45px;
+            width: auto;
+            object-fit: contain;
+            background: white;
+            padding: 0.5rem;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="mobile-header">
+        <div class="header-content">
+            <img class="logo-img" 
+                 src="/narayana/uploads/logos/hotel_logo_1769036600.png" 
+                 alt="Narayana Hotel"
+                 onerror="console.error('Logo error:', this.src); alert('Logo gagal dimuat dari: ' + this.src);">
+            <div>
+                <div class="header-title">Narayana Hotel</div>
+                <div class="header-subtitle">Owner Dashboard</div>
+            </div>
+        </div>
+    </div>
+    
+    <div style="padding: 20px;">
+        <h2>Minimal Dashboard Test</h2>
+        <p>Jika logo muncul di header atas, berarti path sudah benar.</p>
+        <p>Jika tidak muncul, cek Console (F12) untuk error message.</p>
+        
+        <hr style="margin: 20px 0;">
+        
+        <h3>Debug Info:</h3>
+        <div id="debug"></div>
+    </div>
+    
+    <script>
+        // Test image loading
+        const testImg = new Image();
+        const debugDiv = document.getElementById('debug');
+        
+        testImg.onload = function() {
+            debugDiv.innerHTML = `
+                <p style="color: green;">✓ Logo berhasil dimuat!</p>
+                <p>Ukuran: ${this.width}x${this.height} pixels</p>
+                <p>Path: /narayana/uploads/logos/hotel_logo_1769036600.png</p>
+            `;
+        };
+        
+        testImg.onerror = function() {
+            debugDiv.innerHTML = `
+                <p style="color: red;">✗ Logo GAGAL dimuat!</p>
+                <p>Path yang dicoba: /narayana/uploads/logos/hotel_logo_1769036600.png</p>
+                <p>Full URL: ${window.location.origin}/narayana/uploads/logos/hotel_logo_1769036600.png</p>
+            `;
+        };
+        
+        testImg.src = '/narayana/uploads/logos/hotel_logo_1769036600.png';
+    </script>
+</body>
+</html>

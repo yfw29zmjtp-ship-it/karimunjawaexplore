@@ -1,0 +1,135 @@
+/* Deposits Grouped by Investor */
+.deposits-grouped {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.investor-deposit-group {
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.group-header {
+    width: 100%;
+    padding: 1rem;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(139, 92, 246, 0.08));
+    border: none;
+    border-bottom: 1px solid var(--border-color);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    transition: all 0.2s ease;
+}
+
+.group-header:hover {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(139, 92, 246, 0.12));
+}
+
+.toggle-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    transition: transform 0.2s ease;
+    color: #6366f1;
+    font-size: 0.7rem;
+}
+
+.investor-deposit-group.collapsed .toggle-icon {
+    transform: rotate(-90deg);
+}
+
+.investor-badge {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #6366f1;
+    min-width: 100px;
+}
+
+.deposit-count {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    background: rgba(99, 102, 241, 0.1);
+    padding: 0.3rem 0.6rem;
+    border-radius: 4px;
+    font-weight: 600;
+}
+
+.total-amount {
+    margin-left: auto;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #10b981;
+}
+
+.deposit-items {
+    padding: 1rem;
+    background: var(--bg-primary);
+    display: none;
+}
+
+.investor-deposit-group.expanded .deposit-items {
+    display: block;
+}
+
+.investor-contact {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+}
+
+.deposit-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+.deposit-table thead {
+    background: rgba(99, 102, 241, 0.05);
+}
+
+.deposit-table th {
+    padding: 0.6rem 0.8rem;
+    text-align: left;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.deposit-table td {
+    padding: 0.65rem 0.8rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+}
+
+.deposit-table tbody tr:hover {
+    background: rgba(99, 102, 241, 0.02);
+}
+
+.deposit-date {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    white-space: nowrap;
+}
+
+.deposit-desc {
+    color: var(--text-primary);
+}
+
+.deposit-amount {
+    text-align: right;
+    font-weight: 700;
+    color: #10b981;
+}

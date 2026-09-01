@@ -1,0 +1,4 @@
+[17-Mar-2026 13:27:25 Asia/Jakarta] Cash account update: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'account_id' in 'INSERT INTO'
+[17-Mar-2026 14:15:03 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'last_login' in 'SET'
+[17-Mar-2026 14:35:55 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'last_login' in 'SET'
+[17-Mar-2026 14:45:20 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'last_login' in 'SET'

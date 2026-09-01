@@ -1,0 +1,22 @@
+[05-Mar-2026 11:40:25 Asia/Jakarta] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'adfb2574_cqc.projects' doesn't exist in /home/adfb2574/public_html/modules/project/index.php:32
+Stack trace:
+#0 /home/adfb2574/public_html/modules/project/index.php(32): PDO->query()
+#1 {main}
+  thrown in /home/adfb2574/public_html/modules/project/index.php on line 32
+[05-Mar-2026 19:40:13 Asia/Jakarta] PHP Warning:  Undefined variable $base_url in /home/adfb2574/public_html/modules/project/index.php on line 573
+[06-Mar-2026 10:18:10 Asia/Jakarta] PHP Warning:  Undefined variable $base_url in /home/adfb2574/public_html/modules/project/index.php on line 573
+[09-Mar-2026 08:24:41 Asia/Jakarta] PHP Warning:  Undefined variable $base_url in /home/adfb2574/public_html/modules/project/index.php on line 573
+[09-Mar-2026 08:42:05 Asia/Jakarta] PHP Warning:  Undefined variable $base_url in /home/adfb2574/public_html/modules/project/index.php on line 573
+[09-Mar-2026 10:00:28 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'last_login' in 'SET'
+[09-Mar-2026 10:00:28 Asia/Jakarta] PHP Warning:  Undefined variable $base_url in /home/adfb2574/public_html/modules/project/index.php on line 573
+[09-Mar-2026 10:09:46 Asia/Jakarta] PHP Warning:  Undefined variable $base_url in /home/adfb2574/public_html/modules/project/index.php on line 573
+[10-Mar-2026 18:50:44 Asia/Jakarta] PHP Warning:  Undefined variable $base_url in /home/adfb2574/public_html/modules/project/index.php on line 573
+[11-Mar-2026 20:28:06 Asia/Jakarta] PHP Warning:  Undefined variable $base_url in /home/adfb2574/public_html/modules/project/index.php on line 573
+[13-Mar-2026 14:13:33 Asia/Jakarta] PHP Warning:  Undefined variable $base_url in /home/adfb2574/public_html/modules/project/index.php on line 573
+[13-Mar-2026 20:13:59 Asia/Jakarta] PHP Warning:  Undefined variable $base_url in /home/adfb2574/public_html/modules/project/index.php on line 573
+[15-Mar-2026 15:43:01 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'last_login' in 'SET'
+[15-Mar-2026 15:43:01 Asia/Jakarta] PHP Warning:  Undefined variable $base_url in /home/adfb2574/public_html/modules/project/index.php on line 573
+[15-Mar-2026 16:23:16 Asia/Jakarta] PHP Warning:  Undefined variable $base_url in /home/adfb2574/public_html/modules/project/index.php on line 573
+[16-Mar-2026 04:25:10 Asia/Jakarta] PHP Warning:  Undefined variable $base_url in /home/adfb2574/public_html/modules/project/index.php on line 573
+[23-Apr-2026 08:05:47 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'last_login' in 'SET'
+[10-May-2026 07:49:52 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'last_login' in 'SET'

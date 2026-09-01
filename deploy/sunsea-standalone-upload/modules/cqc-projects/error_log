@@ -1,0 +1,78 @@
+[05-Mar-2026 20:20:31 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'last_login' in 'SET'
+[06-Mar-2026 16:43:36 Asia/Jakarta] CQC expense deducted from Petty Cash: -25000
+[06-Mar-2026 16:43:36 Asia/Jakarta] CQC expense synced to cash_book: Project 26030005, Amount: 25000, Fund: petty_cash
+[06-Mar-2026 17:08:06 Asia/Jakarta] CQC expense deducted from Petty Cash: -2000000
+[06-Mar-2026 17:08:06 Asia/Jakarta] CQC expense synced to cash_book: Project A2-P001-III-2026, Amount: 2000000, Fund: petty_cash
+[06-Mar-2026 17:09:11 Asia/Jakarta] CQC expense deducted from Petty Cash: -325250
+[06-Mar-2026 17:09:11 Asia/Jakarta] CQC expense synced to cash_book: Project A2-P001-III-2026, Amount: 325250, Fund: petty_cash
+[07-Mar-2026 14:19:26 Asia/Jakarta] CQC expense deducted from Petty Cash: -1000000
+[07-Mar-2026 14:19:26 Asia/Jakarta] CQC expense synced to cash_book: Project Gedung 4, Amount: 1000000, Fund: petty_cash
+[13-Mar-2026 14:12:54 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'last_login' in 'SET'
+[12-Apr-2026 10:30:15 Asia/Jakarta] CONFIG: Auto-set business_id=1 from active_business_id=narayana-hotel
+[12-Apr-2026 11:20:08 Asia/Jakarta] CQC expense deducted from Petty Cash: -1776000
+[12-Apr-2026 11:20:08 Asia/Jakarta] CQC expense synced to cash_book: Project PRJ-2604-002, Amount: 1776000, Fund: petty_cash
+[12-Apr-2026 12:13:00 Asia/Jakarta] CQC expense deducted from Bank: -10075008
+[12-Apr-2026 12:13:00 Asia/Jakarta] CQC expense synced to cash_book: Project PRJ-2604-002, Amount: 10075008, Fund: general_invoice
+[12-Apr-2026 12:23:13 Asia/Jakarta] CQC expense deducted from Bank: -4021340
+[12-Apr-2026 12:23:13 Asia/Jakarta] CQC expense synced to cash_book: Project PRJ-2604-002, Amount: 4021340, Fund: general_invoice
+[16-Apr-2026 18:36:40 Asia/Jakarta] CQC expense deducted from Bank: -3393270
+[16-Apr-2026 18:36:40 Asia/Jakarta] CQC expense synced to cash_book: Project PRJ-2604-002, Amount: 3393270, Fund: general_invoice
+[16-Apr-2026 18:44:25 Asia/Jakarta] CQC expense deducted from Petty Cash: -1047305
+[16-Apr-2026 18:44:25 Asia/Jakarta] CQC expense synced to cash_book: Project PRJ-2604-002, Amount: 1047305, Fund: petty_cash
+[16-Apr-2026 18:55:56 Asia/Jakarta] CQC expense deducted from Petty Cash: -88000
+[16-Apr-2026 18:55:56 Asia/Jakarta] CQC expense synced to cash_book: Project PRJ-2604-002, Amount: 88000, Fund: petty_cash
+[16-Apr-2026 18:57:56 Asia/Jakarta] CQC expense deducted from Petty Cash: -20000
+[16-Apr-2026 18:57:56 Asia/Jakarta] CQC expense synced to cash_book: Project PRJ-2604-002, Amount: 20000, Fund: petty_cash
+[16-Apr-2026 19:03:26 Asia/Jakarta] CQC expense deducted from Petty Cash: -3138500
+[16-Apr-2026 19:03:26 Asia/Jakarta] CQC expense synced to cash_book: Project PRJ-2604-002, Amount: 3138500, Fund: petty_cash
+[16-Apr-2026 19:08:26 Asia/Jakarta] CQC expense deducted from Petty Cash: -417500
+[16-Apr-2026 19:08:26 Asia/Jakarta] CQC expense synced to cash_book: Project PRJ-2604-002, Amount: 417500, Fund: petty_cash
+[16-Apr-2026 19:12:00 Asia/Jakarta] CQC expense deducted from Petty Cash: -54000
+[16-Apr-2026 19:12:00 Asia/Jakarta] CQC expense synced to cash_book: Project PRJ-2604-002, Amount: 54000, Fund: petty_cash
+[16-Apr-2026 19:14:20 Asia/Jakarta] CQC expense deducted from Petty Cash: -65500
+[16-Apr-2026 19:14:20 Asia/Jakarta] CQC expense synced to cash_book: Project PRJ-2604-002, Amount: 65500, Fund: petty_cash
+[16-Apr-2026 19:17:24 Asia/Jakarta] CQC expense deducted from Petty Cash: -5500
+[16-Apr-2026 19:17:24 Asia/Jakarta] CQC expense synced to cash_book: Project PRJ-2604-002, Amount: 5500, Fund: petty_cash
+[16-Apr-2026 19:18:06 Asia/Jakarta] CQC expense deducted from Petty Cash: -30000
+[16-Apr-2026 19:18:06 Asia/Jakarta] CQC expense synced to cash_book: Project PRJ-2604-002, Amount: 30000, Fund: petty_cash
+[16-Apr-2026 19:21:05 Asia/Jakarta] CQC expense deducted from Petty Cash: -26000
+[16-Apr-2026 19:21:05 Asia/Jakarta] CQC expense synced to cash_book: Project PRJ-2604-002, Amount: 26000, Fund: petty_cash
+[16-Apr-2026 19:22:18 Asia/Jakarta] CQC expense deducted from Petty Cash: -35000
+[16-Apr-2026 19:22:18 Asia/Jakarta] CQC expense synced to cash_book: Project PRJ-2604-002, Amount: 35000, Fund: petty_cash
+[16-Apr-2026 19:24:20 Asia/Jakarta] CQC expense deducted from Petty Cash: -300000
+[16-Apr-2026 19:24:20 Asia/Jakarta] CQC expense synced to cash_book: Project PRJ-2604-002, Amount: 300000, Fund: petty_cash
+[16-Apr-2026 19:30:54 Asia/Jakarta] CQC expense deducted from Petty Cash: -1040500
+[16-Apr-2026 19:30:54 Asia/Jakarta] CQC expense synced to cash_book: Project PRJ-2604-002, Amount: 1040500, Fund: petty_cash
+[16-Apr-2026 19:36:24 Asia/Jakarta] CQC expense deducted from Petty Cash: -10000
+[16-Apr-2026 19:36:24 Asia/Jakarta] CQC expense synced to cash_book: Project PRJ-2604-002, Amount: 10000, Fund: petty_cash
+[16-Apr-2026 19:39:38 Asia/Jakarta] CQC expense deducted from Petty Cash: -31250
+[16-Apr-2026 19:39:38 Asia/Jakarta] CQC expense synced to cash_book: Project PRJ-2604-002, Amount: 31250, Fund: petty_cash
+[16-Apr-2026 19:40:56 Asia/Jakarta] CQC expense deducted from Petty Cash: -60000
+[16-Apr-2026 19:40:56 Asia/Jakarta] CQC expense synced to cash_book: Project PRJ-2604-002, Amount: 60000, Fund: petty_cash
+[16-Apr-2026 19:42:46 Asia/Jakarta] CQC expense deducted from Petty Cash: -378250
+[16-Apr-2026 19:42:46 Asia/Jakarta] CQC expense synced to cash_book: Project PRJ-2604-002, Amount: 378250, Fund: petty_cash
+[16-Apr-2026 19:47:45 Asia/Jakarta] CQC expense deducted from Petty Cash: -170750
+[16-Apr-2026 19:47:45 Asia/Jakarta] CQC expense synced to cash_book: Project PRJ-2604-002, Amount: 170750, Fund: petty_cash
+[16-Apr-2026 19:49:15 Asia/Jakarta] CQC expense deducted from Petty Cash: -93750
+[16-Apr-2026 19:49:15 Asia/Jakarta] CQC expense synced to cash_book: Project PRJ-2604-002, Amount: 93750, Fund: petty_cash
+[16-Apr-2026 19:52:27 Asia/Jakarta] CQC expense deducted from Petty Cash: -150000
+[16-Apr-2026 19:52:27 Asia/Jakarta] CQC expense synced to cash_book: Project PRJ-2604-002, Amount: 150000, Fund: petty_cash
+[16-Apr-2026 19:53:27 Asia/Jakarta] CQC expense deducted from Petty Cash: -158000
+[16-Apr-2026 19:53:27 Asia/Jakarta] CQC expense synced to cash_book: Project PRJ-2604-002, Amount: 158000, Fund: petty_cash
+[16-Apr-2026 19:54:10 Asia/Jakarta] CQC expense deducted from Petty Cash: -60000
+[16-Apr-2026 19:54:10 Asia/Jakarta] CQC expense synced to cash_book: Project PRJ-2604-002, Amount: 60000, Fund: petty_cash
+[20-Apr-2026 10:20:42 Asia/Jakarta] CQC expense deducted from Bank: -2500000
+[20-Apr-2026 10:20:42 Asia/Jakarta] CQC expense synced to cash_book: Project PRJ-2604-002, Amount: 2500000, Fund: general_invoice
+[20-Apr-2026 10:30:42 Asia/Jakarta] CQC expense deducted from Bank: -9900000
+[20-Apr-2026 10:30:42 Asia/Jakarta] CQC expense synced to cash_book: Project PRJ-2604-002, Amount: 9900000, Fund: general_invoice
+[20-Apr-2026 10:34:54 Asia/Jakarta] CQC expense deducted from Petty Cash: -307000
+[20-Apr-2026 10:34:54 Asia/Jakarta] CQC expense synced to cash_book: Project PRJ-2604-002, Amount: 307000, Fund: petty_cash
+[20-Apr-2026 10:35:41 Asia/Jakarta] CQC expense deducted from Petty Cash: -63000
+[20-Apr-2026 10:35:41 Asia/Jakarta] CQC expense synced to cash_book: Project PRJ-2604-002, Amount: 63000, Fund: petty_cash
+[20-Apr-2026 10:47:20 Asia/Jakarta] CQC expense deducted from Petty Cash: -23508352
+[20-Apr-2026 10:47:20 Asia/Jakarta] CQC expense synced to cash_book: Project PRJ-2604-002, Amount: 23508352, Fund: petty_cash
+[29-Apr-2026 09:28:57 Asia/Jakarta] CQC expense deducted from Bank: -3552000
+[29-Apr-2026 09:28:57 Asia/Jakarta] CQC expense synced to cash_book: Project PRJ-2604-001, Amount: 3552000, Fund: general_invoice
+[29-Apr-2026 11:48:35 Asia/Jakarta] CQC expense deducted from Bank: -4662000
+[29-Apr-2026 11:48:35 Asia/Jakarta] CQC expense synced to cash_book: Project PRJ-2604-002, Amount: 4662000, Fund: general_invoice
+[29-Apr-2026 16:10:10 Asia/Jakarta] Query Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'last_login' in 'SET'
