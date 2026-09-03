@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Setup Diperlukan - Explore Karimunjawa</title>
+<style>
+    body { font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif; background: #0f172a; color: #e2e8f0; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 1.5rem; }
+    .box { max-width: 560px; background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 2rem; }
+    h1 { font-size: 1.25rem; margin-top: 0; color: #f8fafc; }
+    p { line-height: 1.6; color: #cbd5e1; }
+    ol { color: #cbd5e1; line-height: 1.8; padding-left: 1.25rem; }
+    code { background: #0f172a; padding: 0.15rem 0.4rem; border-radius: 4px; color: #38bdf8; }
+</style>
+</head>
+<body>
+    <div class="box">
+        <h1>⚠️ Koneksi Database Belum Dikonfigurasi</h1>
+        <p>Aplikasi belum bisa terhubung ke database di hosting ini. Ini biasanya terjadi karena file konfigurasi database khusus server ini belum dibuat.</p>
+        <ol>
+            <li>Masuk ke cPanel &rarr; <strong>MySQL Databases</strong>, pastikan database master dan database bisnis sudah dibuat, beserta user MySQL dengan akses penuh ke keduanya.</li>
+            <li>Lewat cPanel <strong>File Manager</strong>, salin <code>config/local-db-config.example.php</code> menjadi <code>config/local-db-config.php</code> (jangan lewat git).</li>
+            <li>Isi 4 nilai di file tersebut (<code>DB_HOST</code>, <code>DB_NAME</code>, <code>DB_USER</code>, <code>DB_PASS</code>) sesuai info dari cPanel.</li>
+            <li>Import file <code>.sql</code> backup ke database yang sudah dibuat lewat phpMyAdmin.</li>
+        </ol>
+        <p>Setelah selesai, muat ulang halaman ini atau kembali ke <a href="index.php" style="color:#38bdf8;">halaman utama</a>.</p>
+    </div>
+</body>
+</html>
