@@ -239,10 +239,10 @@ function getActiveBusinessId()
         error_log("business_helper: Invalid active_business_id '{$bizId}' in session, resetting.");
     }
 
-    // Default to narayana-hotel if available, otherwise first available business
+    // Default to sunsea (only business on this standalone hosting)
     $businesses = getAvailableBusinesses();
     if (!empty($businesses)) {
-        $defaultBusinessId = isset($businesses['narayana-hotel']) ? 'narayana-hotel' : array_key_first($businesses);
+        $defaultBusinessId = isset($businesses['sunsea']) ? 'sunsea' : array_key_first($businesses);
         if (session_status() === PHP_SESSION_ACTIVE) {
             $_SESSION['active_business_id'] = $defaultBusinessId;
         }
@@ -250,7 +250,7 @@ function getActiveBusinessId()
     }
 
     // Fallback
-    return 'narayana-hotel';
+    return 'sunsea';
 }
 
 /**
@@ -261,8 +261,8 @@ function getActiveBusinessId()
  */
 function getPreferredDefaultBusiness($businesses)
 {
-    if (empty($businesses)) return 'narayana-hotel';
-    if (isset($businesses['narayana-hotel'])) return 'narayana-hotel';
+    if (empty($businesses)) return 'sunsea';
+    if (isset($businesses['sunsea'])) return 'sunsea';
     return array_key_first($businesses);
 }
 

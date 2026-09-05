@@ -5,54 +5,11 @@
  */
 
 $BUSINESSES = [
-$BUSINESSES = [
     [
         'id' => 1,
-        'name' => "Ben's Cafe",
-        'database' => 'adf_benscafe',
-        'type' => 'restaurant',
-        'active' => true
-    ],
-    [
-        'id' => 2,
-        'name' => 'Hotel',
-        'database' => 'adf_narayana_hotel',
-        'type' => 'hotel',
-        'active' => true
-    ],
-    [
-        'id' => 3,
-        'name' => 'Eat & Meet Restaurant',
-        'database' => 'adf_eat_meet',
-        'type' => 'restaurant',
-        'active' => false
-    ],
-    [
-        'id' => 4,
-        'name' => 'Pabrik Kapal',
-        'database' => 'adf_pabrik_kapal',
-        'type' => 'manufacture',
-        'active' => false
-    ],
-    [
-        'id' => 5,
-        'name' => 'Furniture',
-        'database' => 'adf_furniture',
-        'type' => 'retail',
-        'active' => false
-    ],
-    [
-        'id' => 6,
-        'name' => 'Karimunjawa Tourism',
-        'database' => 'adf_karimunjawa',
-        'type' => 'tourism',
-        'active' => false
-    ],
-    [
-        'id' => 7,
-        'name' => 'CQC',
-        'database' => 'adf_cqc',
-        'type' => 'other',
+        'name' => 'Explore Karimunjawa',
+        'database' => 'karw6956_explore',
+        'type' => 'travel_bureau',
         'active' => true
     ]
 ];
