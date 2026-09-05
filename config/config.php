@@ -144,11 +144,8 @@ date_default_timezone_set('Asia/Jakarta');
 // ERROR REPORTING
 // ============================================
 if ($isProduction) {
-    // TEMP DEBUG (2026-09-05): showing real errors to diagnose HTTP 500 on
-    // fresh standalone install. Revert to error_reporting(0)/display_errors=0
-    // once the root cause is fixed.
-    error_reporting(E_ALL);
-    ini_set('display_errors', 1);
+    error_reporting(0);
+    ini_set('display_errors', 0);
     ini_set('log_errors', 1);
 } else {
     error_reporting(E_ALL);

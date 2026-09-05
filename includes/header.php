@@ -5,12 +5,6 @@ require_once __DIR__ . '/functions.php';
 // Load language system
 require_once __DIR__ . '/language.php';
 
-// Load motor notification system
-require_once __DIR__ . '/MotorNotificationHelper.php';
-
-// Load unpaid checked-in guest notification system
-require_once __DIR__ . '/UnpaidGuestNotificationHelper.php';
-
 // Sunsea must use its own custom UI/module stack.
 // If a generic module tries to render with this global header, redirect to Sunsea dashboard.
 if (defined('ACTIVE_BUSINESS_ID') && ACTIVE_BUSINESS_ID === 'sunsea') {
