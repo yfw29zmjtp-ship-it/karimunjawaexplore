@@ -225,6 +225,8 @@ include 'layout-header.php';
     #bookingDetailBody .bd-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px 14px; font-size: 12px; margin-bottom: 12px; background: var(--ss-gray-1); border-radius: 8px; padding: 10px 12px; }
     #bookingDetailBody .bd-grid strong { display: block; color: var(--ss-muted); font-weight: 600; font-size: 10.5px; text-transform: uppercase; letter-spacing: .3px; }
     #bookingDetailBody .bd-section-title { font-size: 12.5px; font-weight: 700; margin: 14px 0 6px; color: #0f172a; }
+    #bookingDetailBody .bd-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0 22px; align-items: start; }
+    #bookingDetailBody .bd-col .bd-section-title { margin-top: 0; }
     #bookingDetailBody table.ss-table { font-size: 12px; margin-bottom: 0; }
     #bookingDetailBody table.ss-table th { font-size: 10.5px; padding: 5px 8px; }
     #bookingDetailBody table.ss-table td { padding: 5px 8px; }
@@ -235,6 +237,7 @@ include 'layout-header.php';
     @media (max-width: 640px) {
         #bookingDetailBody .bd-grid { grid-template-columns: repeat(2, 1fr); }
         #bookingDetailBody .bd-summary { grid-template-columns: 1fr; }
+        #bookingDetailBody .bd-cols { grid-template-columns: 1fr; }
     }
 </style>
 
@@ -278,6 +281,9 @@ include 'layout-header.php';
                 html += '<div><strong>Total RAB/Penawaran</strong>' + fmt(data.totalRab) + '</div>';
                 html += '</div>';
 
+                html += '<div class="bd-cols">';
+
+                html += '<div class="bd-col">';
                 html += '<div class="bd-section-title">Item Booking (RAB)</div>';
                 if (data.items.length === 0) {
                     html += '<div style="font-size:12px;color:var(--ss-muted);">Belum ada item.</div>';
@@ -290,7 +296,9 @@ include 'layout-header.php';
                     });
                     html += '</tbody></table>';
                 }
+                html += '</div>';
 
+                html += '<div class="bd-col">';
                 html += '<div class="bd-section-title">Pengeluaran Trip Ini (dari Finance)</div>';
                 if (data.expenses.length === 0) {
                     html += '<div style="font-size:12px;color:var(--ss-muted);">Belum ada pengeluaran dicatat di Finance untuk trip ini.</div>';
@@ -303,6 +311,9 @@ include 'layout-header.php';
                     });
                     html += '</tbody></table>';
                 }
+                html += '</div>';
+
+                html += '</div>';
 
                 html += '<div class="bd-summary">';
                 html += '<div class="bd-summary-box" style="background:var(--ss-gray-1);"><div class="bd-label">Total RAB/Penawaran</div><div class="bd-value">' + fmt(data.totalRab) + '</div></div>';
