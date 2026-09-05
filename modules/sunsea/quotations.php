@@ -17,6 +17,7 @@ $auth->requireLogin();
 $pdo    = getSunseaConnection();
 sunseaEnsureMasterDataSchema($pdo);
 sunseaEnsureAccommodationSchema($pdo);
+sunseaEnsureQuotationItinerarySchema($pdo);
 $action = $_GET['action'] ?? 'list';
 $qId    = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
@@ -34,6 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $discount   = (float)str_replace(['.', ','], ['', '.'], $_POST['discount_amount'] ?? '0');
         $tripDate   = $_POST['trip_date']     ?: null;
         $tripEnd    = $_POST['trip_end_date'] ?: null;
+        $itinerary  = trim($_POST['itinerary'] ?? '');
         $paxCount   = max(1, (int)($_POST['pax_count'] ?? 1));
         $notes      = trim($_POST['notes'] ?? '');
         $intNotes   = trim($_POST['internal_notes'] ?? '');
@@ -84,7 +86,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($id > 0) {
             $pdo->prepare("
                 UPDATE quotations SET customer_id=?, package_id=?, trip_date=?, trip_end_date=?,
-                pax_count=?, subtotal=?, tax_pct=?, tax_amount=?, discount_amount=?, total_amount=?,
+                itinerary=?, pax_count=?, subtotal=?, tax_pct=?, tax_amount=?, discount_amount=?, total_amount=?,
                 notes=?, internal_notes=?, valid_until=?, updated_at=NOW()
                 WHERE id=?
             ")->execute([
@@ -92,6 +94,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $packageId,
                 $tripDate,
                 $tripEnd,
+                $itinerary,
                 $paxCount,
                 $subtotal,
                 $taxPct,
@@ -109,16 +112,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $qNo = sunseaNextNumber($pdo, 'quotation');
             $pdo->prepare("
                 INSERT INTO quotations 
-                (quotation_no, customer_id, package_id, trip_date, trip_end_date, pax_count,
+                (quotation_no, customer_id, package_id, trip_date, trip_end_date, itinerary, pax_count,
                  subtotal, tax_pct, tax_amount, discount_amount, total_amount,
                  notes, internal_notes, valid_until, created_by)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             ")->execute([
                 $qNo,
                 $customerId,
                 $packageId,
                 $tripDate,
                 $tripEnd,
+                $itinerary,
                 $paxCount,
                 $subtotal,
                 $taxPct,
@@ -265,7 +269,7 @@ if (in_array($action, ['view', 'edit', 'print']) && $qId > 0) {
 
 // Customers & packages for form
 $customers = $pdo->query("SELECT id, name, phone FROM customers WHERE is_active=1 ORDER BY name")->fetchAll();
-$packages  = $pdo->query("SELECT id, name, base_price, duration_days, duration_nights FROM trip_packages WHERE is_active=1 ORDER BY name")->fetchAll();
+$packages  = $pdo->query("SELECT id, name, base_price, duration_days, duration_nights, itinerary FROM trip_packages WHERE is_active=1 ORDER BY name")->fetchAll();
 
 // Master data untuk quick-add item penawaran (Tiket, Transportasi, Penginapan, Makanan, Fasilitas)
 function qSafeAll(PDO $pdo, string $sql): array
@@ -525,6 +529,10 @@ if ($action === 'print' && $quotation):
             </div>
         <?php endif; ?>
 
+        <?php if (!empty($quotation['itinerary'])): ?>
+            <div style="margin-top:16px;"><strong>Itinerary (Jadwal Perjalanan):</strong><br><?php echo nl2br(htmlspecialchars($quotation['itinerary'])); ?></div>
+        <?php endif; ?>
+
         <?php if ($quotation['notes']): ?>
             <div style="margin-top:16px;"><strong>Catatan:</strong><br><?php echo nl2br(htmlspecialchars($quotation['notes'])); ?></div>
         <?php endif; ?>
@@ -693,12 +701,13 @@ include 'layout-header.php';
                             </div>
                             <div class="ss-form-group">
                                 <label class="ss-label">Paket (opsional)</label>
-                                <select name="package_id" class="ss-select" id="pkgSelect">
+                                <select name="package_id" class="ss-select" id="pkgSelect" onchange="fillItineraryFromPackage()">
                                     <option value="">-- Custom / Tidak pakai paket --</option>
                                     <?php foreach ($packages as $p): ?>
                                         <option value="<?php echo $p['id']; ?>"
                                             data-price="<?php echo $p['base_price']; ?>"
                                             data-days="<?php echo $p['duration_days']; ?>"
+                                            data-itinerary="<?php echo htmlspecialchars($p['itinerary'] ?? ''); ?>"
                                             <?php echo ($quotation['package_id'] ?? 0) == $p['id'] ? 'selected' : ''; ?>>
                                             <?php echo htmlspecialchars($p['name']); ?> — <?php echo sunseaRupiah((float)$p['base_price']); ?>/org
                                         </option>
@@ -837,6 +846,17 @@ include 'layout-header.php';
                     </div>
 
                     <div class="ss-card" style="margin-bottom:16px;">
+                        <div class="ss-card-header">
+                            <label class="ss-label" style="margin:0;">Itinerary (Jadwal Perjalanan)</label>
+                            <button type="button" onclick="fillItineraryFromPackage(true)" class="ss-btn ss-btn-outline ss-btn-sm">
+                                <i data-feather="refresh-cw"></i> Isi dari Paket
+                            </button>
+                        </div>
+                        <textarea name="itinerary" id="itineraryInput" class="ss-textarea" rows="6" placeholder="Hari 1: ...&#10;Hari 2: ..."><?php echo htmlspecialchars($quotation['itinerary'] ?? ''); ?></textarea>
+                        <div style="font-size:11px;color:var(--ss-muted);margin-top:4px;">* Otomatis terisi dari itinerary paket yang dipilih (bisa diedit manual, atau ketik sendiri jika custom).</div>
+                    </div>
+
+                    <div class="ss-card" style="margin-bottom:16px;">
                         <div class="ss-form-group">
                             <label class="ss-label">Catatan (tampil di dokumen)</label>
                             <textarea name="notes" class="ss-textarea" rows="4"><?php echo htmlspecialchars($quotation['notes'] ?? ''); ?></textarea>
@@ -952,6 +972,20 @@ HTML;
 ?>
 
 <script>
+    function fillItineraryFromPackage(forceOverwrite) {
+        var sel = document.getElementById('pkgSelect');
+        var box = document.getElementById('itineraryInput');
+        if (!sel || !box) return;
+        var opt = sel.options[sel.selectedIndex];
+        var itinerary = opt ? (opt.getAttribute('data-itinerary') || '') : '';
+        if (!itinerary) return;
+        // Auto-fill on package change only if the field is still empty,
+        // so it never silently overwrites text the user already typed.
+        if (forceOverwrite || !box.value.trim()) {
+            box.value = itinerary;
+        }
+    }
+
     function fmt(n) {
         return 'Rp ' + Math.round(n).toLocaleString('id-ID');
     }

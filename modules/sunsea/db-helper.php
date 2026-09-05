@@ -374,6 +374,22 @@ function sunseaEnsureAccommodationSchema(PDO $pdo): void
 }
 
 /**
+ * Ensure quotations table has an itinerary column (added after initial deploy).
+ */
+function sunseaEnsureQuotationItinerarySchema(PDO $pdo): void
+{
+    try {
+        $check = $pdo->prepare("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'quotations' AND COLUMN_NAME = 'itinerary'");
+        $check->execute();
+        if ((int)$check->fetchColumn() === 0) {
+            $pdo->exec("ALTER TABLE quotations ADD COLUMN itinerary TEXT NULL AFTER trip_end_date");
+        }
+    } catch (Exception $e) {
+        error_log('sunseaEnsureQuotationItinerarySchema error: ' . $e->getMessage());
+    }
+}
+
+/**
  * Get next auto-number for quotation / invoice.
  * Format: SS-QUO-2026-001
  *
