@@ -24,6 +24,12 @@ $sunseaNavItems = [
     'settings'      => ['icon' => 'settings',   'label' => 'Pengaturan',        'url' => 'settings.php'],
 ];
 
+// Sub-menu grouping: parent key => list of child keys shown in a collapsible dropdown
+$sunseaNavGroups = [
+    'bookings' => ['calendar', 'packages', 'rab'],
+    'settings' => ['database', 'coordinators'],
+];
+
 $activePage = $activePage ?? '';
 $currentUser = isset($auth) ? $auth->getCurrentUser() : [];
 $userName    = $currentUser['full_name'] ?? $currentUser['username'] ?? 'User';
@@ -257,6 +263,57 @@ if (empty($sunseaNavItemsVisible)) {
             width: 16px;
             height: 16px;
             flex-shrink: 0;
+        }
+
+        .ss-nav-group-row {
+            display: flex;
+            align-items: center;
+            border-radius: 8px;
+            margin-bottom: 2px;
+        }
+
+        .ss-nav-group-row .ss-nav-item {
+            flex: 1;
+            margin-bottom: 0;
+        }
+
+        .ss-nav-group-row:hover .ss-nav-item:not(.active) {
+            background: var(--ss-sky);
+            color: var(--ss-ocean);
+        }
+
+        .ss-nav-caret-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 8px 10px;
+            color: var(--ss-muted);
+            display: flex;
+            align-items: center;
+        }
+
+        .ss-nav-caret-btn svg {
+            width: 14px;
+            height: 14px;
+            transition: transform .2s;
+        }
+
+        .ss-nav-group.open .ss-nav-caret-btn svg {
+            transform: rotate(180deg);
+        }
+
+        .ss-nav-submenu {
+            display: none;
+            padding-left: 14px;
+        }
+
+        .ss-nav-group.open .ss-nav-submenu {
+            display: block;
+        }
+
+        .ss-nav-submenu .ss-nav-item {
+            font-size: 13px;
+            padding: 8px 12px;
         }
 
         .ss-sidebar-footer {
@@ -888,13 +945,61 @@ if (empty($sunseaNavItemsVisible)) {
 
         <nav class="ss-nav">
             <div class="ss-nav-label">Menu Utama</div>
-            <?php foreach ($sunseaNavItemsVisible as $key => $item): ?>
-                <a href="<?php echo $item['url']; ?>"
-                    class="ss-nav-item <?php echo ($activePage === $key) ? 'active' : ''; ?>">
-                    <i data-feather="<?php echo $item['icon']; ?>"></i>
-                    <?php echo $item['label']; ?>
-                </a>
-            <?php endforeach; ?>
+            <?php
+            $__childOfGroup = [];
+            foreach ($sunseaNavGroups as $__gk => $__children) {
+                foreach ($__children as $__c) $__childOfGroup[$__c] = $__gk;
+            }
+            foreach ($sunseaNavItemsVisible as $key => $item):
+                if (isset($__childOfGroup[$key])) continue; // rendered nested under its parent group below
+
+                if (isset($sunseaNavGroups[$key])) {
+                    $__childKeys = array_values(array_intersect($sunseaNavGroups[$key], array_keys($sunseaNavItemsVisible)));
+                    if (empty($__childKeys)) {
+                        // No visible children for this user -> render as a plain link
+            ?>
+                        <a href="<?php echo $item['url']; ?>"
+                            class="ss-nav-item <?php echo ($activePage === $key) ? 'active' : ''; ?>">
+                            <i data-feather="<?php echo $item['icon']; ?>"></i>
+                            <?php echo $item['label']; ?>
+                        </a>
+            <?php
+                    } else {
+                        $__isOpen = ($activePage === $key) || in_array($activePage, $__childKeys);
+            ?>
+                        <div class="ss-nav-group <?php echo $__isOpen ? 'open' : ''; ?>">
+                            <div class="ss-nav-group-row">
+                                <a href="<?php echo $item['url']; ?>"
+                                    class="ss-nav-item <?php echo ($activePage === $key) ? 'active' : ''; ?>">
+                                    <i data-feather="<?php echo $item['icon']; ?>"></i>
+                                    <?php echo $item['label']; ?>
+                                </a>
+                                <button type="button" class="ss-nav-caret-btn" onclick="this.closest('.ss-nav-group').classList.toggle('open')">
+                                    <i data-feather="chevron-down"></i>
+                                </button>
+                            </div>
+                            <div class="ss-nav-submenu">
+                                <?php foreach ($__childKeys as $__ck): $__child = $sunseaNavItemsVisible[$__ck]; ?>
+                                    <a href="<?php echo $__child['url']; ?>"
+                                        class="ss-nav-item <?php echo ($activePage === $__ck) ? 'active' : ''; ?>">
+                                        <i data-feather="<?php echo $__child['icon']; ?>"></i>
+                                        <?php echo $__child['label']; ?>
+                                    </a>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+            <?php
+                    }
+                } else {
+            ?>
+                    <a href="<?php echo $item['url']; ?>"
+                        class="ss-nav-item <?php echo ($activePage === $key) ? 'active' : ''; ?>">
+                        <i data-feather="<?php echo $item['icon']; ?>"></i>
+                        <?php echo $item['label']; ?>
+                    </a>
+            <?php
+                }
+            endforeach; ?>
 
         </nav>
 
