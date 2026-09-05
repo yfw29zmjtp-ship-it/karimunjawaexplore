@@ -52,6 +52,8 @@ uploads/
 !database/business_template.sql
 !database/user_permissions.sql
 !sql/user-avatars-table.sql
+!database/sunsea-setup.sql
+!database/master-schema-fresh.sql
 
 # =============================================
 # Debug / Check / Test / Fix / Diagnostic scripts
