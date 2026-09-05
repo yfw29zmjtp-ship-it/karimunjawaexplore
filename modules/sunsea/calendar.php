@@ -143,9 +143,9 @@ include 'layout-header.php';
                         <?php if ((int)$b['pending_count'] > 0): ?>
                             <span title="Ada layanan belum selesai" style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#dc2626;margin-right:3px;"></span>
                         <?php endif; ?>
-                        <a href="bookings.php?view=<?php echo $b['id']; ?>" onclick="event.stopPropagation()" style="color:var(--ss-text);text-decoration:none;"><?php echo htmlspecialchars($b['customer_name']); ?></a>
+                        <a href="javascript:void(0)" onclick="event.stopPropagation();openBookingDetail(<?php echo $b['id']; ?>)" style="color:var(--ss-text);text-decoration:none;"><?php echo htmlspecialchars($b['customer_name']); ?></a>
                         <div style="font-size:9px;font-weight:400;color:var(--ss-muted);">
-                            <a href="bookings.php?view=<?php echo $b['id']; ?>" onclick="event.stopPropagation()" style="color:var(--ss-ocean);text-decoration:none;"><?php echo htmlspecialchars($b['booking_no']); ?></a>
+                            <a href="javascript:void(0)" onclick="event.stopPropagation();openBookingDetail(<?php echo $b['id']; ?>)" style="color:var(--ss-ocean);text-decoration:none;"><?php echo htmlspecialchars($b['booking_no']); ?></a>
                             · <?php echo (int)$b['pax_count']; ?> pax
                         </div>
                     </div>
@@ -184,7 +184,7 @@ include 'layout-header.php';
             <tbody>
                 <?php foreach ($bookings as $b): ?>
                     <tr style="cursor:pointer;" onclick="openBookingDetail(<?php echo $b['id']; ?>)">
-                        <td><a href="bookings.php?view=<?php echo $b['id']; ?>" onclick="event.stopPropagation()" style="color:var(--ss-ocean);font-weight:600;text-decoration:none;"><?php echo htmlspecialchars($b['booking_no']); ?></a></td>
+                        <td><a href="javascript:void(0)" onclick="event.stopPropagation();openBookingDetail(<?php echo $b['id']; ?>)" style="color:var(--ss-ocean);font-weight:600;text-decoration:none;"><?php echo htmlspecialchars($b['booking_no']); ?></a></td>
                         <td>
                             <?php if ((int)$b['pending_count'] > 0): ?>
                                 <span title="Ada layanan belum selesai" style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#dc2626;margin-right:4px;"></span>
@@ -215,7 +215,7 @@ include 'layout-header.php';
                 <i data-feather="x"></i>
             </button>
         </div>
-        <div id="bookingDetailBody" style="flex:1;overflow:auto;padding:16px 20px;max-width:900px;width:100%;margin:0 auto;">
+        <div id="bookingDetailBody" style="flex:1;overflow:auto;padding:16px 24px;width:100%;">
             <div style="text-align:center;padding:30px;color:var(--ss-muted);">Memuat...</div>
         </div>
     </div>
