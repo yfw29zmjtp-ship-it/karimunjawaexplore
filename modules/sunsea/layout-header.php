@@ -144,6 +144,7 @@ if (empty($sunseaNavItemsVisible)) {
             font-family: 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
             background: var(--ss-sky);
             color: var(--ss-text);
+            font-size: 13px;
             min-height: 100vh;
             display: flex;
         }
@@ -243,7 +244,7 @@ if (empty($sunseaNavItemsVisible)) {
             border-radius: 8px;
             text-decoration: none;
             color: var(--ss-muted);
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 500;
             margin-bottom: 2px;
             transition: all .2s;
