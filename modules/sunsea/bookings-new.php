@@ -89,10 +89,30 @@ if ($_GET['action'] ?? '' === 'get_price') {
 // Handle form POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_booking') {
     $customerId = (int)($_POST['customer_id'] ?? 0);
+    $newCustomerName = trim($_POST['new_customer_name'] ?? '');
     $bookingMode = $_POST['booking_mode'] ?? 'paket';
     $startDate = $_POST['start_date'] ?? '';
     $endDate = $_POST['end_date'] ?? '';
     $pax = max(1, (int)($_POST['pax_count'] ?? 1));
+
+    // Create the customer inline if the "Tambah Customer Baru" panel was used.
+    if ($customerId <= 0 && $newCustomerName !== '') {
+        $lastCode = $pdo->query("SELECT code FROM customers ORDER BY id DESC LIMIT 1")->fetchColumn();
+        $nextNum = 1;
+        if ($lastCode && preg_match('/(\d+)$/', $lastCode, $m)) $nextNum = (int)$m[1] + 1;
+        $newCode = 'SS-CUST-' . str_pad($nextNum, 3, '0', STR_PAD_LEFT);
+        $pdo->prepare("INSERT INTO customers (code, name, type, email, phone, whatsapp, country) VALUES (?,?,?,?,?,?,?)")
+            ->execute([
+                $newCode,
+                $newCustomerName,
+                'individual',
+                trim($_POST['new_customer_email'] ?? ''),
+                trim($_POST['new_customer_phone'] ?? ''),
+                trim($_POST['new_customer_phone'] ?? ''),
+                'Indonesia'
+            ]);
+        $customerId = (int)$pdo->lastInsertId();
+    }
 
     if ($customerId <= 0 || $startDate === '' || $endDate === '') {
         $_SESSION['flash_message'] = 'Customer, tanggal mulai, dan tanggal selesai wajib diisi.';
@@ -347,13 +367,33 @@ include 'layout-header.php';
             <div style="margin-bottom:6px;font-size:13px;font-weight:600;color:#7C2D12;">👤 1. Data Tamu &amp; Jadwal</div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;">
                 <div style="grid-column:1/-1;">
-                    <label style="display:block;margin-bottom:3px;font-weight:500;font-size:12px;">Customer *</label>
-                    <select name="customer_id" required style="width:100%;padding:5px 7px;border:1px solid #ccc;border-radius:4px;font-family:inherit;font-size:12.5px;box-sizing:border-box;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
+                        <label style="font-weight:500;font-size:12px;">Customer *</label>
+                        <a href="javascript:void(0)" onclick="toggleNewCustomer()" id="newCustomerToggleLink" style="font-size:11.5px;color:#C2410C;font-weight:600;text-decoration:none;">+ Tambah Customer Baru</a>
+                    </div>
+                    <select name="customer_id" id="customerSelect" required style="width:100%;padding:5px 7px;border:1px solid #ccc;border-radius:4px;font-family:inherit;font-size:12.5px;box-sizing:border-box;">
                         <option value="">-- Pilih Customer --</option>
                         <?php foreach ($customers as $c): ?>
                             <option value="<?php echo $c['id']; ?>"><?php echo htmlspecialchars($c['name'] . ' (' . $c['phone'] . ')'); ?></option>
                         <?php endforeach; ?>
                     </select>
+                    <div id="newCustomerBox" style="display:none;margin-top:6px;padding:8px;background:#FFF7ED;border:1px solid #FDE4CC;border-radius:6px;">
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;">
+                            <div style="grid-column:1/-1;">
+                                <label style="display:block;margin-bottom:3px;font-weight:500;font-size:11.5px;">Nama Customer *</label>
+                                <input type="text" name="new_customer_name" id="newCustomerName" placeholder="Nama lengkap tamu" style="width:100%;padding:5px 7px;border:1px solid #ccc;border-radius:4px;font-family:inherit;font-size:12.5px;box-sizing:border-box;">
+                            </div>
+                            <div>
+                                <label style="display:block;margin-bottom:3px;font-weight:500;font-size:11.5px;">No. HP / WA</label>
+                                <input type="text" name="new_customer_phone" placeholder="08xxxxxxxxxx" style="width:100%;padding:5px 7px;border:1px solid #ccc;border-radius:4px;font-family:inherit;font-size:12.5px;box-sizing:border-box;">
+                            </div>
+                            <div>
+                                <label style="display:block;margin-bottom:3px;font-weight:500;font-size:11.5px;">Email (opsional)</label>
+                                <input type="email" name="new_customer_email" placeholder="email@contoh.com" style="width:100%;padding:5px 7px;border:1px solid #ccc;border-radius:4px;font-family:inherit;font-size:12.5px;box-sizing:border-box;">
+                            </div>
+                        </div>
+                        <div style="font-size:10.5px;color:#888;margin-top:5px;">* Otomatis tersimpan ke database Pelanggan saat pesanan disimpan.</div>
+                    </div>
                 </div>
                 <div>
                     <label style="display:block;margin-bottom:3px;font-weight:500;font-size:12px;">Jumlah Pax *</label>
@@ -657,6 +697,25 @@ include 'layout-header.php';
 </div>
 
 <script>
+    function toggleNewCustomer() {
+        var box = document.getElementById('newCustomerBox');
+        var select = document.getElementById('customerSelect');
+        var link = document.getElementById('newCustomerToggleLink');
+        var showing = box.style.display !== 'none';
+        if (showing) {
+            box.style.display = 'none';
+            select.required = true;
+            select.disabled = false;
+            link.textContent = '+ Tambah Customer Baru';
+        } else {
+            box.style.display = 'block';
+            select.value = '';
+            select.required = false;
+            select.disabled = true;
+            link.textContent = '← Pilih dari Daftar Customer';
+        }
+    }
+
     function selectMode(mode) {
         document.getElementById('bookingModeSelect').value = mode;
         document.querySelectorAll('.mode-card').forEach(card => {
