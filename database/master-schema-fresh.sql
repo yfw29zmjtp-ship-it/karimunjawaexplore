@@ -71,7 +71,7 @@ CREATE TABLE IF NOT EXISTS `businesses` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 INSERT IGNORE INTO `businesses` (`id`, `business_code`, `business_name`, `business_type`, `database_name`, `slug`, `owner_id`, `description`, `is_active`) VALUES
-(1, 'SUNSEA', 'Explore Karimunjawa', 'travel_bureau', 'GANTI_NAMA_DATABASE', 'sunsea', 1, 'Biro Wisata Explore Karimunjawa - Invoice, Penawaran, Kalkulasi Harga', 1);
+(1, 'SUNSEA', 'Explore Karimunjawa', 'travel_bureau', 'karw6956_explore', 'sunsea', 1, 'Biro Wisata Explore Karimunjawa - Invoice, Penawaran, Kalkulasi Harga', 1);
 
 -- ============================================================
 -- 4. MENU ITEMS + BUSINESS MENU CONFIG (kosong, hanya untuk kompatibilitas kode)
