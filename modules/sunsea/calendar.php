@@ -46,11 +46,16 @@ if (($_GET['ajax'] ?? '') === 'detail' && (int)($_GET['id'] ?? 0) > 0) {
     $totalExpense = 0;
     foreach ($expenses as $ex) $totalExpense += (float)$ex['amount'];
 
+    $totalRab = 0;
+    foreach ($items as $it) $totalRab += (float)$it['total_sell'];
+
     echo json_encode([
         'booking'      => $booking,
         'items'        => $items,
         'expenses'     => $expenses,
         'totalExpense' => $totalExpense,
+        'totalRab'     => $totalRab,
+        'margin'       => $totalRab - $totalExpense,
     ]);
     exit;
 }
@@ -202,19 +207,36 @@ include 'layout-header.php';
 </div>
 
 <!-- Modal Detail Reservasi + Pengeluaran (Finance) -->
-<div id="bookingDetailOverlay" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,0.5);z-index:1000;align-items:center;justify-content:center;">
-    <div class="ss-card" style="width:100%;max-width:560px;margin:16px;max-height:88vh;overflow:auto;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-            <div class="ss-card-title" style="margin:0;">Detail Reservasi</div>
-            <button type="button" onclick="closeBookingDetail()" style="background:none;border:none;cursor:pointer;color:var(--ss-muted);">
+<div id="bookingDetailOverlay" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,0.55);z-index:1000;align-items:stretch;justify-content:stretch;">
+    <div style="width:100%;height:100%;display:flex;flex-direction:column;background:#fff;">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 20px;border-bottom:1px solid var(--ss-gray-1);flex-shrink:0;">
+            <div style="font-size:15px;font-weight:700;">Detail Reservasi</div>
+            <button type="button" onclick="closeBookingDetail()" style="background:none;border:none;cursor:pointer;color:var(--ss-muted);padding:4px;">
                 <i data-feather="x"></i>
             </button>
         </div>
-        <div id="bookingDetailBody">
+        <div id="bookingDetailBody" style="flex:1;overflow:auto;padding:16px 20px;max-width:900px;width:100%;margin:0 auto;">
             <div style="text-align:center;padding:30px;color:var(--ss-muted);">Memuat...</div>
         </div>
     </div>
 </div>
+
+<style>
+    #bookingDetailBody .bd-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px 14px; font-size: 12px; margin-bottom: 12px; background: var(--ss-gray-1); border-radius: 8px; padding: 10px 12px; }
+    #bookingDetailBody .bd-grid strong { display: block; color: var(--ss-muted); font-weight: 600; font-size: 10.5px; text-transform: uppercase; letter-spacing: .3px; }
+    #bookingDetailBody .bd-section-title { font-size: 12.5px; font-weight: 700; margin: 14px 0 6px; color: #0f172a; }
+    #bookingDetailBody table.ss-table { font-size: 12px; margin-bottom: 0; }
+    #bookingDetailBody table.ss-table th { font-size: 10.5px; padding: 5px 8px; }
+    #bookingDetailBody table.ss-table td { padding: 5px 8px; }
+    #bookingDetailBody .bd-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 14px; }
+    #bookingDetailBody .bd-summary-box { border-radius: 8px; padding: 10px 12px; }
+    #bookingDetailBody .bd-summary-box .bd-label { font-size: 10.5px; text-transform: uppercase; letter-spacing: .3px; opacity: .8; }
+    #bookingDetailBody .bd-summary-box .bd-value { font-size: 15px; font-weight: 700; margin-top: 2px; }
+    @media (max-width: 640px) {
+        #bookingDetailBody .bd-grid { grid-template-columns: repeat(2, 1fr); }
+        #bookingDetailBody .bd-summary { grid-template-columns: 1fr; }
+    }
+</style>
 
 <script>
     function openBookingDetail(id) {
@@ -222,6 +244,7 @@ include 'layout-header.php';
         var body = document.getElementById('bookingDetailBody');
         body.innerHTML = '<div style="text-align:center;padding:30px;color:var(--ss-muted);">Memuat...</div>';
         overlay.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
 
         fetch('calendar.php?ajax=detail&id=' + id)
             .then(function(r) {
@@ -239,48 +262,55 @@ include 'layout-header.php';
                 var statusLabels = {
                     draft: 'Draft', confirmed: 'Confirmed', ongoing: 'Ongoing', completed: 'Completed', cancelled: 'Cancelled'
                 };
+                var marginColor = data.margin >= 0 ? 'var(--ss-success)' : 'var(--ss-danger)';
 
                 var html = '';
-                html += '<div style="margin-bottom:14px;">';
-                html += '<div style="font-size:16px;font-weight:700;">' + b.customer_name + '</div>';
-                html += '<div style="font-size:12px;color:var(--ss-muted);">' + b.booking_no + (b.customer_phone ? ' \u00b7 ' + b.customer_phone : '') + '</div>';
+                html += '<div style="margin-bottom:12px;display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">';
+                html += '<div><div style="font-size:15px;font-weight:700;">' + b.customer_name + '</div>';
+                html += '<div style="font-size:11.5px;color:var(--ss-muted);">' + b.booking_no + (b.customer_phone ? ' \u00b7 ' + b.customer_phone : '') + '</div></div>';
+                html += '<span class="ss-badge" style="align-self:center;">' + (statusLabels[b.status] || b.status) + '</span>';
                 html += '</div>';
 
-                html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12.5px;margin-bottom:14px;background:var(--ss-gray-1);border-radius:8px;padding:10px;">';
-                html += '<div><strong>Tanggal:</strong><br>' + b.start_date + ' s/d ' + b.end_date + '</div>';
-                html += '<div><strong>Pax:</strong><br>' + b.pax_count + ' orang</div>';
-                html += '<div><strong>Paket:</strong><br>' + (b.package_name || '-') + '</div>';
-                html += '<div><strong>Status:</strong><br>' + (statusLabels[b.status] || b.status) + '</div>';
+                html += '<div class="bd-grid">';
+                html += '<div><strong>Tanggal</strong>' + b.start_date + ' s/d ' + b.end_date + '</div>';
+                html += '<div><strong>Pax</strong>' + b.pax_count + ' orang</div>';
+                html += '<div><strong>Paket</strong>' + (b.package_name || '-') + '</div>';
+                html += '<div><strong>Total RAB/Penawaran</strong>' + fmt(data.totalRab) + '</div>';
                 html += '</div>';
 
-                html += '<div class="ss-card-title" style="font-size:13px;margin-bottom:6px;">Item Booking</div>';
+                html += '<div class="bd-section-title">Item Booking (RAB)</div>';
                 if (data.items.length === 0) {
-                    html += '<div style="font-size:12px;color:var(--ss-muted);margin-bottom:14px;">Belum ada item.</div>';
+                    html += '<div style="font-size:12px;color:var(--ss-muted);">Belum ada item.</div>';
                 } else {
-                    html += '<table class="ss-table" style="margin-bottom:14px;"><thead><tr><th>Komponen</th><th style="width:60px;">Qty</th><th style="width:110px;">Subtotal</th></tr></thead><tbody>';
+                    html += '<table class="ss-table"><thead><tr><th>Komponen</th><th style="width:70px;">Qty</th><th style="width:100px;">Subtotal</th></tr></thead><tbody>';
                     data.items.forEach(function(it) {
-                        html += '<tr><td style="font-size:12px;">' + it.component_name + (it.is_done == 1 ? ' <span style="color:var(--ss-success);">\u2713</span>' : '') + '</td>' +
-                            '<td style="font-size:12px;">' + it.qty + ' ' + (it.unit || '') + '</td>' +
-                            '<td style="font-size:12px;font-weight:600;">' + fmt(it.total_sell) + '</td></tr>';
+                        html += '<tr><td>' + it.component_name + (it.is_done == 1 ? ' <span style="color:var(--ss-success);">\u2713</span>' : '') + '</td>' +
+                            '<td>' + it.qty + ' ' + (it.unit || '') + '</td>' +
+                            '<td style="font-weight:600;">' + fmt(it.total_sell) + '</td></tr>';
                     });
                     html += '</tbody></table>';
                 }
 
-                html += '<div class="ss-card-title" style="font-size:13px;margin-bottom:6px;">Pengeluaran Trip Ini (dari Finance)</div>';
+                html += '<div class="bd-section-title">Pengeluaran Trip Ini (dari Finance)</div>';
                 if (data.expenses.length === 0) {
                     html += '<div style="font-size:12px;color:var(--ss-muted);">Belum ada pengeluaran dicatat di Finance untuk trip ini.</div>';
                 } else {
-                    html += '<table class="ss-table"><thead><tr><th style="width:80px;">Tanggal</th><th>Keterangan</th><th style="width:110px;">Jumlah</th></tr></thead><tbody>';
+                    html += '<table class="ss-table"><thead><tr><th style="width:75px;">Tanggal</th><th>Keterangan</th><th style="width:100px;">Jumlah</th></tr></thead><tbody>';
                     data.expenses.forEach(function(ex) {
-                        html += '<tr><td style="font-size:12px;">' + ex.transaction_date + '</td>' +
-                            '<td style="font-size:12px;">' + ex.description + (ex.category ? '<br><small style="color:var(--ss-muted);">' + ex.category + '</small>' : '') + '</td>' +
-                            '<td style="font-size:12px;font-weight:600;color:var(--ss-danger);">' + fmt(ex.amount) + '</td></tr>';
+                        html += '<tr><td>' + ex.transaction_date + '</td>' +
+                            '<td>' + ex.description + (ex.category ? '<br><small style="color:var(--ss-muted);">' + ex.category + '</small>' : '') + '</td>' +
+                            '<td style="font-weight:600;color:var(--ss-danger);">' + fmt(ex.amount) + '</td></tr>';
                     });
                     html += '</tbody></table>';
-                    html += '<div style="text-align:right;margin-top:8px;font-size:13px;font-weight:700;">Total Pengeluaran: <span style="color:var(--ss-danger);">' + fmt(data.totalExpense) + '</span></div>';
                 }
 
-                html += '<div style="margin-top:14px;display:flex;gap:8px;">';
+                html += '<div class="bd-summary">';
+                html += '<div class="bd-summary-box" style="background:var(--ss-gray-1);"><div class="bd-label">Total RAB/Penawaran</div><div class="bd-value">' + fmt(data.totalRab) + '</div></div>';
+                html += '<div class="bd-summary-box" style="background:#FEF2F2;"><div class="bd-label" style="color:var(--ss-danger);">Total Pengeluaran</div><div class="bd-value" style="color:var(--ss-danger);">' + fmt(data.totalExpense) + '</div></div>';
+                html += '<div class="bd-summary-box" style="background:#F0FDF4;"><div class="bd-label" style="color:' + marginColor + ';">Margin</div><div class="bd-value" style="color:' + marginColor + ';">' + fmt(data.margin) + '</div></div>';
+                html += '</div>';
+
+                html += '<div style="margin-top:16px;display:flex;gap:8px;">';
                 html += '<a href="bookings.php?view=' + b.id + '" class="ss-btn ss-btn-outline ss-btn-sm">Buka Halaman Booking</a>';
                 html += '<a href="finance.php?customer_id=' + b.customer_id + '" class="ss-btn ss-btn-outline ss-btn-sm">Lihat di Finance</a>';
                 html += '</div>';
@@ -295,6 +325,7 @@ include 'layout-header.php';
 
     function closeBookingDetail() {
         document.getElementById('bookingDetailOverlay').style.display = 'none';
+        document.body.style.overflow = '';
     }
 </script>
 
