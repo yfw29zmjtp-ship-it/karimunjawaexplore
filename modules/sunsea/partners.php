@@ -95,6 +95,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Location: partners.php');
         exit;
     }
+
+    if ($action === 'update_room') {
+        $roomId = (int)($_POST['room_id'] ?? 0);
+        $partnerId = (int)($_POST['partner_id'] ?? 0);
+        $roomType = trim($_POST['room_type'] ?? '');
+        if ($roomId > 0 && $partnerId > 0 && $roomType !== '') {
+            $pdo->prepare("UPDATE accommodation_rooms
+                SET partner_id=?, room_type=?, capacity=?, price_cost=?, price_sell=?, quota=?, notes=?, is_active=?, updated_at=NOW()
+                WHERE id=?")
+                ->execute([
+                    $partnerId,
+                    $roomType,
+                    max(1, (int)($_POST['capacity'] ?? 2)),
+                    (float)str_replace(['.', ','], ['', '.'], $_POST['price_cost'] ?? '0'),
+                    (float)str_replace(['.', ','], ['', '.'], $_POST['price_sell'] ?? '0'),
+                    max(0, (int)($_POST['quota'] ?? 0)),
+                    trim($_POST['notes'] ?? ''),
+                    isset($_POST['is_active']) ? 1 : 0,
+                    $roomId,
+                ]);
+            $_SESSION['flash_message'] = 'Tipe kamar/homestay berhasil diperbarui.';
+            $_SESSION['flash_type'] = 'success';
+        }
+        header('Location: partners.php');
+        exit;
+    }
 }
 
 $partners = safeFetchAllPartners($pdo, "SELECT * FROM accommodation_partners ORDER BY is_active DESC, partner_type, name", [], 'mitra penginapan');
@@ -228,6 +254,7 @@ include 'layout-header.php';
                     <th>Harga Modal</th>
                     <th>Harga Jual</th>
                     <th>Quota</th>
+                    <th>Aksi</th>
                 </tr>
             </thead>
             <tbody>
@@ -239,6 +266,22 @@ include 'layout-header.php';
                         <td><?php echo sunseaRupiah((float)$r['price_cost']); ?></td>
                         <td><?php echo sunseaRupiah((float)$r['price_sell']); ?></td>
                         <td><?php echo (int)$r['quota']; ?></td>
+                        <td>
+                            <button type="button" class="ss-btn ss-btn-sm ss-btn-outline"
+                                onclick='openEditRoomModal(<?php echo json_encode([
+                                                                "id" => (int)$r['id'],
+                                                                "partner_id" => (int)$r['partner_id'],
+                                                                "room_type" => $r['room_type'],
+                                                                "capacity" => (int)$r['capacity'],
+                                                                "price_cost" => (float)$r['price_cost'],
+                                                                "price_sell" => (float)$r['price_sell'],
+                                                                "quota" => (int)$r['quota'],
+                                                                "notes" => $r['notes'],
+                                                                "is_active" => (int)$r['is_active'],
+                                                            ]); ?>)'>
+                                <i data-feather="edit-2"></i> Edit
+                            </button>
+                        </td>
                     </tr>
                 <?php endforeach; ?>
             </tbody>
@@ -246,4 +289,53 @@ include 'layout-header.php';
     </div>
 </div>
 
-<?php include 'layout-footer.php';
+<!-- Modal Edit Room -->
+<div id="editRoomModalOverlay" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,0.5);z-index:1000;align-items:center;justify-content:center;">
+    <div class="ss-card" style="width:100%;max-width:480px;margin:16px;">
+        <div class="ss-card-title" style="margin-bottom:10px;">Edit Tipe Kamar/Homestay</div>
+        <form method="POST">
+            <input type="hidden" name="action" value="update_room">
+            <input type="hidden" name="room_id" id="editRoomId">
+            <div class="ss-form-grid cols-2">
+                <div class="ss-form-group" style="grid-column:1/-1;">
+                    <label class="ss-label">Mitra</label>
+                    <select class="ss-select" name="partner_id" id="editRoomPartnerId" required>
+                        <?php foreach ($partners as $p): ?>
+                            <option value="<?php echo $p['id']; ?>"><?php echo htmlspecialchars($p['name'] . ' (' . $p['partner_type'] . ')'); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="ss-form-group"><label class="ss-label">Tipe Kamar</label><input class="ss-input" name="room_type" id="editRoomType" required></div>
+                <div class="ss-form-group"><label class="ss-label">Kapasitas</label><input class="ss-input" name="capacity" id="editRoomCapacity" type="number" min="1"></div>
+                <div class="ss-form-group"><label class="ss-label">Harga Modal</label><input class="ss-input" name="price_cost" id="editRoomPriceCost"></div>
+                <div class="ss-form-group"><label class="ss-label">Harga Jual</label><input class="ss-input" name="price_sell" id="editRoomPriceSell"></div>
+                <div class="ss-form-group"><label class="ss-label">Quota</label><input class="ss-input" name="quota" id="editRoomQuota" type="number" min="0"></div>
+                <div class="ss-form-group" style="grid-column:1/-1;"><label class="ss-label">Catatan</label><input class="ss-input" name="notes" id="editRoomNotes"></div>
+                <div class="ss-form-group"><label><input type="checkbox" name="is_active" id="editRoomIsActive"> Aktif</label></div>
+            </div>
+            <div style="display:flex;gap:10px;margin-top:10px;">
+                <button class="ss-btn ss-btn-primary" type="submit"><i data-feather="save"></i> Simpan Perubahan</button>
+                <button class="ss-btn ss-btn-outline" type="button" onclick="closeEditRoomModal()">Batal</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openEditRoomModal(room) {
+        document.getElementById('editRoomId').value = room.id;
+        document.getElementById('editRoomPartnerId').value = room.partner_id;
+        document.getElementById('editRoomType').value = room.room_type;
+        document.getElementById('editRoomCapacity').value = room.capacity;
+        document.getElementById('editRoomPriceCost').value = room.price_cost;
+        document.getElementById('editRoomPriceSell').value = room.price_sell;
+        document.getElementById('editRoomQuota').value = room.quota;
+        document.getElementById('editRoomNotes').value = room.notes;
+        document.getElementById('editRoomIsActive').checked = !!room.is_active;
+        document.getElementById('editRoomModalOverlay').style.display = 'flex';
+    }
+
+    function closeEditRoomModal() {
+        document.getElementById('editRoomModalOverlay').style.display = 'none';
+    }
+</script>
