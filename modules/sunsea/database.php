@@ -55,14 +55,65 @@ $activePage = 'database';
 include 'layout-header.php';
 ?>
 
-<div class="ss-card" style="margin-bottom:16px;">
-    <div class="ss-card-header">
+<style>
+    .db-page .ss-card {
+        padding: 14px 16px;
+    }
+
+    .db-page .ss-card-title {
+        font-size: 13px;
+    }
+
+    .db-page .ss-card-sub {
+        font-size: 11px;
+    }
+
+    .db-page .ss-stats-grid {
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 10px;
+    }
+
+    .db-page .ss-stat-card {
+        padding: 10px 12px;
+        gap: 10px;
+    }
+
+    .db-page .ss-stat-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+    }
+
+    .db-page .ss-stat-icon svg {
+        width: 15px;
+        height: 15px;
+    }
+
+    .db-page .ss-stat-value {
+        font-size: 16px;
+    }
+
+    .db-page .ss-stat-label {
+        font-size: 10.5px;
+        margin-top: 2px;
+    }
+
+    .db-page .ss-btn {
+        font-size: 11.5px;
+        padding: 6px 10px;
+        height: auto;
+    }
+</style>
+
+<div class="db-page">
+<div class="ss-card" style="margin-bottom:14px;">
+    <div class="ss-card-header" style="margin-bottom:12px;">
         <div>
             <div class="ss-card-title">Database Master Explore Karimunjawa</div>
             <div class="ss-card-sub">Pusat data referensi untuk operasional booking, quotation, dan invoice</div>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <a href="partners.php" class="ss-btn ss-btn-primary ss-btn-sm"><i data-feather="plus"></i> Tambah Database Baru</a>
+            <a href="partners.php" class="ss-btn ss-btn-primary ss-btn-sm"><i data-feather="plus" style="width:12px;height:12px;"></i> Tambah Database Baru</a>
         </div>
     </div>
 
@@ -126,13 +177,13 @@ include 'layout-header.php';
     </div>
 </div>
 
-<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;">
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;">
     <div class="ss-card">
-        <div class="ss-card-title" style="margin-bottom:6px;">Database Harga Hotel & Homestay</div>
-        <div class="ss-card-sub" style="margin-bottom:12px;">Master mitra penginapan, tipe kamar, modal, dan harga jual.</div>
+        <div class="ss-card-title" style="margin-bottom:4px;">Database Harga Hotel & Homestay</div>
+        <div class="ss-card-sub" style="margin-bottom:10px;">Master mitra penginapan, tipe kamar, modal, dan harga jual.</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <a href="partners.php" class="ss-btn ss-btn-primary"><i data-feather="building"></i> Kelola Hotel/Homestay</a>
-            <a href="partners.php" class="ss-btn ss-btn-outline"><i data-feather="plus"></i> Tambah Hotel/Homestay</a>
+            <a href="partners.php" class="ss-btn ss-btn-primary ss-btn-sm"><i data-feather="building" style="width:12px;height:12px;"></i> Kelola Hotel/Homestay</a>
+            <a href="partners.php" class="ss-btn ss-btn-outline ss-btn-sm"><i data-feather="plus" style="width:12px;height:12px;"></i> Tambah Hotel/Homestay</a>
         </div>
     </div>
 
@@ -198,6 +249,7 @@ include 'layout-header.php';
             <a href="coordinators.php" class="ss-btn ss-btn-outline"><i data-feather="plus"></i> Tambah Koordinator</a>
         </div>
     </div>
+</div>
 </div>
 
 <?php include 'layout-footer.php';
