@@ -234,10 +234,23 @@ include 'layout-header.php';
     #bookingDetailBody .bd-summary-box { border-radius: 8px; padding: 10px 12px; }
     #bookingDetailBody .bd-summary-box .bd-label { font-size: 10.5px; text-transform: uppercase; letter-spacing: .3px; opacity: .8; }
     #bookingDetailBody .bd-summary-box .bd-value { font-size: 15px; font-weight: 700; margin-top: 2px; }
+    #bookingDetailBody .bd-chart-row { display: grid; grid-template-columns: 160px 1fr; gap: 18px; align-items: center; margin-top: 14px; padding: 12px; background: var(--ss-gray-1); border-radius: 8px; }
+    #bookingDetailBody .bd-donut { width: 140px; height: 140px; border-radius: 50%; position: relative; margin: 0 auto; }
+    #bookingDetailBody .bd-donut-center { position: absolute; inset: 16px; background: #fff; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    #bookingDetailBody .bd-donut-center .pct { font-size: 17px; font-weight: 700; }
+    #bookingDetailBody .bd-donut-center .lbl { font-size: 9.5px; color: var(--ss-muted); text-transform: uppercase; letter-spacing: .3px; }
+    #bookingDetailBody .bd-legend { font-size: 12px; }
+    #bookingDetailBody .bd-legend-item { display: flex; align-items: center; gap: 7px; padding: 4px 0; }
+    #bookingDetailBody .bd-legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    #bookingDetailBody .bd-mitra-list { margin-top: 6px; }
+    #bookingDetailBody .bd-mitra-item { display: flex; justify-content: space-between; align-items: center; padding: 7px 10px; border-radius: 6px; font-size: 12px; margin-bottom: 5px; }
+    #bookingDetailBody .bd-mitra-item.paid { background: #F0FDF4; color: #15803d; }
+    #bookingDetailBody .bd-mitra-item.unpaid { background: #FFF7ED; color: #C2410C; }
     @media (max-width: 640px) {
         #bookingDetailBody .bd-grid { grid-template-columns: repeat(2, 1fr); }
         #bookingDetailBody .bd-summary { grid-template-columns: 1fr; }
         #bookingDetailBody .bd-cols { grid-template-columns: 1fr; }
+        #bookingDetailBody .bd-chart-row { grid-template-columns: 1fr; }
     }
 </style>
 
@@ -321,6 +334,50 @@ include 'layout-header.php';
                 html += '<div class="bd-summary-box" style="background:var(--ss-gray-1);"><div class="bd-label">Total RAB/Penawaran</div><div class="bd-value">' + fmt(data.totalRab) + '</div></div>';
                 html += '<div class="bd-summary-box" style="background:#FEF2F2;"><div class="bd-label" style="color:var(--ss-danger);">Total Pengeluaran</div><div class="bd-value" style="color:var(--ss-danger);">' + fmt(data.totalExpense) + '</div></div>';
                 html += '<div class="bd-summary-box" style="background:#F0FDF4;"><div class="bd-label" style="color:' + marginColor + ';">Margin</div><div class="bd-value" style="color:' + marginColor + ';">' + fmt(data.margin) + '</div></div>';
+                html += '</div>';
+
+                // Donut chart: proporsi pemasukan vs pengeluaran + persentase profit di tengah
+                var incomeVal = parseFloat(data.totalRab) || 0;
+                var expenseVal = parseFloat(data.totalExpense) || 0;
+                var chartTotal = incomeVal + expenseVal;
+                var incomeShare = chartTotal > 0 ? (incomeVal / chartTotal * 100) : 0;
+                var profitPct = incomeVal > 0 ? (data.margin / incomeVal * 100) : 0;
+                var profitPctColor = profitPct >= 0 ? 'var(--ss-success)' : 'var(--ss-danger)';
+
+                html += '<div class="bd-chart-row">';
+                html += '<div class="bd-donut" style="background:conic-gradient(#16a34a 0% ' + incomeShare + '%, #dc2626 ' + incomeShare + '% 100%);">';
+                html += '<div class="bd-donut-center"><div class="pct" style="color:' + profitPctColor + ';">' + profitPct.toFixed(1) + '%</div><div class="lbl">Profit</div></div>';
+                html += '</div>';
+                html += '<div class="bd-legend">';
+                html += '<div class="bd-legend-item"><span class="bd-legend-dot" style="background:#16a34a;"></span> Pemasukan (RAB) &mdash; ' + fmt(incomeVal) + '</div>';
+                html += '<div class="bd-legend-item"><span class="bd-legend-dot" style="background:#dc2626;"></span> Pengeluaran &mdash; ' + fmt(expenseVal) + '</div>';
+                html += '<div style="margin-top:6px;color:var(--ss-muted);font-size:11px;">Margin bersih: <strong style="color:' + marginColor + ';">' + fmt(data.margin) + '</strong></div>';
+                html += '</div>';
+                html += '</div>';
+
+                // Checklist layanan mitra: cek apakah sudah ada pengeluaran tercatat untuk tiap kategori
+                var mitraCategories = [
+                    { label: 'Tiket Kapal (Berangkat & Pulang)', keywords: ['tiket', 'kapal', 'kmp', 'express', 'ferry', 'boat'] },
+                    { label: 'Penginapan (Hotel/Homestay)', keywords: ['hotel', 'homestay', 'penginapan', 'kamar', 'inn'] },
+                    { label: 'Rental Motor/Mobil & Transportasi', keywords: ['motor', 'mobil', 'rental', 'transport', 'antar', 'jemput', 'sewa'] },
+                    { label: 'Guide/Pemandu Wisata', keywords: ['guide', 'pemandu'] },
+                    { label: 'Catering/Konsumsi', keywords: ['makan', 'catering', 'konsumsi'] }
+                ];
+                html += '<div class="bd-section-title">Checklist Pembayaran ke Mitra</div>';
+                html += '<div class="bd-mitra-list">';
+                mitraCategories.forEach(function(cat) {
+                    var paidAmount = 0;
+                    data.expenses.forEach(function(ex) {
+                        var haystack = ((ex.category || '') + ' ' + (ex.description || '')).toLowerCase();
+                        var matched = cat.keywords.some(function(kw) { return haystack.indexOf(kw) !== -1; });
+                        if (matched) paidAmount += parseFloat(ex.amount) || 0;
+                    });
+                    var isPaid = paidAmount > 0;
+                    html += '<div class="bd-mitra-item ' + (isPaid ? 'paid' : 'unpaid') + '">';
+                    html += '<span>' + (isPaid ? '\u2713' : '\u26a0') + ' ' + cat.label + '</span>';
+                    html += '<strong>' + (isPaid ? fmt(paidAmount) + ' (sudah dibayar)' : 'Belum dibayar') + '</strong>';
+                    html += '</div>';
+                });
                 html += '</div>';
 
                 html += '<div style="margin-top:16px;display:flex;gap:8px;">';
