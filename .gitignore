@@ -54,6 +54,7 @@ uploads/
 !sql/user-avatars-table.sql
 !database/sunsea-setup.sql
 !database/master-schema-fresh.sql
+!database/FULL-INSTALL-satu-file.sql
 
 # =============================================
 # Debug / Check / Test / Fix / Diagnostic scripts
