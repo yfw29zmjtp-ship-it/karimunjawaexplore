@@ -288,11 +288,13 @@ include 'layout-header.php';
                 if (data.items.length === 0) {
                     html += '<div style="font-size:12px;color:var(--ss-muted);">Belum ada item.</div>';
                 } else {
-                    html += '<table class="ss-table"><thead><tr><th>Komponen</th><th style="width:70px;">Qty</th><th style="width:100px;">Subtotal</th></tr></thead><tbody>';
+                    html += '<table class="ss-table"><thead><tr><th>Komponen</th><th style="width:80px;text-align:center;">Qty</th><th style="width:115px;white-space:nowrap;">Subtotal</th></tr></thead><tbody>';
                     data.items.forEach(function(it) {
+                        var qtyNum = parseFloat(it.qty);
+                        var qtyStr = (qtyNum % 1 === 0 ? qtyNum.toFixed(0) : qtyNum);
                         html += '<tr><td>' + it.component_name + (it.is_done == 1 ? ' <span style="color:var(--ss-success);">\u2713</span>' : '') + '</td>' +
-                            '<td>' + it.qty + ' ' + (it.unit || '') + '</td>' +
-                            '<td style="font-weight:600;">' + fmt(it.total_sell) + '</td></tr>';
+                            '<td style="text-align:center;white-space:nowrap;">' + qtyStr + ' ' + (it.unit || '') + '</td>' +
+                            '<td style="font-weight:600;white-space:nowrap;">' + fmt(it.total_sell) + '</td></tr>';
                     });
                     html += '</tbody></table>';
                 }
@@ -303,11 +305,11 @@ include 'layout-header.php';
                 if (data.expenses.length === 0) {
                     html += '<div style="font-size:12px;color:var(--ss-muted);">Belum ada pengeluaran dicatat di Finance untuk trip ini.</div>';
                 } else {
-                    html += '<table class="ss-table"><thead><tr><th style="width:75px;">Tanggal</th><th>Keterangan</th><th style="width:100px;">Jumlah</th></tr></thead><tbody>';
+                    html += '<table class="ss-table"><thead><tr><th style="width:90px;white-space:nowrap;">Tanggal</th><th>Keterangan</th><th style="width:115px;white-space:nowrap;">Jumlah</th></tr></thead><tbody>';
                     data.expenses.forEach(function(ex) {
-                        html += '<tr><td>' + ex.transaction_date + '</td>' +
+                        html += '<tr><td style="white-space:nowrap;">' + ex.transaction_date + '</td>' +
                             '<td>' + ex.description + (ex.category ? '<br><small style="color:var(--ss-muted);">' + ex.category + '</small>' : '') + '</td>' +
-                            '<td style="font-weight:600;color:var(--ss-danger);">' + fmt(ex.amount) + '</td></tr>';
+                            '<td style="font-weight:600;color:var(--ss-danger);white-space:nowrap;">' + fmt(ex.amount) + '</td></tr>';
                     });
                     html += '</tbody></table>';
                 }
