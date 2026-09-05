@@ -84,20 +84,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         // Logo upload
+        $logoUploadError = '';
         if (!empty($_FILES['company_logo']['tmp_name'])) {
-            $uploadDir = __DIR__ . '/../../uploads/sunsea/';
-            if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
-            $ext = strtolower(pathinfo($_FILES['company_logo']['name'], PATHINFO_EXTENSION));
-            if (in_array($ext, ['png', 'jpg', 'jpeg', 'webp', 'gif'])) {
-                $fname = 'company_logo.' . $ext;
-                if (move_uploaded_file($_FILES['company_logo']['tmp_name'], $uploadDir . $fname)) {
-                    setSetting($pdo, 'company_logo', 'uploads/sunsea/' . $fname);
+            if ((int)($_FILES['company_logo']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+                $logoUploadError = 'Upload logo gagal (kode error: ' . $_FILES['company_logo']['error'] . ').';
+            } else {
+                $uploadDir = __DIR__ . '/../../uploads/sunsea/';
+                if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
+                $ext = strtolower(pathinfo($_FILES['company_logo']['name'], PATHINFO_EXTENSION));
+                if (!in_array($ext, ['png', 'jpg', 'jpeg', 'webp', 'gif'])) {
+                    $logoUploadError = 'Format logo harus PNG, JPG, JPEG, WEBP, atau GIF.';
+                } else {
+                    // Remove old logo files with a different extension so stale files don't linger.
+                    foreach (['png', 'jpg', 'jpeg', 'webp', 'gif'] as $oldExt) {
+                        $oldFile = $uploadDir . 'company_logo.' . $oldExt;
+                        if ($oldExt !== $ext && file_exists($oldFile)) unlink($oldFile);
+                    }
+                    $fname = 'company_logo.' . $ext;
+                    if (move_uploaded_file($_FILES['company_logo']['tmp_name'], $uploadDir . $fname)) {
+                        setSetting($pdo, 'company_logo', 'uploads/sunsea/' . $fname);
+                    } else {
+                        $logoUploadError = 'Gagal menyimpan file logo ke server (cek permission folder uploads/sunsea).';
+                    }
                 }
             }
         }
 
-        $flashMsg = 'Pengaturan perusahaan berhasil disimpan.';
-        $flashType = 'success';
+        if ($logoUploadError) {
+            $flashMsg = 'Data perusahaan disimpan, tetapi logo gagal diupload: ' . $logoUploadError;
+            $flashType = 'error';
+        } else {
+            $flashMsg = 'Pengaturan perusahaan berhasil disimpan.';
+            $flashType = 'success';
+        }
         $tab = 'company';
     }
 
