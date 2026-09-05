@@ -144,20 +144,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // Invoice logo upload
         if (!empty($_FILES['invoice_logo']['tmp_name'])) {
-            $uploadDir = __DIR__ . '/../../uploads/sunsea/';
-            if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
-            $ext = strtolower(pathinfo($_FILES['invoice_logo']['name'], PATHINFO_EXTENSION));
-            if (in_array($ext, ['png', 'jpg', 'jpeg', 'webp', 'gif'])) {
-                $fname = 'invoice_logo.' . $ext . '?t=' . time();
-                $fname = 'invoice_logo.' . $ext;
-                if (move_uploaded_file($_FILES['invoice_logo']['tmp_name'], $uploadDir . $fname)) {
-                    setSetting($pdo, 'invoice_logo', 'uploads/sunsea/' . $fname);
+            if ((int)($_FILES['invoice_logo']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+                $flashMsg = 'Upload logo invoice gagal (kode error: ' . $_FILES['invoice_logo']['error'] . ').';
+                $flashType = 'error';
+            } else {
+                $uploadDir = __DIR__ . '/../../uploads/sunsea/';
+                if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
+                $ext = strtolower(pathinfo($_FILES['invoice_logo']['name'], PATHINFO_EXTENSION));
+                if (!in_array($ext, ['png', 'jpg', 'jpeg', 'webp', 'gif'])) {
+                    $flashMsg = 'Format logo invoice harus PNG, JPG, JPEG, WEBP, atau GIF.';
+                    $flashType = 'error';
+                } else {
+                    // Remove old logo files with a different extension so stale files don't linger.
+                    foreach (['png', 'jpg', 'jpeg', 'webp', 'gif'] as $oldExt) {
+                        $oldFile = $uploadDir . 'invoice_logo.' . $oldExt;
+                        if ($oldExt !== $ext && file_exists($oldFile)) unlink($oldFile);
+                    }
+                    $fname = 'invoice_logo.' . $ext;
+                    if (move_uploaded_file($_FILES['invoice_logo']['tmp_name'], $uploadDir . $fname)) {
+                        setSetting($pdo, 'invoice_logo', 'uploads/sunsea/' . $fname);
+                    } else {
+                        $flashMsg = 'Gagal menyimpan file logo invoice ke server (cek permission folder uploads/sunsea).';
+                        $flashType = 'error';
+                    }
                 }
             }
         }
 
-        $flashMsg = 'Pengaturan invoice berhasil disimpan.';
-        $flashType = 'success';
+        if (empty($flashMsg)) {
+            $flashMsg = 'Pengaturan invoice berhasil disimpan.';
+            $flashType = 'success';
+        } else {
+            $flashMsg = 'Data invoice disimpan, tetapi: ' . $flashMsg;
+        }
         $tab = 'invoice';
     }
 
@@ -535,8 +554,9 @@ $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : '
         <div style="background:#fff;border:1px solid #dde5ef;border-radius:8px;padding:20px;">
             <div style="font-size:14px;font-weight:700;color:#7C2D12;margin-bottom:12px;">👁️ Preview</div>
             <?php if ($cfg['company_logo']): ?>
+                <?php $companyLogoPath = __DIR__ . '/../../' . trim($cfg['company_logo'], '/'); ?>
                 <div style="text-align:center;margin-bottom:12px;padding:12px;background:#f8fbff;border-radius:6px;">
-                    <img src="<?php echo htmlspecialchars($baseUrl . '/' . trim($cfg['company_logo'], '/')); ?>"
+                    <img src="<?php echo htmlspecialchars($baseUrl . '/' . trim($cfg['company_logo'], '/')) . '?v=' . (file_exists($companyLogoPath) ? filemtime($companyLogoPath) : time()); ?>"
                         alt="Logo" style="max-height:80px;max-width:100%;object-fit:contain;">
                 </div>
             <?php else: ?>
@@ -575,8 +595,9 @@ $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : '
                         <input type="file" name="invoice_logo" accept="image/*"
                             style="width:100%;padding:6px;border:1px solid #ccc;border-radius:5px;font-family:inherit;font-size:13px;box-sizing:border-box;">
                         <?php if ($cfg['invoice_logo']): ?>
+                            <?php $invoiceLogoPath = __DIR__ . '/../../' . trim($cfg['invoice_logo'], '/'); ?>
                             <div style="margin-top:8px;padding:8px;background:#f8fbff;border-radius:4px;text-align:center;">
-                                <img src="<?php echo htmlspecialchars($baseUrl . '/' . trim($cfg['invoice_logo'], '/')); ?>"
+                                <img src="<?php echo htmlspecialchars($baseUrl . '/' . trim($cfg['invoice_logo'], '/')) . '?v=' . (file_exists($invoiceLogoPath) ? filemtime($invoiceLogoPath) : time()); ?>"
                                     alt="Invoice Logo" style="max-height:50px;max-width:100%;object-fit:contain;">
                                 <div style="font-size:11px;color:#888;margin-top:4px;">Logo saat ini</div>
                             </div>
