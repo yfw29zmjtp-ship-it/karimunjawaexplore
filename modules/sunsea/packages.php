@@ -14,8 +14,20 @@ $auth = new Auth();
 $auth->requireLogin();
 
 $pdo    = getSunseaConnection();
+sunseaEnsurePackageItemsSchema($pdo);
 $action = $_GET['action'] ?? 'list';
 $pkgId  = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+
+$packageItemTypes = [
+    'tiket_kapal' => 'Tiket Kapal',
+    'penginapan'  => 'Penginapan',
+    'transport'   => 'Transport / Rental',
+    'guide'       => 'Guide/Pemandu',
+    'catering'    => 'Catering/Konsumsi',
+    'fasilitas'   => 'Fasilitas',
+    'dokumentasi' => 'Dokumentasi',
+    'lainnya'     => 'Lainnya',
+];
 
 // ---- HANDLE POST ----
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -70,11 +82,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->prepare("UPDATE trip_packages SET is_active = !is_active WHERE id=?")->execute([$id]);
         header('Location: packages.php');
         exit;
+    } elseif ($postAction === 'save_package_item') {
+        $packageId = (int)($_POST['package_id'] ?? 0);
+        $itemName  = trim($_POST['item_name'] ?? '');
+        if ($packageId > 0 && $itemName !== '') {
+            $sortStmt = $pdo->prepare("SELECT COALESCE(MAX(sort_order),-1)+1 FROM trip_package_items WHERE package_id=?");
+            $sortStmt->execute([$packageId]);
+            $nextSort = (int)$sortStmt->fetchColumn();
+            $pdo->prepare("INSERT INTO trip_package_items
+                (package_id, item_type, item_name, cost_basis, estimated_cost, notes, sort_order)
+                VALUES (?,?,?,?,?,?,?)")
+                ->execute([
+                    $packageId,
+                    $_POST['item_type'] ?? 'lainnya',
+                    $itemName,
+                    ($_POST['cost_basis'] ?? 'per_pax') === 'flat' ? 'flat' : 'per_pax',
+                    (float)str_replace(['.', ','], ['', '.'], $_POST['estimated_cost'] ?? '0'),
+                    trim($_POST['notes'] ?? ''),
+                    $nextSort,
+                ]);
+            $_SESSION['flash_message'] = 'Layanan paket berhasil ditambahkan.';
+            $_SESSION['flash_type'] = 'success';
+        }
+        header('Location: packages.php?action=edit&id=' . $packageId);
+        exit;
+    } elseif ($postAction === 'delete_package_item') {
+        $packageId = (int)($_POST['package_id'] ?? 0);
+        $itemId    = (int)($_POST['item_id'] ?? 0);
+        if ($itemId > 0) {
+            $pdo->prepare("DELETE FROM trip_package_items WHERE id=? AND package_id=?")->execute([$itemId, $packageId]);
+            $_SESSION['flash_message'] = 'Layanan paket berhasil dihapus.';
+            $_SESSION['flash_type'] = 'success';
+        }
+        header('Location: packages.php?action=edit&id=' . $packageId);
+        exit;
     }
 }
 
 // ---- LOAD DATA ----
 $editPkg = null;
+$packageItems = [];
 if (in_array($action, ['edit', 'view']) && $pkgId > 0) {
     $stmt = $pdo->prepare("SELECT * FROM trip_packages WHERE id=?");
     $stmt->execute([$pkgId]);
@@ -83,6 +130,9 @@ if (in_array($action, ['edit', 'view']) && $pkgId > 0) {
         header('Location: packages.php');
         exit;
     }
+    $itemsStmt = $pdo->prepare("SELECT * FROM trip_package_items WHERE package_id=? ORDER BY sort_order");
+    $itemsStmt->execute([$pkgId]);
+    $packageItems = $itemsStmt->fetchAll();
 }
 
 $categoryMap = [
@@ -212,6 +262,89 @@ include 'layout-header.php';
                 </div>
             </form>
         </div>
+
+        <?php if ($editPkg): ?>
+            <div class="ss-card" style="margin-top:16px;">
+                <div class="ss-card-header">
+                    <div>
+                        <div class="ss-card-title">Detail Layanan dalam Paket</div>
+                        <div class="ss-card-sub">Isi tiket kapal, penginapan, transport, guide, dll agar tagihan mitra yang belum dibayar akurat saat booking memakai paket ini.</div>
+                    </div>
+                </div>
+
+                <?php if (empty($packageItems)): ?>
+                    <div style="font-size:12.5px;color:var(--ss-muted);margin-bottom:10px;">Belum ada detail layanan. Tambahkan minimal tiket kapal, penginapan, dan transport supaya checklist pembayaran mitra bisa dihitung otomatis.</div>
+                <?php else: ?>
+                    <div class="ss-table-wrap" style="margin-bottom:12px;">
+                        <table class="ss-table">
+                            <thead>
+                                <tr>
+                                    <th>Tipe</th>
+                                    <th>Nama Layanan</th>
+                                    <th>Basis Biaya</th>
+                                    <th>Estimasi Modal</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($packageItems as $pi): ?>
+                                    <tr>
+                                        <td><?php echo htmlspecialchars($packageItemTypes[$pi['item_type']] ?? $pi['item_type']); ?></td>
+                                        <td><?php echo htmlspecialchars($pi['item_name']); ?><?php if (!empty($pi['notes'])): ?><br><small style="color:var(--ss-muted);"><?php echo htmlspecialchars($pi['notes']); ?></small><?php endif; ?></td>
+                                        <td><?php echo $pi['cost_basis'] === 'flat' ? 'Flat (sekali)' : 'Per Pax'; ?></td>
+                                        <td><?php echo sunseaRupiah((float)$pi['estimated_cost']); ?></td>
+                                        <td>
+                                            <form method="POST" onsubmit="return confirm('Hapus layanan ini dari paket?');">
+                                                <input type="hidden" name="action" value="delete_package_item">
+                                                <input type="hidden" name="package_id" value="<?php echo (int)$editPkg['id']; ?>">
+                                                <input type="hidden" name="item_id" value="<?php echo (int)$pi['id']; ?>">
+                                                <button type="submit" class="ss-btn ss-btn-outline ss-btn-sm" style="color:#dc2626;border-color:#dc2626;"><i data-feather="trash-2"></i></button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php endif; ?>
+
+                <div class="ss-card-title" style="margin:10px 0 8px;font-size:13px;">+ Tambah Layanan</div>
+                <form method="POST">
+                    <input type="hidden" name="action" value="save_package_item">
+                    <input type="hidden" name="package_id" value="<?php echo (int)$editPkg['id']; ?>">
+                    <div class="ss-form-grid cols-2">
+                        <div class="ss-form-group">
+                            <label class="ss-label">Tipe Layanan</label>
+                            <select name="item_type" class="ss-select">
+                                <?php foreach ($packageItemTypes as $v => $label): ?>
+                                    <option value="<?php echo $v; ?>"><?php echo htmlspecialchars($label); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="ss-form-group">
+                            <label class="ss-label">Nama Layanan *</label>
+                            <input type="text" name="item_name" class="ss-input" required placeholder="Contoh: Tiket Kapal Express PP">
+                        </div>
+                        <div class="ss-form-group">
+                            <label class="ss-label">Basis Biaya</label>
+                            <select name="cost_basis" class="ss-select">
+                                <option value="per_pax">Per Pax (dikali jumlah tamu)</option>
+                                <option value="flat">Flat (sekali per booking)</option>
+                            </select>
+                        </div>
+                        <div class="ss-form-group">
+                            <label class="ss-label">Estimasi Modal (Rp)</label>
+                            <input type="text" name="estimated_cost" class="ss-input" placeholder="0">
+                        </div>
+                        <div class="ss-form-group" style="grid-column:1/-1;">
+                            <label class="ss-label">Catatan</label>
+                            <input type="text" name="notes" class="ss-input" placeholder="Contoh: dibayar ke mitra kapal Bahari Express">
+                        </div>
+                    </div>
+                    <button type="submit" class="ss-btn ss-btn-primary ss-btn-sm" style="margin-top:6px;"><i data-feather="plus"></i> Tambah Layanan</button>
+                </form>
+            </div>
+        <?php endif; ?>
     </div>
 
 <?php else: ?>

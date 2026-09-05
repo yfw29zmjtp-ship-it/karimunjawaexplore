@@ -141,6 +141,10 @@ function sunseaEnsureBookingSchema(PDO $pdo): void
         if ((int)$itemColumnCheck->fetchColumn() === 0) {
             $pdo->exec("ALTER TABLE booking_order_items ADD COLUMN is_done TINYINT(1) DEFAULT 0 AFTER sort_order");
         }
+        $itemColumnCheck->execute(['is_paid_mitra']);
+        if ((int)$itemColumnCheck->fetchColumn() === 0) {
+            $pdo->exec("ALTER TABLE booking_order_items ADD COLUMN is_paid_mitra TINYINT(1) DEFAULT 0 AFTER is_done");
+        }
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS booking_schedule (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -155,6 +159,33 @@ function sunseaEnsureBookingSchema(PDO $pdo): void
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
     } catch (Exception $e) {
         error_log('sunseaEnsureBookingSchema error: ' . $e->getMessage());
+    }
+}
+
+/**
+ * Ensure the trip_package_items table exists (detail layanan per paket:
+ * tiket kapal, penginapan, transport, guide, catering, dll) so that when a
+ * booking uses a paket, the real mitra obligations/tagihan can be tracked
+ * per booking instead of guessed from Finance expense text.
+ */
+function sunseaEnsurePackageItemsSchema(PDO $pdo): void
+{
+    try {
+        $pdo->exec("CREATE TABLE IF NOT EXISTS trip_package_items (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            package_id INT NOT NULL,
+            item_type ENUM('tiket_kapal','penginapan','transport','guide','catering','fasilitas','dokumentasi','lainnya') DEFAULT 'lainnya',
+            item_name VARCHAR(200) NOT NULL,
+            cost_basis ENUM('per_pax','flat') DEFAULT 'per_pax',
+            estimated_cost DECIMAL(15,2) DEFAULT 0.00,
+            notes VARCHAR(255) NULL,
+            sort_order INT DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_pkgitems_package (package_id),
+            CONSTRAINT fk_pkgitems_package FOREIGN KEY (package_id) REFERENCES trip_packages(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    } catch (Exception $e) {
+        error_log('sunseaEnsurePackageItemsSchema error: ' . $e->getMessage());
     }
 }
 

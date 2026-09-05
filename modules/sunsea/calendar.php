@@ -35,7 +35,7 @@ if (($_GET['ajax'] ?? '') === 'detail' && (int)($_GET['id'] ?? 0) > 0) {
         exit;
     }
 
-    $items = $pdo->prepare("SELECT component_name, qty, unit, price_sell, total_sell, is_done FROM booking_order_items WHERE booking_id=? ORDER BY sort_order, id");
+    $items = $pdo->prepare("SELECT component_code, component_name, qty, unit, price_sell, price_cost, total_sell, total_cost, is_done, is_paid_mitra FROM booking_order_items WHERE booking_id=? ORDER BY sort_order, id");
     $items->execute([$bId]);
     $items = $items->fetchAll();
 
@@ -49,9 +49,12 @@ if (($_GET['ajax'] ?? '') === 'detail' && (int)($_GET['id'] ?? 0) > 0) {
     $totalRab = 0;
     foreach ($items as $it) $totalRab += (float)$it['total_sell'];
 
+    $mitraItems = array_values(array_filter($items, fn($it) => $it['component_code'] !== 'paket'));
+
     echo json_encode([
         'booking'      => $booking,
         'items'        => $items,
+        'mitraItems'   => $mitraItems,
         'expenses'     => $expenses,
         'totalExpense' => $totalExpense,
         'totalRab'     => $totalRab,
@@ -355,29 +358,22 @@ include 'layout-header.php';
                 html += '</div>';
                 html += '</div>';
 
-                // Checklist layanan mitra: cek apakah sudah ada pengeluaran tercatat untuk tiap kategori
-                var mitraCategories = [
-                    { label: 'Tiket Kapal (Berangkat & Pulang)', keywords: ['tiket', 'kapal', 'kmp', 'express', 'ferry', 'boat'] },
-                    { label: 'Penginapan (Hotel/Homestay)', keywords: ['hotel', 'homestay', 'penginapan', 'kamar', 'inn'] },
-                    { label: 'Rental Motor/Mobil & Transportasi', keywords: ['motor', 'mobil', 'rental', 'transport', 'antar', 'jemput', 'sewa'] },
-                    { label: 'Guide/Pemandu Wisata', keywords: ['guide', 'pemandu'] },
-                    { label: 'Catering/Konsumsi', keywords: ['makan', 'catering', 'konsumsi'] }
-                ];
+                // Checklist layanan mitra: pakai data terstruktur dari detail layanan paket
+                // (component_code != 'paket'), bukan tebakan kata kunci dari teks pengeluaran.
                 html += '<div class="bd-section-title">Checklist Pembayaran ke Mitra</div>';
                 html += '<div class="bd-mitra-list">';
-                mitraCategories.forEach(function(cat) {
-                    var paidAmount = 0;
-                    data.expenses.forEach(function(ex) {
-                        var haystack = ((ex.category || '') + ' ' + (ex.description || '')).toLowerCase();
-                        var matched = cat.keywords.some(function(kw) { return haystack.indexOf(kw) !== -1; });
-                        if (matched) paidAmount += parseFloat(ex.amount) || 0;
+                if (!data.mitraItems || data.mitraItems.length === 0) {
+                    html += '<div style="font-size:12px;color:var(--ss-muted);">Belum ada detail layanan mitra. Isi "Detail Layanan dalam Paket" di menu Paket Wisata (tiket kapal, penginapan, rental, dll) agar tagihan mitra tampil di sini.</div>';
+                } else {
+                    data.mitraItems.forEach(function(it) {
+                        var isPaid = it.is_paid_mitra == 1;
+                        html += '<div class="bd-mitra-item ' + (isPaid ? 'paid' : 'unpaid') + '">';
+                        html += '<span>' + (isPaid ? '\u2713' : '\u26a0') + ' ' + it.component_name + '</span>';
+                        html += '<strong>' + (isPaid ? fmt(it.total_cost) + ' (sudah dibayar)' : fmt(it.total_cost) + ' (belum dibayar)') + '</strong>';
+                        html += '</div>';
                     });
-                    var isPaid = paidAmount > 0;
-                    html += '<div class="bd-mitra-item ' + (isPaid ? 'paid' : 'unpaid') + '">';
-                    html += '<span>' + (isPaid ? '\u2713' : '\u26a0') + ' ' + cat.label + '</span>';
-                    html += '<strong>' + (isPaid ? fmt(paidAmount) + ' (sudah dibayar)' : 'Belum dibayar') + '</strong>';
-                    html += '</div>';
-                });
+                    html += '<div style="margin-top:6px;color:var(--ss-muted);font-size:11px;">Tandai pembayaran mitra di halaman <a href="bookings.php?view=' + b.id + '">Detail Booking</a> &rarr; Pembayaran ke Mitra.</div>';
+                }
                 html += '</div>';
 
                 html += '<div style="margin-top:16px;display:flex;gap:8px;">';

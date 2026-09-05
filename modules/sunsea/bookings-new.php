@@ -16,6 +16,7 @@ $pdo = getSunseaConnection();
 sunseaEnsureBookingSchema($pdo);
 sunseaEnsureMasterDataSchema($pdo);
 sunseaEnsureAccommodationSchema($pdo);
+sunseaEnsurePackageItemsSchema($pdo);
 
 // Fail-safe query agar halaman tidak blank jika tabel layanan optional belum ada.
 $pageWarnings = [];
@@ -151,6 +152,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
         $pkg = $pkgStmt->fetch(PDO::FETCH_ASSOC);
         if ($pkg) {
             $addComponent('paket', 'Paket: ' . $pkg['name'], $pax, 'pax', 0, (float)$pkg['base_price']);
+
+            // Pecah detail layanan paket (tiket kapal, penginapan, transport, dll) jadi
+            // item modal terpisah supaya tagihan mitra yang belum dibayar bisa dicek akurat.
+            $pkgItemsStmt = $pdo->prepare("SELECT item_type, item_name, cost_basis, estimated_cost FROM trip_package_items WHERE package_id=? ORDER BY sort_order");
+            $pkgItemsStmt->execute([$packageId]);
+            foreach ($pkgItemsStmt->fetchAll(PDO::FETCH_ASSOC) as $pi) {
+                $qty = $pi['cost_basis'] === 'flat' ? 1 : $pax;
+                $addComponent($pi['item_type'], $pi['item_name'], $qty, $pi['cost_basis'] === 'flat' ? 'paket' : 'pax', (float)$pi['estimated_cost'], 0);
+            }
         }
     }
 

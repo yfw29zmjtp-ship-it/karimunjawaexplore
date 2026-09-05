@@ -535,6 +535,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updat
     exit;
 }
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'update_mitra_paid') {
+    $bookingId = (int)($_POST['booking_id'] ?? 0);
+    $paidIds = array_map('intval', $_POST['paid_items'] ?? []);
+
+    if ($bookingId > 0) {
+        try {
+            $itemsStmt = $pdo->prepare("SELECT id FROM booking_order_items WHERE booking_id=? AND component_code != 'paket'");
+            $itemsStmt->execute([$bookingId]);
+            $allIds = $itemsStmt->fetchAll(PDO::FETCH_COLUMN);
+            $upd = $pdo->prepare("UPDATE booking_order_items SET is_paid_mitra=? WHERE id=?");
+            foreach ($allIds as $iid) {
+                $upd->execute([in_array((int)$iid, $paidIds, true) ? 1 : 0, (int)$iid]);
+            }
+            $_SESSION['flash_message'] = 'Checklist pembayaran mitra berhasil disimpan.';
+            $_SESSION['flash_type'] = 'success';
+        } catch (Exception $e) {
+            $_SESSION['flash_message'] = 'Gagal simpan checklist mitra: ' . $e->getMessage();
+            $_SESSION['flash_type'] = 'error';
+        }
+    }
+
+    header('Location: bookings.php?view=' . $bookingId);
+    exit;
+}
+
 $action = $_GET['action'] ?? 'list';
 $viewId = (int)($_GET['view'] ?? 0);
 $pageError = '';
@@ -765,6 +790,44 @@ include 'layout-header.php';
                             <button class="ss-btn ss-btn-primary ss-btn-sm" type="submit" style="margin-top:10px;"><i data-feather="save"></i> Simpan Checklist</button>
                         </form>
                     </div>
+                <?php endif; ?>
+            </div>
+            <?php
+            $mitraItems = array_values(array_filter($detailItems, fn($it) => $it['component_code'] !== 'paket'));
+            $mitraUnpaidCount = 0;
+            foreach ($mitraItems as $it) {
+                if (empty($it['is_paid_mitra'])) $mitraUnpaidCount++;
+            }
+            ?>
+            <div class="ss-card" style="margin-bottom:12px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                    <div class="ss-card-title" style="margin:0;">Pembayaran ke Mitra</div>
+                    <?php if (!empty($mitraItems)): ?>
+                        <?php if ($mitraUnpaidCount > 0): ?>
+                            <span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#dc2626;font-weight:700;"><span style="width:8px;height:8px;border-radius:50%;background:#dc2626;display:inline-block;"></span> <?php echo $mitraUnpaidCount; ?> belum dibayar</span>
+                        <?php else: ?>
+                            <span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#16a34a;font-weight:700;"><span style="width:8px;height:8px;border-radius:50%;background:#16a34a;display:inline-block;"></span> Semua lunas</span>
+                        <?php endif; ?>
+                    <?php endif; ?>
+                </div>
+
+                <?php if (empty($mitraItems)): ?>
+                    <div style="font-size:12px;color:var(--ss-muted);">Belum ada detail layanan mitra. Isi "Detail Layanan dalam Paket" di menu Paket Wisata agar tagihan mitra (tiket kapal, penginapan, rental, dll) tampil di sini.</div>
+                <?php else: ?>
+                    <form method="POST">
+                        <input type="hidden" name="action" value="update_mitra_paid">
+                        <input type="hidden" name="booking_id" value="<?php echo (int)$detail['id']; ?>">
+                        <?php foreach ($mitraItems as $it): ?>
+                            <label style="display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12.5px;padding:6px 0;border-bottom:1px solid var(--ss-gray-2);">
+                                <span style="display:flex;align-items:center;gap:8px;">
+                                    <input type="checkbox" name="paid_items[]" value="<?php echo (int)$it['id']; ?>" <?php echo !empty($it['is_paid_mitra']) ? 'checked' : ''; ?>>
+                                    <span style="<?php echo !empty($it['is_paid_mitra']) ? 'text-decoration:line-through;color:var(--ss-muted);' : ''; ?>"><?php echo htmlspecialchars($it['component_name']); ?></span>
+                                </span>
+                                <strong style="white-space:nowrap;"><?php echo sunseaRupiah((float)$it['total_cost']); ?></strong>
+                            </label>
+                        <?php endforeach; ?>
+                        <button class="ss-btn ss-btn-primary ss-btn-sm" type="submit" style="margin-top:10px;"><i data-feather="save"></i> Simpan Pembayaran Mitra</button>
+                    </form>
                 <?php endif; ?>
             </div>
             <div class="ss-card" style="margin-bottom:12px;">
