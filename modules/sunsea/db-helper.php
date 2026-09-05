@@ -432,6 +432,45 @@ function sunseaEnsureFinanceSchema(PDO $pdo): void
 }
 
 /**
+ * Ensure the `roles` and `users` (login) tables exist.
+ * These already exist on standalone Sunsea hosting, but this guards
+ * fresh installs and keeps the pattern consistent with other modules.
+ */
+function sunseaEnsureUserSchema(PDO $pdo): void
+{
+    try {
+        $pdo->exec("CREATE TABLE IF NOT EXISTS `roles` (
+            `id`         INT AUTO_INCREMENT PRIMARY KEY,
+            `role_code`  VARCHAR(30) NOT NULL UNIQUE,
+            `role_name`  VARCHAR(100) NOT NULL,
+            `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        $pdo->exec("INSERT IGNORE INTO `roles` (`id`, `role_code`, `role_name`) VALUES
+            (1, 'developer', 'Developer / Owner'),
+            (2, 'manager',   'Manager'),
+            (3, 'staff',     'Staff')");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS `users` (
+            `id`              INT AUTO_INCREMENT PRIMARY KEY,
+            `username`        VARCHAR(50) NOT NULL UNIQUE,
+            `password`        VARCHAR(255) NOT NULL,
+            `full_name`       VARCHAR(150) NOT NULL,
+            `email`           VARCHAR(150),
+            `role_id`         INT DEFAULT 3,
+            `business_access` VARCHAR(20) DEFAULT 'all',
+            `is_active`       TINYINT(1) DEFAULT 1,
+            `last_login`      TIMESTAMP NULL,
+            `created_at`      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            `updated_at`      TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_username (`username`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    } catch (Exception $e) {
+        error_log('sunseaEnsureUserSchema error: ' . $e->getMessage());
+    }
+}
+
+/**
  * Get next auto-number for quotation / invoice.
  * Format: SS-QUO-2026-001
  *
