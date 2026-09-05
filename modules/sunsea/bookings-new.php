@@ -237,8 +237,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
             $mQty = max(0, (float)($_POST['manual_qty'][$i] ?? 1));
             if ($mQty <= 0) continue;
             $mUnit = trim($_POST['manual_unit'][$i] ?? 'pax') ?: 'pax';
+            $mCost = (float)str_replace(['.', ','], ['', '.'], $_POST['manual_cost'][$i] ?? '0');
             $mPrice = (float)str_replace(['.', ','], ['', '.'], $_POST['manual_price'][$i] ?? '0');
-            $addComponent('manual', $mName, $mQty, $mUnit, 0, $mPrice);
+            $addComponent('manual', $mName, $mQty, $mUnit, $mCost, $mPrice);
         }
     }
 
@@ -611,7 +612,7 @@ include 'layout-header.php';
                         <label style="display:flex;align-items:center;gap:6px;padding:6px 8px;background:#ffffff;border:1px solid #e0e0e0;border-radius:4px;cursor:pointer;">
                             <input type="checkbox" name="facility_ids[]" value="<?php echo $f['id']; ?>" onchange="calculateTotal()" style="width:14px;height:14px;cursor:pointer;">
                             <span style="flex:1;font-size:12px;"><?php echo htmlspecialchars($f['name'] . ' (' . $f['unit'] . ')'); ?></span>
-                            <span class="fac-price" style="color:#C2410C;font-weight:600;min-width:90px;text-align:right;font-size:11px;">Rp <?php echo number_format((float)$f['price_sell'], 0, ',', '.'); ?></span>
+                            <span class="fac-price" data-cost="<?php echo (float)$f['price_cost']; ?>" style="color:#C2410C;font-weight:600;min-width:90px;text-align:right;font-size:11px;">Rp <?php echo number_format((float)$f['price_sell'], 0, ',', '.'); ?></span>
                             <input type="number" name="facility_qty_<?php echo $f['id']; ?>" placeholder="Qty" value="1" min="0" step="0.01" onchange="calculateTotal()" style="width:50px;padding:3px;border:1px solid #ccc;border-radius:3px;font-family:inherit;font-size:11px;">
                         </label>
                     <?php endforeach; ?>
@@ -692,11 +693,12 @@ include 'layout-header.php';
 
     function addManualItem() {
         const row = document.createElement('div');
-        row.style.cssText = 'display:grid;grid-template-columns:1fr 60px 80px 110px 26px;gap:6px;margin-bottom:5px;align-items:center;';
+        row.style.cssText = 'display:grid;grid-template-columns:1fr 55px 70px 100px 100px 26px;gap:6px;margin-bottom:5px;align-items:center;';
         row.innerHTML = '<input type="text" name="manual_name[]" placeholder="Nama item" onchange="calculateTotal()" style="padding:5px 7px;border:1px solid #ccc;border-radius:4px;font-family:inherit;font-size:12px;box-sizing:border-box;">' +
             '<input type="number" name="manual_qty[]" placeholder="Qty" value="1" min="0" step="0.01" onchange="calculateTotal()" style="padding:5px 7px;border:1px solid #ccc;border-radius:4px;font-family:inherit;font-size:12px;box-sizing:border-box;">' +
             '<input type="text" name="manual_unit[]" placeholder="Satuan" value="pax" style="padding:5px 7px;border:1px solid #ccc;border-radius:4px;font-family:inherit;font-size:12px;box-sizing:border-box;">' +
-            '<input type="text" name="manual_price[]" placeholder="Harga (Rp)" onchange="calculateTotal()" style="padding:5px 7px;border:1px solid #ccc;border-radius:4px;font-family:inherit;font-size:12px;box-sizing:border-box;">' +
+            '<input type="text" name="manual_cost[]" placeholder="Harga Modal" onchange="calculateTotal()" style="padding:5px 7px;border:1px solid #ccc;border-radius:4px;font-family:inherit;font-size:12px;box-sizing:border-box;">' +
+            '<input type="text" name="manual_price[]" placeholder="Harga Jual" onchange="calculateTotal()" style="padding:5px 7px;border:1px solid #ccc;border-radius:4px;font-family:inherit;font-size:12px;box-sizing:border-box;">' +
             '<button type="button" onclick="this.parentElement.remove(); calculateTotal();" style="background:#fee;color:#c00;border:1px solid #fbb;border-radius:4px;cursor:pointer;padding:5px;font-size:12px;">✕</button>';
         document.getElementById('manualItemsBody').appendChild(row);
     }
@@ -707,14 +709,18 @@ include 'layout-header.php';
 
     function loadPrice(type, id, displayId) {
         if (!id) {
-            document.getElementById(displayId).textContent = '-';
+            const el = document.getElementById(displayId);
+            el.textContent = '-';
+            el.dataset.cost = '0';
             calculateTotal();
             return;
         }
         fetch('bookings-new.php?action=get_price&type=' + type + '&id=' + id)
             .then(r => r.json())
             .then(data => {
-                document.getElementById(displayId).textContent = rupiah(data.sell);
+                const el = document.getElementById(displayId);
+                el.textContent = rupiah(data.sell);
+                el.dataset.cost = data.cost;
                 calculateTotal();
             })
             .catch(e => console.error(e));
@@ -755,11 +761,14 @@ include 'layout-header.php';
         // Tiket (bisa PP / sekali jalan)
         let ticketSubtotal = 0;
         if (document.querySelector('select[name="ticket_id"]').value) {
-            const price = parseRupiah(document.getElementById('ticketPrice').textContent);
+            const priceEl = document.getElementById('ticketPrice');
+            const price = parseRupiah(priceEl.textContent);
+            const cost = parseFloat(priceEl.dataset.cost) || 0;
             const qty = parseFloat(document.getElementById('ticketQty').value) || 0;
             const tripType = document.querySelector('select[name="ticket_trip_type"]').value;
             const multiplier = tripType === 'pp' ? 2 : 1;
             ticketSubtotal = price * qty * multiplier;
+            costTotal += cost * qty * multiplier;
             sellTotal += ticketSubtotal;
         }
         setSubtotal('ticketSubtotal', ticketSubtotal);
@@ -767,9 +776,12 @@ include 'layout-header.php';
         // Transportasi
         let transportSubtotal = 0;
         if (document.querySelector('select[name="transport_id"]').value) {
-            const price = parseRupiah(document.getElementById('transportPrice').textContent);
+            const priceEl = document.getElementById('transportPrice');
+            const price = parseRupiah(priceEl.textContent);
+            const cost = parseFloat(priceEl.dataset.cost) || 0;
             const qty = parseFloat(document.querySelector('input[name="transport_qty"]').value) || 0;
             transportSubtotal = price * qty;
+            costTotal += cost * qty;
             sellTotal += transportSubtotal;
         }
         setSubtotal('transportSubtotal', transportSubtotal);
@@ -777,10 +789,13 @@ include 'layout-header.php';
         // Penginapan
         let roomSubtotal = 0;
         if (document.querySelector('select[name="room_id"]').value) {
-            const price = parseRupiah(document.getElementById('roomPrice').textContent);
+            const priceEl = document.getElementById('roomPrice');
+            const price = parseRupiah(priceEl.textContent);
+            const cost = parseFloat(priceEl.dataset.cost) || 0;
             const nights = parseFloat(document.querySelector('input[name="stay_nights"]').value) || 1;
             const qty = parseFloat(document.querySelector('input[name="stay_room_qty"]').value) || 1;
             roomSubtotal = price * nights * qty;
+            costTotal += cost * nights * qty;
             sellTotal += roomSubtotal;
         }
         setSubtotal('roomSubtotal', roomSubtotal);
@@ -788,9 +803,12 @@ include 'layout-header.php';
         // Catering
         let cateringSubtotal = 0;
         if (document.querySelector('select[name="catering_id"]').value) {
-            const price = parseRupiah(document.getElementById('cateringPrice').textContent);
+            const priceEl = document.getElementById('cateringPrice');
+            const price = parseRupiah(priceEl.textContent);
+            const cost = parseFloat(priceEl.dataset.cost) || 0;
             const qty = parseFloat(document.querySelector('input[name="catering_qty"]').value) || 0;
             cateringSubtotal = price * qty;
+            costTotal += cost * qty;
             sellTotal += cateringSubtotal;
         }
         setSubtotal('cateringSubtotal', cateringSubtotal);
@@ -798,9 +816,12 @@ include 'layout-header.php';
         // Guide Darat
         let guideDaratSubtotal = 0;
         if (document.querySelector('select[name="guide_darat_id"]').value) {
-            const price = parseRupiah(document.getElementById('guideDaratPrice').textContent);
+            const priceEl = document.getElementById('guideDaratPrice');
+            const price = parseRupiah(priceEl.textContent);
+            const cost = parseFloat(priceEl.dataset.cost) || 0;
             const days = parseFloat(document.querySelector('input[name="guide_darat_days"]').value) || 1;
             guideDaratSubtotal = price * days;
+            costTotal += cost * days;
             sellTotal += guideDaratSubtotal;
         }
         setSubtotal('guideDaratSubtotal', guideDaratSubtotal);
@@ -808,9 +829,12 @@ include 'layout-header.php';
         // Guide Laut
         let guideLautSubtotal = 0;
         if (document.querySelector('select[name="guide_laut_id"]').value) {
-            const price = parseRupiah(document.getElementById('guideLautPrice').textContent);
+            const priceEl = document.getElementById('guideLautPrice');
+            const price = parseRupiah(priceEl.textContent);
+            const cost = parseFloat(priceEl.dataset.cost) || 0;
             const days = parseFloat(document.querySelector('input[name="guide_laut_days"]').value) || 1;
             guideLautSubtotal = price * days;
+            costTotal += cost * days;
             sellTotal += guideLautSubtotal;
         }
         setSubtotal('guideLautSubtotal', guideLautSubtotal);
@@ -819,9 +843,12 @@ include 'layout-header.php';
         let facilitySubtotal = 0;
         document.querySelectorAll('input[name="facility_ids[]"]:checked').forEach(checkbox => {
             const facId = checkbox.value;
-            const facPrice = parseRupiah(checkbox.parentElement.querySelector('.fac-price').textContent);
+            const facPriceEl = checkbox.parentElement.querySelector('.fac-price');
+            const facPrice = parseRupiah(facPriceEl.textContent);
+            const facCost = parseFloat(facPriceEl.dataset.cost) || 0;
             const facQty = parseFloat(document.querySelector('input[name="facility_qty_' + facId + '"]').value) || 1;
             facilitySubtotal += facPrice * facQty;
+            costTotal += facCost * facQty;
         });
         sellTotal += facilitySubtotal;
         setSubtotal('facilitySubtotal', facilitySubtotal);
@@ -830,11 +857,14 @@ include 'layout-header.php';
         let manualSubtotal = 0;
         const manualNames = document.querySelectorAll('input[name="manual_name[]"]');
         const manualQtys = document.querySelectorAll('input[name="manual_qty[]"]');
+        const manualCosts = document.querySelectorAll('input[name="manual_cost[]"]');
         const manualPrices = document.querySelectorAll('input[name="manual_price[]"]');
         manualNames.forEach((nameInput, idx) => {
             if (!nameInput.value.trim()) return;
             const qty = parseFloat(manualQtys[idx] ? manualQtys[idx].value : 0) || 0;
+            const cost = parseRupiah(manualCosts[idx] ? manualCosts[idx].value : '0');
             const price = parseRupiah(manualPrices[idx] ? manualPrices[idx].value : '0');
+            costTotal += qty * cost;
             manualSubtotal += qty * price;
         });
         sellTotal += manualSubtotal;
