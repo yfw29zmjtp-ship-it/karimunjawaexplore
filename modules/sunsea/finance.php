@@ -281,72 +281,76 @@ include 'layout-header.php';
 </div>
 
 <!-- Modal: Tambah Transaksi Kas -->
-<div id="txModalOverlay" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,0.55);z-index:1000;align-items:center;justify-content:center;">
-    <div style="width:100%;max-width:420px;max-height:88vh;display:flex;flex-direction:column;background:#fff;border-radius:10px;overflow:hidden;">
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 18px;border-bottom:1px solid var(--ss-gray-1);flex-shrink:0;">
+<div id="txModalOverlay" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,0.55);z-index:1000;align-items:center;justify-content:center;padding:20px;">
+    <div style="width:100%;max-width:680px;max-height:88vh;display:flex;flex-direction:column;background:#fff;border-radius:10px;overflow:hidden;">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 20px;border-bottom:1px solid var(--ss-gray-1);flex-shrink:0;">
             <div style="font-size:13px;font-weight:700;">Input Transaksi Kas</div>
             <button type="button" onclick="closeTxModal()" style="background:none;border:none;cursor:pointer;color:var(--ss-muted);padding:4px;">
                 <i data-feather="x" style="width:16px;height:16px;"></i>
             </button>
         </div>
-        <div style="flex:1;overflow:auto;padding:16px 18px;">
+        <div style="flex:1;overflow:auto;padding:16px 20px;">
             <form method="POST" id="txForm">
                 <input type="hidden" name="action" value="save">
                 <input type="hidden" name="redirect_qs" value="<?php echo htmlspecialchars(http_build_query($_GET)); ?>">
-                <div class="ss-form-group">
-                    <label class="ss-label" style="font-size:11px;">Jenis</label>
-                    <select name="type" class="ss-select" id="typeSelect" style="font-size:12px;">
-                        <option value="expense">Pengeluaran</option>
-                        <option value="income">Pemasukan</option>
-                    </select>
+                <div class="fin-modal-grid">
+                    <div class="ss-form-group" style="margin:0;">
+                        <label class="ss-label" style="font-size:11px;">Jenis</label>
+                        <select name="type" class="ss-select" id="typeSelect" style="font-size:12px;">
+                            <option value="expense">Pengeluaran</option>
+                            <option value="income">Pemasukan</option>
+                        </select>
+                    </div>
+                    <div class="ss-form-group" style="margin:0;">
+                        <label class="ss-label" style="font-size:11px;">Tanggal</label>
+                        <input type="date" name="transaction_date" class="ss-input" style="font-size:12px;" value="<?php echo date('Y-m-d'); ?>" required>
+                    </div>
+                    <div class="ss-form-group" style="margin:0;">
+                        <label class="ss-label" style="font-size:11px;">Trip / Booking (opsional)</label>
+                        <select name="booking_id" class="ss-select" id="bookingSelect" style="font-size:12px;" onchange="autoFillGuestFromBooking()">
+                            <option value="">-- Tidak terkait trip tertentu --</option>
+                            <?php foreach ($bookings as $b): ?>
+                                <option value="<?php echo $b['id']; ?>" data-customer-id="<?php echo $b['customer_id']; ?>">
+                                    <?php echo htmlspecialchars($b['booking_no']); ?> — <?php echo htmlspecialchars($b['customer_name']); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="ss-form-group" style="margin:0;">
+                        <label class="ss-label" style="font-size:11px;">Tamu / Customer</label>
+                        <select name="customer_id" class="ss-select" id="customerSelect" style="font-size:12px;">
+                            <option value="">-- Tidak terkait tamu tertentu --</option>
+                            <?php foreach ($customers as $c): ?>
+                                <option value="<?php echo $c['id']; ?>"><?php echo htmlspecialchars($c['name']); ?><?php echo $c['phone'] ? ' - ' . htmlspecialchars($c['phone']) : ''; ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="ss-form-group" style="margin:0;grid-column:1 / -1;margin-top:-6px;">
+                        <div style="font-size:10.5px;color:var(--ss-muted);">* Tamu otomatis terisi saat memilih Trip/Booking, tapi bisa diganti manual.</div>
+                    </div>
+                    <div class="ss-form-group" style="margin:0;">
+                        <label class="ss-label" style="font-size:11px;">Kategori</label>
+                        <select name="category" class="ss-select" style="font-size:12px;">
+                            <option value="">-- Pilih kategori --</option>
+                            <?php foreach ($categoryOptions as $cat): ?>
+                                <option value="<?php echo htmlspecialchars($cat); ?>"><?php echo htmlspecialchars($cat); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="ss-form-group" style="margin:0;">
+                        <label class="ss-label" style="font-size:11px;">Jumlah (Rp)</label>
+                        <input type="text" name="amount" class="ss-input" style="font-size:12px;" placeholder="0" required>
+                    </div>
+                    <div class="ss-form-group" style="margin:0;grid-column:1 / -1;">
+                        <label class="ss-label" style="font-size:11px;">Keterangan</label>
+                        <input type="text" name="description" class="ss-input" style="font-size:12px;" placeholder="Contoh: Bensin speedboat trip snorkeling" required>
+                    </div>
+                    <div class="ss-form-group" style="margin:0;grid-column:1 / -1;">
+                        <label class="ss-label" style="font-size:11px;">Referensi (opsional)</label>
+                        <input type="text" name="reference" class="ss-input" style="font-size:12px;" placeholder="No. nota / kwitansi">
+                    </div>
                 </div>
-                <div class="ss-form-group">
-                    <label class="ss-label" style="font-size:11px;">Tanggal</label>
-                    <input type="date" name="transaction_date" class="ss-input" style="font-size:12px;" value="<?php echo date('Y-m-d'); ?>" required>
-                </div>
-                <div class="ss-form-group">
-                    <label class="ss-label" style="font-size:11px;">Trip / Booking (opsional)</label>
-                    <select name="booking_id" class="ss-select" id="bookingSelect" style="font-size:12px;" onchange="autoFillGuestFromBooking()">
-                        <option value="">-- Tidak terkait trip tertentu --</option>
-                        <?php foreach ($bookings as $b): ?>
-                            <option value="<?php echo $b['id']; ?>" data-customer-id="<?php echo $b['customer_id']; ?>">
-                                <?php echo htmlspecialchars($b['booking_no']); ?> — <?php echo htmlspecialchars($b['customer_name']); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="ss-form-group">
-                    <label class="ss-label" style="font-size:11px;">Tamu / Customer</label>
-                    <select name="customer_id" class="ss-select" id="customerSelect" style="font-size:12px;">
-                        <option value="">-- Tidak terkait tamu tertentu --</option>
-                        <?php foreach ($customers as $c): ?>
-                            <option value="<?php echo $c['id']; ?>"><?php echo htmlspecialchars($c['name']); ?><?php echo $c['phone'] ? ' - ' . htmlspecialchars($c['phone']) : ''; ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                    <div style="font-size:11px;color:var(--ss-muted);margin-top:3px;">* Otomatis terisi saat memilih Trip/Booking, tapi bisa diganti manual.</div>
-                </div>
-                <div class="ss-form-group">
-                    <label class="ss-label" style="font-size:11px;">Kategori</label>
-                    <select name="category" class="ss-select" style="font-size:12px;">
-                        <option value="">-- Pilih kategori --</option>
-                        <?php foreach ($categoryOptions as $cat): ?>
-                            <option value="<?php echo htmlspecialchars($cat); ?>"><?php echo htmlspecialchars($cat); ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="ss-form-group">
-                    <label class="ss-label" style="font-size:11px;">Keterangan</label>
-                    <input type="text" name="description" class="ss-input" style="font-size:12px;" placeholder="Contoh: Bensin speedboat trip snorkeling" required>
-                </div>
-                <div class="ss-form-group">
-                    <label class="ss-label" style="font-size:11px;">Jumlah (Rp)</label>
-                    <input type="text" name="amount" class="ss-input" style="font-size:12px;" placeholder="0" required>
-                </div>
-                <div class="ss-form-group">
-                    <label class="ss-label" style="font-size:11px;">Referensi (opsional)</label>
-                    <input type="text" name="reference" class="ss-input" style="font-size:12px;" placeholder="No. nota / kwitansi">
-                </div>
-                <button type="submit" class="ss-btn ss-btn-primary" style="width:100%;font-size:12px;">
+                <button type="submit" class="ss-btn ss-btn-primary" style="width:100%;font-size:12px;margin-top:14px;">
                     <i data-feather="save"></i> Simpan Transaksi
                 </button>
             </form>
@@ -355,6 +359,18 @@ include 'layout-header.php';
 </div>
 
 <style>
+    .fin-modal-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px 14px;
+    }
+
+    @media (max-width: 560px) {
+        .fin-modal-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
     .fin-add-btn {
         display: flex;
         align-items: center;
