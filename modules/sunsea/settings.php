@@ -142,33 +142,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             setSetting($pdo, $f, trim($_POST[$f] ?? ''));
         }
 
-        // Invoice logo upload
-        if (!empty($_FILES['invoice_logo']['tmp_name'])) {
-            if ((int)($_FILES['invoice_logo']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
-                $flashMsg = 'Upload logo invoice gagal (kode error: ' . $_FILES['invoice_logo']['error'] . ').';
-                $flashType = 'error';
-            } else {
-                $uploadDir = __DIR__ . '/../../uploads/sunsea/';
-                if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
-                $ext = strtolower(pathinfo($_FILES['invoice_logo']['name'], PATHINFO_EXTENSION));
-                if (!in_array($ext, ['png', 'jpg', 'jpeg', 'webp', 'gif'])) {
-                    $flashMsg = 'Format logo invoice harus PNG, JPG, JPEG, WEBP, atau GIF.';
-                    $flashType = 'error';
-                } else {
-                    // Remove old logo files with a different extension so stale files don't linger.
-                    foreach (['png', 'jpg', 'jpeg', 'webp', 'gif'] as $oldExt) {
-                        $oldFile = $uploadDir . 'invoice_logo.' . $oldExt;
-                        if ($oldExt !== $ext && file_exists($oldFile)) unlink($oldFile);
-                    }
-                    $fname = 'invoice_logo.' . $ext;
-                    if (move_uploaded_file($_FILES['invoice_logo']['tmp_name'], $uploadDir . $fname)) {
-                        setSetting($pdo, 'invoice_logo', 'uploads/sunsea/' . $fname);
-                    } else {
-                        $flashMsg = 'Gagal menyimpan file logo invoice ke server (cek permission folder uploads/sunsea).';
-                        $flashType = 'error';
-                    }
-                }
+        // Upload a named image setting (invoice_logo / invoice_stamp), keeping filename fixed per setting.
+        $uploadImageSetting = function (string $fileField, string $settingKey) use ($pdo): string {
+            if (empty($_FILES[$fileField]['tmp_name'])) return '';
+            if ((int)($_FILES[$fileField]['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+                return "Upload $fileField gagal (kode error: " . $_FILES[$fileField]['error'] . ").";
             }
+            $uploadDir = __DIR__ . '/../../uploads/sunsea/';
+            if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
+            $ext = strtolower(pathinfo($_FILES[$fileField]['name'], PATHINFO_EXTENSION));
+            if (!in_array($ext, ['png', 'jpg', 'jpeg', 'webp', 'gif'])) {
+                return "Format $fileField harus PNG, JPG, JPEG, WEBP, atau GIF.";
+            }
+            foreach (['png', 'jpg', 'jpeg', 'webp', 'gif'] as $oldExt) {
+                $oldFile = $uploadDir . $settingKey . '.' . $oldExt;
+                if ($oldExt !== $ext && file_exists($oldFile)) unlink($oldFile);
+            }
+            $fname = $settingKey . '.' . $ext;
+            if (!move_uploaded_file($_FILES[$fileField]['tmp_name'], $uploadDir . $fname)) {
+                return "Gagal menyimpan file $fileField ke server (cek permission folder uploads/sunsea).";
+            }
+            setSetting($pdo, $settingKey, 'uploads/sunsea/' . $fname);
+            return '';
+        };
+
+        $logoErr = $uploadImageSetting('invoice_logo', 'invoice_logo');
+        $stampErr = $uploadImageSetting('invoice_stamp', 'invoice_stamp');
+        if ($logoErr || $stampErr) {
+            $flashMsg = trim($logoErr . ' ' . $stampErr);
+            $flashType = 'error';
         }
 
         if (empty($flashMsg)) {
@@ -393,6 +395,7 @@ $keys = [
     'invoice_footer',
     'invoice_notes',
     'invoice_logo',
+    'invoice_stamp',
     'bank_name',
     'bank_account',
     'bank_holder',
@@ -603,6 +606,21 @@ $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : '
                             </div>
                         <?php endif; ?>
                         <small style="color:#888;">Tampil di kop surat invoice. Gunakan logo dengan background transparan (PNG).</small>
+                    </div>
+
+                    <div>
+                        <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;">Stempel / Cap Perusahaan</label>
+                        <input type="file" name="invoice_stamp" accept="image/*"
+                            style="width:100%;padding:6px;border:1px solid #ccc;border-radius:5px;font-family:inherit;font-size:13px;box-sizing:border-box;">
+                        <?php if ($cfg['invoice_stamp']): ?>
+                            <?php $invoiceStampPath = __DIR__ . '/../../' . trim($cfg['invoice_stamp'], '/'); ?>
+                            <div style="margin-top:8px;padding:8px;background:#f8fbff;border-radius:4px;text-align:center;">
+                                <img src="<?php echo htmlspecialchars($baseUrl . '/' . trim($cfg['invoice_stamp'], '/')) . '?v=' . (file_exists($invoiceStampPath) ? filemtime($invoiceStampPath) : time()); ?>"
+                                    alt="Stempel" style="max-height:70px;max-width:100%;object-fit:contain;">
+                                <div style="font-size:11px;color:#888;margin-top:4px;">Stempel saat ini</div>
+                            </div>
+                        <?php endif; ?>
+                        <small style="color:#888;">Muncul di area tanda tangan invoice. Gunakan PNG background transparan.</small>
                     </div>
 
                     <div>

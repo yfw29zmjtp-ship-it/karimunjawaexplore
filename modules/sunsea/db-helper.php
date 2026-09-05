@@ -531,3 +531,17 @@ function sunseaSetting(PDO $pdo, string $key, string $default = ''): string
         return $default;
     }
 }
+
+/**
+ * Build a cache-busted BASE_URL for a stored uploads-relative path so a re-uploaded
+ * file (same filename) shows immediately instead of a stale browser-cached version.
+ */
+function sunseaAssetUrl(string $relPath): string
+{
+    if ($relPath === '') return '';
+    $relPath = ltrim($relPath, '/');
+    $localFile = __DIR__ . '/../../' . $relPath;
+    $v = file_exists($localFile) ? filemtime($localFile) : time();
+    return BASE_URL . '/' . $relPath . '?v=' . $v;
+}
+

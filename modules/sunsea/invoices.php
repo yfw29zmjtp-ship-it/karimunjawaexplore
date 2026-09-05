@@ -236,7 +236,7 @@ $invoiceList->execute($lp);
 $invoiceList = $invoiceList->fetchAll();
 
 $invoiceLogoPath = sunseaSetting($pdo, 'invoice_logo', '') ?: sunseaSetting($pdo, 'company_logo', '');
-$invoiceLogoSrc = $invoiceLogoPath ? BASE_URL . '/' . ltrim($invoiceLogoPath, '/') : '';
+$invoiceLogoSrc = sunseaAssetUrl($invoiceLogoPath);
 
 $pageTitle  = match ($action) {
     'add'   => 'Buat Invoice Baru',
@@ -253,7 +253,9 @@ if ($action === 'print' && $invoice):
     $companyAddress = sunseaSetting($pdo, 'company_address', '');
     $companyPhone   = sunseaSetting($pdo, 'company_phone', '');
     $printLogoPath  = sunseaSetting($pdo, 'invoice_logo', '') ?: sunseaSetting($pdo, 'company_logo', '');
-    $printLogoSrc   = $printLogoPath ? BASE_URL . '/' . ltrim($printLogoPath, '/') : '';
+    $printLogoSrc   = sunseaAssetUrl($printLogoPath);
+    $stampPath      = sunseaSetting($pdo, 'invoice_stamp', '');
+    $stampSrc       = sunseaAssetUrl($stampPath);
     $bankName       = sunseaSetting($pdo, 'bank_name', '');
     $bankAccount    = sunseaSetting($pdo, 'bank_account', '');
     $bankHolder     = sunseaSetting($pdo, 'bank_holder', '');
@@ -283,125 +285,309 @@ if ($action === 'print' && $invoice):
         <meta charset="UTF-8">
         <title>Invoice <?php echo htmlspecialchars($invoice['invoice_no']); ?></title>
         <style>
-            body {
-                font-family: 'Segoe UI', sans-serif;
-                font-size: 12px;
-                padding: 24px;
-                color: #0f172a
+            * {
+                box-sizing: border-box;
             }
 
-            h1 {
-                font-size: 22px;
-                margin: 0;
-                color: #7C2D12
+            body {
+                font-family: 'Segoe UI', Arial, sans-serif;
+                font-size: 12.5px;
+                padding: 32px 40px;
+                color: #1e293b;
+                background: #fff;
+            }
+
+            .accent-bar {
+                height: 6px;
+                border-radius: 4px;
+                background: linear-gradient(90deg, #7C2D12, #C2410C 55%, #EA580C);
+                margin-bottom: 22px;
+            }
+
+            .head {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                padding-bottom: 18px;
+                border-bottom: 1px solid #E2E8F0;
             }
 
             .brand-logo {
-                width: 72px;
-                height: 72px;
+                width: 64px;
+                height: 64px;
                 object-fit: contain;
                 margin-right: 14px;
+                border-radius: 6px;
             }
 
-            h2 {
-                font-size: 14px;
-                margin: 2px 0 16px;
-                color: #64748B
+            .brand-name {
+                font-size: 19px;
+                font-weight: 800;
+                margin: 0;
+                color: #7C2D12;
+                letter-spacing: .2px;
+            }
+
+            .brand-meta {
+                font-size: 11px;
+                color: #64748B;
+                margin-top: 3px;
+                line-height: 1.5;
+                max-width: 320px;
+            }
+
+            .invoice-tag {
+                font-size: 26px;
+                font-weight: 800;
+                letter-spacing: 2px;
+                color: #C2410C;
+                margin: 0;
+            }
+
+            .invoice-no {
+                font-size: 12px;
+                color: #64748B;
+                margin-top: 4px;
+                font-weight: 600;
+            }
+
+            .meta-box {
+                display: flex;
+                justify-content: space-between;
+                gap: 16px;
+                background: #FFF7ED;
+                border: 1px solid #FDE4CC;
+                border-radius: 8px;
+                padding: 14px 18px;
+                margin-top: 18px;
+            }
+
+            .meta-box .item {
+                font-size: 11px;
+                color: #7C2D12;
+            }
+
+            .meta-box .item b {
+                display: block;
+                font-size: 12.5px;
+                color: #1e293b;
+                margin-top: 2px;
+                font-weight: 700;
+            }
+
+            .cust-row {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                margin-top: 18px;
+            }
+
+            .cust-row .cust-name {
+                font-size: 15px;
+                font-weight: 700;
+                color: #1e293b;
+            }
+
+            .cust-row .cust-label {
+                font-size: 10px;
+                color: #94a3b8;
+                text-transform: uppercase;
+                letter-spacing: .5px;
+            }
+
+            .status-badge {
+                display: inline-block;
+                font-size: 10.5px;
+                font-weight: 700;
+                padding: 4px 14px;
+                border-radius: 20px;
+                letter-spacing: .3px;
             }
 
             table {
                 width: 100%;
                 border-collapse: collapse;
-                margin-top: 12px
+                margin-top: 16px;
             }
 
-            th,
-            td {
-                border: 1px solid #E2E8F0;
-                padding: 8px;
-                text-align: left
+            thead th {
+                background: #7C2D12;
+                color: #fff;
+                font-size: 10.5px;
+                text-transform: uppercase;
+                letter-spacing: .4px;
+                padding: 9px 10px;
+                text-align: left;
             }
 
-            th {
-                background: #FFF7ED;
+            thead th:nth-child(2),
+            thead th:nth-child(3),
+            thead th:nth-child(4) {
+                text-align: right;
+            }
+
+            tbody td {
+                padding: 8px 10px;
+                border-bottom: 1px solid #EEF2F7;
+                font-size: 12px;
+            }
+
+            tbody td:nth-child(2),
+            tbody td:nth-child(3),
+            tbody td:nth-child(4) {
+                text-align: right;
+                white-space: nowrap;
+            }
+
+            tbody tr:nth-child(even) {
+                background: #FAFBFC;
+            }
+
+            .bottom-flex {
+                display: flex;
+                justify-content: space-between;
+                gap: 24px;
+                margin-top: 20px;
+            }
+
+            .bank-box {
+                flex: 1;
                 font-size: 11px;
-                color: #64748B
+                color: #475569;
+            }
+
+            .bank-card {
+                background: #F8FAFC;
+                border: 1px solid #E2E8F0;
+                border-radius: 8px;
+                padding: 10px 14px;
+                margin-bottom: 8px;
+            }
+
+            .bank-card b {
+                color: #1e293b;
             }
 
             .total {
-                margin-top: 16px;
-                max-width: 360px;
-                float: right
+                width: 300px;
+                flex-shrink: 0;
             }
 
             .row {
                 display: flex;
                 justify-content: space-between;
-                padding: 4px 0
+                padding: 5px 0;
+                font-size: 12px;
             }
 
             .final {
                 font-size: 16px;
-                font-weight: 700;
+                font-weight: 800;
                 border-top: 2px solid #C2410C;
-                padding-top: 8px;
-                color: #C2410C
+                margin-top: 4px;
+                padding-top: 10px;
+                color: #C2410C;
             }
 
-            .status-badge {
-                display: inline-block;
-                font-size: 11px;
-                font-weight: 700;
-                padding: 4px 12px;
-                border-radius: 20px;
-                margin-left: 10px;
-                vertical-align: middle;
+            .signature-area {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-end;
+                margin-top: 48px;
+                gap: 24px;
             }
 
-            .bank-box {
-                clear: both;
-                margin-top: 70px;
-                padding-top: 12px;
-                border-top: 1px solid #E2E8F0;
+            .notes-col {
+                flex: 1;
                 font-size: 11px;
                 color: #475569;
-                max-width: 55%;
+            }
+
+            .sign-col {
+                width: 220px;
+                text-align: center;
+                position: relative;
+            }
+
+            .sign-col .sign-place {
+                font-size: 11px;
+                color: #64748B;
+                margin-bottom: 4px;
+            }
+
+            .stamp-img {
+                max-width: 110px;
+                max-height: 110px;
+                object-fit: contain;
+                opacity: .88;
+                margin: 6px auto -18px;
+                display: block;
+                mix-blend-mode: multiply;
+            }
+
+            .sign-line {
+                margin-top: 58px;
+                border-top: 1px solid #94a3b8;
+                padding-top: 6px;
+                font-size: 11.5px;
+                font-weight: 700;
+                color: #1e293b;
+            }
+
+            .footer-note {
+                clear: both;
+                margin-top: 28px;
+                padding-top: 12px;
+                border-top: 1px dashed #E2E8F0;
+                font-size: 10.5px;
+                color: #94a3b8;
+                text-align: center;
+                font-style: italic;
             }
 
             @media print {
                 body {
-                    padding: 8px
+                    padding: 10px 18px;
                 }
             }
         </style>
     </head>
 
     <body onload="window.print()">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #C2410C;padding-bottom:16px;">
+        <div class="accent-bar"></div>
+        <div class="head">
             <div style="display:flex;align-items:center;">
                 <?php if ($printLogoSrc): ?><img class="brand-logo" src="<?php echo htmlspecialchars($printLogoSrc); ?>" alt="Logo"> <?php endif; ?>
                 <div>
-                    <h1><?php echo htmlspecialchars($companyName); ?></h1>
-                    <div style="font-size:11px;color:#64748B;margin-top:2px;">
+                    <p class="brand-name"><?php echo htmlspecialchars($companyName); ?></p>
+                    <div class="brand-meta">
                         <?php echo htmlspecialchars($companyAddress); ?><?php echo ($companyAddress && $companyPhone) ? ' &middot; ' : ''; ?><?php echo htmlspecialchars($companyPhone); ?>
                     </div>
                 </div>
             </div>
             <div style="text-align:right;">
-                <h1 style="font-size:20px;">INVOICE</h1>
-                <div style="font-size:11px;color:#64748B;margin-top:2px;"><?php echo htmlspecialchars($invoice['invoice_no']); ?></div>
+                <p class="invoice-tag">INVOICE</p>
+                <div class="invoice-no">No. <?php echo htmlspecialchars($invoice['invoice_no']); ?></div>
+                <div style="margin-top:8px;"><span class="status-badge" style="background:<?php echo $statusBg; ?>;color:<?php echo $statusColor; ?>;"><?php echo $statusLabel; ?></span></div>
             </div>
         </div>
-        <h2>
-            <?php echo htmlspecialchars($invoice['customer_name']); ?>
-            <span class="status-badge" style="background:<?php echo $statusBg; ?>;color:<?php echo $statusColor; ?>;"><?php echo $statusLabel; ?></span>
-        </h2>
-        <div>
-            Tanggal: <?php echo date('d M Y', strtotime($invoice['issued_at'] ?: $invoice['created_at'])); ?>
-            | Jatuh Tempo: <?php echo $invoice['due_date'] ? date('d M Y', strtotime($invoice['due_date'])) : '-'; ?>
-            | Pax: <?php echo (int)$invoice['pax_count']; ?>
-            <?php if ($invoice['trip_date']): ?> | Trip: <?php echo date('d M Y', strtotime($invoice['trip_date'])); ?><?php echo $invoice['trip_end_date'] ? ' - ' . date('d M Y', strtotime($invoice['trip_end_date'])) : ''; ?><?php endif; ?>
+
+        <div class="cust-row">
+            <div>
+                <div class="cust-label">Ditagihkan kepada</div>
+                <div class="cust-name"><?php echo htmlspecialchars($invoice['customer_name']); ?></div>
+            </div>
         </div>
+
+        <div class="meta-box">
+            <div class="item">Tanggal Invoice<b><?php echo date('d M Y', strtotime($invoice['issued_at'] ?: $invoice['created_at'])); ?></b></div>
+            <div class="item">Jatuh Tempo<b><?php echo $invoice['due_date'] ? date('d M Y', strtotime($invoice['due_date'])) : '-'; ?></b></div>
+            <div class="item">Jumlah Pax<b><?php echo (int)$invoice['pax_count']; ?> orang</b></div>
+            <?php if ($invoice['trip_date']): ?>
+                <div class="item">Tanggal Trip<b><?php echo date('d M Y', strtotime($invoice['trip_date'])); ?><?php echo $invoice['trip_end_date'] ? ' - ' . date('d M Y', strtotime($invoice['trip_end_date'])) : ''; ?></b></div>
+            <?php endif; ?>
+        </div>
+
         <table>
             <thead>
                 <tr>
@@ -422,29 +608,43 @@ if ($action === 'print' && $invoice):
                 <?php endforeach; ?>
             </tbody>
         </table>
-        <div class="total">
-            <div class="row"><span>Subtotal</span><strong><?php echo sunseaRupiah((float)$invoice['subtotal']); ?></strong></div>
-            <?php if ($invoice['discount_amount'] > 0): ?>
-                <div class="row"><span>Diskon</span><strong>-<?php echo sunseaRupiah((float)$invoice['discount_amount']); ?></strong></div>
-            <?php endif; ?>
-            <div class="row"><span>PPN <?php echo (float)$invoice['tax_pct']; ?>%</span><strong><?php echo sunseaRupiah((float)$invoice['tax_amount']); ?></strong></div>
-            <div class="row final"><span>TOTAL</span><strong><?php echo sunseaRupiah((float)$invoice['total_amount']); ?></strong></div>
-            <?php if ($invoice['paid_amount'] > 0): ?>
-                <div class="row" style="margin-top:8px;"><span>Terbayar</span><strong style="color:#15803D;"><?php echo sunseaRupiah((float)$invoice['paid_amount']); ?></strong></div>
-                <div class="row"><span><?php echo $invoice['remaining_amount'] > 0 ? 'Sisa Tagihan' : '&check; Lunas'; ?></span><strong style="color:<?php echo $invoice['remaining_amount'] > 0 ? '#B91C1C' : '#15803D'; ?>;"><?php echo sunseaRupiah((float)$invoice['remaining_amount']); ?></strong></div>
-            <?php endif; ?>
+
+        <div class="bottom-flex">
+            <div class="bank-box">
+                <?php if ($bankName || $bankAccount): ?>
+                    <div class="bank-card"><b>Transfer ke:</b> <?php echo htmlspecialchars($bankName ?: '-'); ?> &mdash; <?php echo htmlspecialchars($bankAccount ?: '-'); ?> a.n. <?php echo htmlspecialchars($bankHolder ?: '-'); ?></div>
+                <?php endif; ?>
+                <?php if ($bankName2 || $bankAccount2): ?>
+                    <div class="bank-card"><b>Transfer ke:</b> <?php echo htmlspecialchars($bankName2 ?: '-'); ?> &mdash; <?php echo htmlspecialchars($bankAccount2 ?: '-'); ?> a.n. <?php echo htmlspecialchars($bankHolder2 ?: '-'); ?></div>
+                <?php endif; ?>
+                <?php if ($invoiceNotes): ?><div style="margin-top:6px;"><?php echo nl2br(htmlspecialchars($invoiceNotes)); ?></div><?php endif; ?>
+                <?php if ($invoice['notes']): ?><div style="margin-top:6px;"><strong>Catatan:</strong> <?php echo nl2br(htmlspecialchars($invoice['notes'])); ?></div><?php endif; ?>
+            </div>
+            <div class="total">
+                <div class="row"><span>Subtotal</span><strong><?php echo sunseaRupiah((float)$invoice['subtotal']); ?></strong></div>
+                <?php if ($invoice['discount_amount'] > 0): ?>
+                    <div class="row"><span>Diskon</span><strong>-<?php echo sunseaRupiah((float)$invoice['discount_amount']); ?></strong></div>
+                <?php endif; ?>
+                <div class="row"><span>PPN <?php echo (float)$invoice['tax_pct']; ?>%</span><strong><?php echo sunseaRupiah((float)$invoice['tax_amount']); ?></strong></div>
+                <div class="row final"><span>TOTAL</span><strong><?php echo sunseaRupiah((float)$invoice['total_amount']); ?></strong></div>
+                <?php if ($invoice['paid_amount'] > 0): ?>
+                    <div class="row" style="margin-top:8px;"><span>Terbayar</span><strong style="color:#15803D;"><?php echo sunseaRupiah((float)$invoice['paid_amount']); ?></strong></div>
+                    <div class="row"><span><?php echo $invoice['remaining_amount'] > 0 ? 'Sisa Tagihan' : '&check; Lunas'; ?></span><strong style="color:<?php echo $invoice['remaining_amount'] > 0 ? '#B91C1C' : '#15803D'; ?>;"><?php echo sunseaRupiah((float)$invoice['remaining_amount']); ?></strong></div>
+                <?php endif; ?>
+            </div>
         </div>
-        <div class="bank-box">
-            <?php if ($bankName || $bankAccount): ?>
-                <div><strong>Transfer ke:</strong> <?php echo htmlspecialchars($bankName ?: '-'); ?> &mdash; <?php echo htmlspecialchars($bankAccount ?: '-'); ?> a.n. <?php echo htmlspecialchars($bankHolder ?: '-'); ?></div>
-            <?php endif; ?>
-            <?php if ($bankName2 || $bankAccount2): ?>
-                <div><strong>Transfer ke:</strong> <?php echo htmlspecialchars($bankName2 ?: '-'); ?> &mdash; <?php echo htmlspecialchars($bankAccount2 ?: '-'); ?> a.n. <?php echo htmlspecialchars($bankHolder2 ?: '-'); ?></div>
-            <?php endif; ?>
-            <?php if ($invoiceNotes): ?><div style="margin-top:6px;"><?php echo nl2br(htmlspecialchars($invoiceNotes)); ?></div><?php endif; ?>
-            <?php if ($invoice['notes']): ?><div style="margin-top:6px;"><strong>Catatan:</strong> <?php echo nl2br(htmlspecialchars($invoice['notes'])); ?></div><?php endif; ?>
-            <?php if ($footer): ?><div style="margin-top:6px;"><?php echo nl2br(htmlspecialchars($footer)); ?></div><?php endif; ?>
+
+        <div class="signature-area">
+            <div class="notes-col"></div>
+            <div class="sign-col">
+                <div class="sign-place"><?php echo date('d M Y'); ?></div>
+                <div>Hormat kami,</div>
+                <?php if ($stampSrc): ?><img class="stamp-img" src="<?php echo htmlspecialchars($stampSrc); ?>" alt="Stempel"><?php endif; ?>
+                <div class="sign-line"><?php echo htmlspecialchars($companyName); ?></div>
+            </div>
         </div>
+
+        <?php if ($footer): ?><div class="footer-note"><?php echo nl2br(htmlspecialchars($footer)); ?></div><?php endif; ?>
     </body>
 
     </html>
