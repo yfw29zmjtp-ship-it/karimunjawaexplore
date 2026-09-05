@@ -1,9 +1,8 @@
 -- ============================================================
 --  SUNSEA TRAVEL BUREAU - Database Setup
---  Database: adf_sunsea  (hosting: adfb2574_sunsea)
---  
---  Run this script after creating the database:
---    CREATE DATABASE adf_sunsea CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+--  Standalone hosting: karw6956_explore (single database untuk master + data Sunsea)
+--
+--  Import file ini SETELAH database/master-schema-fresh.sql, ke database yang SAMA.
 --
 --  Tables:
 --    1. settings          - Konfigurasi bisnis
