@@ -62,6 +62,7 @@ $sidebarMenuOptions = [
     'rab'          => 'Cetak RAB',
     'quotations'   => 'Penawaran',
     'invoices'     => 'Invoice',
+    'finance'      => 'Finance (Kas Operasional)',
     'settings'     => 'Pengaturan',
 ];
 

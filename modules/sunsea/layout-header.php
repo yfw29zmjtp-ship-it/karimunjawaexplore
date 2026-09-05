@@ -21,6 +21,7 @@ $sunseaNavItems = [
     'rab'           => ['icon' => 'file-minus', 'label' => 'Cetak RAB',         'url' => 'rab.php'],
     'quotations'    => ['icon' => 'file-text',  'label' => 'Penawaran',         'url' => 'quotations.php'],
     'invoices'      => ['icon' => 'credit-card', 'label' => 'Invoice',          'url' => 'invoices.php'],
+    'finance'       => ['icon' => 'dollar-sign', 'label' => 'Finance',          'url' => 'finance.php'],
     'settings'      => ['icon' => 'settings',   'label' => 'Pengaturan',        'url' => 'settings.php'],
 ];
 

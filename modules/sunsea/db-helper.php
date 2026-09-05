@@ -390,6 +390,48 @@ function sunseaEnsureQuotationItinerarySchema(PDO $pdo): void
 }
 
 /**
+ * Ensure cash_book (Buku Kas Operasional) exists and supports linking an
+ * expense/income entry to a specific booking (trip), on top of customer_id.
+ */
+function sunseaEnsureFinanceSchema(PDO $pdo): void
+{
+    try {
+        $pdo->exec("CREATE TABLE IF NOT EXISTS `cash_book` (
+            `id`               INT AUTO_INCREMENT PRIMARY KEY,
+            `cash_account_id`  INT,
+            `transaction_date` DATE NOT NULL,
+            `transaction_time` TIME DEFAULT '00:00:00',
+            `type`             ENUM('income','expense') NOT NULL,
+            `category`         VARCHAR(100),
+            `description`      VARCHAR(255) NOT NULL,
+            `amount`           DECIMAL(15,2) NOT NULL,
+            `reference`        VARCHAR(100),
+            `customer_id`      INT NULL,
+            `invoice_id`       INT NULL,
+            `created_by`       VARCHAR(100),
+            `created_at`       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            `updated_at`       TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_date (`transaction_date`),
+            INDEX idx_type (`type`),
+            INDEX idx_account (`cash_account_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        $requiredColumns = [
+            'booking_id' => "ALTER TABLE cash_book ADD COLUMN booking_id INT NULL AFTER customer_id",
+        ];
+        $check = $pdo->prepare("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cash_book' AND COLUMN_NAME = ?");
+        foreach ($requiredColumns as $column => $alterSql) {
+            $check->execute([$column]);
+            if ((int)$check->fetchColumn() === 0) {
+                $pdo->exec($alterSql);
+            }
+        }
+    } catch (Exception $e) {
+        error_log('sunseaEnsureFinanceSchema error: ' . $e->getMessage());
+    }
+}
+
+/**
  * Get next auto-number for quotation / invoice.
  * Format: SS-QUO-2026-001
  *
