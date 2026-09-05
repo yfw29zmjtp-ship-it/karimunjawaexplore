@@ -121,6 +121,9 @@ _*.php
 # Daily automated backup cron script - must stay tracked so it deploys
 !cron-daily-backup.php
 
+# Sunsea live feature page, not a throwaway "-new" script - must stay tracked
+!modules/sunsea/bookings-new.php
+
 # =============================================
 # Security-sensitive / Deploy scripts
 # =============================================
