@@ -701,10 +701,11 @@ include 'layout-header.php';
                             </div>
                             <div class="ss-form-group">
                                 <label class="ss-label">Paket (opsional)</label>
-                                <select name="package_id" class="ss-select" id="pkgSelect" onchange="fillItineraryFromPackage()">
+                                <select name="package_id" class="ss-select" id="pkgSelect" onchange="fillItineraryFromPackage(); applyPackageMode();">
                                     <option value="">-- Custom / Tidak pakai paket --</option>
                                     <?php foreach ($packages as $p): ?>
                                         <option value="<?php echo $p['id']; ?>"
+                                            data-name="<?php echo htmlspecialchars($p['name']); ?>"
                                             data-price="<?php echo $p['base_price']; ?>"
                                             data-days="<?php echo $p['duration_days']; ?>"
                                             data-itinerary="<?php echo htmlspecialchars($p['itinerary'] ?? ''); ?>"
@@ -717,7 +718,7 @@ include 'layout-header.php';
                             <div class="ss-form-group">
                                 <label class="ss-label">Jumlah Peserta</label>
                                 <input type="number" name="pax_count" class="ss-input" min="1"
-                                    value="<?php echo $quotation['pax_count'] ?? 1; ?>" id="paxInput">
+                                    value="<?php echo $quotation['pax_count'] ?? 1; ?>" id="paxInput" oninput="syncPackageQtyFromPax()">
                             </div>
                             <div class="ss-form-group">
                                 <label class="ss-label">Tanggal Trip</label>
@@ -732,8 +733,15 @@ include 'layout-header.php';
                         </div>
                     </div>
 
+                    <!-- Info: paket dipilih, item otomatis dari harga paket x jumlah peserta -->
+                    <div class="ss-card" id="packageModeNote" style="margin-bottom:16px;display:none;background:var(--ss-gray-1);">
+                        <div style="font-size:13px;color:var(--ss-text);">
+                            <strong>Mode Paket aktif.</strong> Tidak perlu input item satu-satu — subtotal otomatis dihitung dari harga paket × jumlah peserta. Ubah "Jumlah Peserta" di atas untuk update subtotal, atau pilih "Custom / Tidak pakai paket" untuk input item manual.
+                        </div>
+                    </div>
+
                     <!-- Items -->
-                    <div class="ss-card" style="margin-bottom:16px;">
+                    <div class="ss-card" id="itemsCard" style="margin-bottom:16px;">
                         <div class="ss-card-header">
                             <div class="ss-card-title">Item Penawaran</div>
                             <button type="button" onclick="addItem()" class="ss-btn ss-btn-outline ss-btn-sm">
@@ -986,6 +994,64 @@ HTML;
         }
     }
 
+    function packageRowHtml(name, qty, price) {
+        return `<td><select name="item_type[]" class="ss-select" style="font-size:12px;padding:6px 8px;"><option value="other" selected>Paket</option></select></td>
+        <td><input type="text" name="item_description[]" class="ss-input" style="font-size:12px;padding:6px 8px;" value="${name.replace(/"/g, '&quot;')}" readonly></td>
+        <td><input type="number" name="item_qty[]" class="ss-input item-qty" style="font-size:12px;padding:6px 8px;" value="${qty}" min="1" step="1" readonly></td>
+        <td><input type="text" name="item_unit[]" class="ss-input" style="font-size:12px;padding:6px 8px;" value="org" readonly></td>
+        <td><input type="text" name="item_price[]" class="ss-input item-price" style="font-size:12px;padding:6px 8px;" value="${Math.round(price).toLocaleString('id-ID')}" readonly></td>
+        <td><input type="text" class="ss-input item-sub" style="font-size:12px;padding:6px 8px;font-weight:600;" readonly placeholder="0"></td>
+        <td></td>`;
+    }
+
+    // Called when the package dropdown changes: switches between "package mode"
+    // (single auto row, no manual input needed) and "custom mode" (manual items).
+    function applyPackageMode() {
+        var sel = document.getElementById('pkgSelect');
+        var itemsCard = document.getElementById('itemsCard');
+        var note = document.getElementById('packageModeNote');
+        var tbody = document.getElementById('itemsBody');
+        if (!sel || !itemsCard || !tbody) return;
+        var opt = sel.options[sel.selectedIndex];
+
+        if (sel.value) {
+            itemsCard.style.display = 'none';
+            if (note) note.style.display = '';
+            var price = parseFloat(opt.getAttribute('data-price')) || 0;
+            var name = opt.getAttribute('data-name') || '';
+            var qty = parseFloat(document.getElementById('paxInput')?.value) || 1;
+            tbody.innerHTML = '';
+            var tr = document.createElement('tr');
+            tr.setAttribute('data-pkg-row', '1');
+            tr.innerHTML = packageRowHtml(name, qty, price);
+            tbody.appendChild(tr);
+            setupRowListeners(tr);
+        } else {
+            itemsCard.style.display = '';
+            if (note) note.style.display = 'none';
+            tbody.querySelectorAll('tr[data-pkg-row]').forEach(function(r) {
+                r.remove();
+            });
+            if (!tbody.querySelector('tr')) {
+                addItem();
+                addItem();
+            }
+        }
+        calcTotals();
+    }
+
+    // Keeps the auto package row's qty synced with "Jumlah Peserta" without
+    // touching anything else (so it never disturbs manual custom items).
+    function syncPackageQtyFromPax() {
+        var tbody = document.getElementById('itemsBody');
+        var pkgRow = tbody ? tbody.querySelector('tr[data-pkg-row]') : null;
+        if (!pkgRow) return;
+        var qty = parseFloat(document.getElementById('paxInput')?.value) || 1;
+        var qtyField = pkgRow.querySelector('.item-qty');
+        if (qtyField) qtyField.value = qty;
+        calcTotals();
+    }
+
     function fmt(n) {
         return 'Rp ' + Math.round(n).toLocaleString('id-ID');
     }
@@ -1091,7 +1157,15 @@ HTML;
     document.querySelectorAll('#itemsBody tr').forEach(setupRowListeners);
     document.getElementById('discountInput')?.addEventListener('input', calcTotals);
     document.getElementById('taxInput')?.addEventListener('input', calcTotals);
-    calcTotals();
+
+    // Only auto-switch to package mode on page load when there are no
+    // already-saved items, so editing an existing custom quotation is untouched.
+    var hasSavedItems = <?php echo (!empty($qItems)) ? 'true' : 'false'; ?>;
+    if (!hasSavedItems && document.getElementById('pkgSelect')?.value) {
+        applyPackageMode();
+    } else {
+        calcTotals();
+    }
 </script>
 
 <?php include 'layout-footer.php'; ?>
