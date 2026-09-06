@@ -18,6 +18,7 @@ $pdo    = getSunseaConnection();
 sunseaEnsureMasterDataSchema($pdo);
 sunseaEnsureAccommodationSchema($pdo);
 sunseaEnsureQuotationItinerarySchema($pdo);
+sunseaEnsurePackageItemsSchema($pdo);
 $action = $_GET['action'] ?? 'list';
 $qId    = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
@@ -245,11 +246,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // ---- LOAD DATA ----
 $quotation   = null;
 $qItems      = [];
+$qPackageItems = [];
 if (in_array($action, ['view', 'edit', 'print']) && $qId > 0) {
     $s = $pdo->prepare("
         SELECT q.*, c.name as customer_name, c.phone as customer_phone,
                c.email as customer_email, c.address as customer_address, c.city as customer_city,
-               p.name as package_name
+               p.name as package_name, p.includes as package_includes
         FROM quotations q
         JOIN customers c ON c.id = q.customer_id
         LEFT JOIN trip_packages p ON p.id = q.package_id
@@ -265,6 +267,12 @@ if (in_array($action, ['view', 'edit', 'print']) && $qId > 0) {
     $si = $pdo->prepare("SELECT * FROM quotation_items WHERE quotation_id=? ORDER BY sort_order");
     $si->execute([$qId]);
     $qItems = $si->fetchAll();
+
+    if (!empty($quotation['package_id'])) {
+        $pi = $pdo->prepare("SELECT item_type, item_name, notes FROM trip_package_items WHERE package_id=? ORDER BY sort_order");
+        $pi->execute([(int)$quotation['package_id']]);
+        $qPackageItems = $pi->fetchAll();
+    }
 }
 
 // Customers & packages for form
@@ -317,10 +325,27 @@ if ($action === 'print' && $quotation):
     $companyName    = sunseaSetting($pdo, 'company_name', 'Explore Karimunjawa');
     $companyAddress = sunseaSetting($pdo, 'company_address', '');
     $companyPhone   = sunseaSetting($pdo, 'company_phone', '');
+    $printLogoPath  = sunseaSetting($pdo, 'invoice_logo', '') ?: sunseaSetting($pdo, 'company_logo', '');
+    $printLogoSrc   = sunseaAssetUrl($printLogoPath);
+    $stampPath      = sunseaSetting($pdo, 'invoice_stamp', '');
+    $stampSrc       = sunseaAssetUrl($stampPath);
     $bankName       = sunseaSetting($pdo, 'bank_name', '');
     $bankAccount    = sunseaSetting($pdo, 'bank_account', '');
     $bankHolder     = sunseaSetting($pdo, 'bank_holder', '');
     $footer         = sunseaSetting($pdo, 'invoice_footer', '');
+
+    // Fasilitas yang didapat: pakai detail layanan paket terstruktur bila ada,
+    // fallback ke teks bebas "includes" pada paket.
+    $facilityLines = [];
+    foreach ($qPackageItems as $pi) {
+        $facilityLines[] = trim($pi['item_name']) . (!empty($pi['notes']) ? ' (' . trim($pi['notes']) . ')' : '');
+    }
+    if (empty($facilityLines) && !empty($quotation['package_includes'])) {
+        foreach (preg_split('/\r\n|\r|\n/', $quotation['package_includes']) as $line) {
+            $line = trim($line, " \t-•");
+            if ($line !== '') $facilityLines[] = $line;
+        }
+    }
 ?>
     <!DOCTYPE html>
     <html lang="id">
@@ -330,98 +355,216 @@ if ($action === 'print' && $quotation):
         <title>Penawaran <?php echo htmlspecialchars($quotation['quotation_no']); ?></title>
         <style>
             * {
-                margin: 0;
-                padding: 0;
                 box-sizing: border-box;
             }
 
             body {
-                font-family: 'Segoe UI', sans-serif;
-                font-size: 12px;
-                color: #0F172A;
-                padding: 30px 40px;
+                font-family: 'Segoe UI', Arial, sans-serif;
+                font-size: 12.5px;
+                padding: 32px 40px;
+                color: #1e293b;
+                background: #fff;
             }
 
-            .header {
+            .accent-bar {
+                height: 6px;
+                border-radius: 4px;
+                background: linear-gradient(90deg, #7C2D12, #C2410C 55%, #EA580C);
+                margin-bottom: 22px;
+            }
+
+            .head {
                 display: flex;
                 justify-content: space-between;
                 align-items: flex-start;
-                margin-bottom: 28px;
-                border-bottom: 2px solid #C2410C;
-                padding-bottom: 16px;
+                padding-bottom: 18px;
+                border-bottom: 1px solid #E2E8F0;
             }
 
-            .brand {
+            .brand-logo {
+                width: 64px;
+                height: 64px;
+                object-fit: contain;
+                margin-right: 14px;
+                border-radius: 6px;
+            }
+
+            .brand-name {
+                font-size: 19px;
+                font-weight: 800;
+                margin: 0;
+                color: #7C2D12;
+                letter-spacing: .2px;
+            }
+
+            .brand-meta {
+                font-size: 11px;
+                color: #64748B;
+                margin-top: 3px;
+                line-height: 1.5;
+                max-width: 320px;
+            }
+
+            .quo-tag {
                 font-size: 24px;
                 font-weight: 800;
+                letter-spacing: 1.5px;
+                color: #C2410C;
+                margin: 0;
+            }
+
+            .quo-no {
+                font-size: 12px;
+                color: #64748B;
+                margin-top: 4px;
+                font-weight: 600;
+            }
+
+            .cust-row {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                margin-top: 18px;
+            }
+
+            .cust-row .cust-name {
+                font-size: 15px;
+                font-weight: 700;
+                color: #1e293b;
+            }
+
+            .cust-row .cust-label {
+                font-size: 10px;
+                color: #94a3b8;
+                text-transform: uppercase;
+                letter-spacing: .5px;
+            }
+
+            .meta-box {
+                display: flex;
+                justify-content: space-between;
+                gap: 16px;
+                background: #FFF7ED;
+                border: 1px solid #FDE4CC;
+                border-radius: 8px;
+                padding: 14px 18px;
+                margin-top: 18px;
+            }
+
+            .meta-box .item {
+                font-size: 11px;
                 color: #7C2D12;
             }
 
-            .brand-sub {
-                font-size: 11px;
-                color: #64748B;
-            }
-
-            .doc-info {
-                text-align: right;
-            }
-
-            .doc-no {
-                font-size: 18px;
-                font-weight: 800;
-                color: #C2410C;
+            .meta-box .item b {
+                display: block;
+                font-size: 12.5px;
+                color: #1e293b;
+                margin-top: 2px;
+                font-weight: 700;
             }
 
             .section-title {
-                font-size: 10px;
+                font-size: 11px;
                 font-weight: 700;
                 text-transform: uppercase;
-                letter-spacing: 1px;
-                color: #64748B;
-                margin-bottom: 6px;
-            }
-
-            .to-from {
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-                gap: 20px;
-                margin-bottom: 24px;
+                letter-spacing: .5px;
+                color: #7C2D12;
+                margin: 20px 0 8px;
             }
 
             table {
                 width: 100%;
                 border-collapse: collapse;
-                margin-bottom: 16px;
+                margin-top: 8px;
             }
 
-            th {
-                background: #FFF7ED;
-                padding: 8px 10px;
+            thead th {
+                background: #7C2D12;
+                color: #fff;
+                font-size: 10.5px;
+                text-transform: uppercase;
+                letter-spacing: .4px;
+                padding: 9px 10px;
                 text-align: left;
-                font-size: 11px;
-                color: #64748B;
-                font-weight: 700;
             }
 
-            td {
+            thead th:nth-child(3),
+            thead th:nth-child(4),
+            thead th:nth-child(5),
+            thead th:nth-child(6) {
+                text-align: right;
+            }
+
+            tbody td {
                 padding: 8px 10px;
-                border-bottom: 1px solid #E2E8F0;
+                border-bottom: 1px solid #EEF2F7;
+                font-size: 12px;
             }
 
-            .total-box {
-                float: right;
+            tbody td:nth-child(3),
+            tbody td:nth-child(5),
+            tbody td:nth-child(6) {
+                text-align: right;
+                white-space: nowrap;
+            }
+
+            tbody tr:nth-child(even) {
+                background: #FAFBFC;
+            }
+
+            .facility-box {
+                background: #F0FDF4;
+                border: 1px solid #BBF7D0;
+                border-radius: 8px;
+                padding: 12px 16px;
+                margin-top: 6px;
+            }
+
+            .facility-list {
+                columns: 2;
+                column-gap: 24px;
+                margin: 0;
+                padding-left: 18px;
+                font-size: 11.5px;
+                color: #15803D;
+                line-height: 1.7;
+            }
+
+            .bottom-flex {
+                display: flex;
+                justify-content: space-between;
+                gap: 24px;
+                margin-top: 20px;
+            }
+
+            .bank-box {
+                flex: 1;
+                font-size: 11px;
+                color: #475569;
+            }
+
+            .bank-card {
+                background: #F8FAFC;
+                border: 1px solid #E2E8F0;
+                border-radius: 6px;
+                padding: 8px 10px;
+                margin-bottom: 6px;
+            }
+
+            .total {
                 width: 280px;
             }
 
-            .total-row {
+            .row {
                 display: flex;
                 justify-content: space-between;
                 padding: 4px 0;
                 font-size: 12px;
             }
 
-            .total-row.final {
-                font-size: 14px;
+            .row.final {
+                font-size: 15px;
                 font-weight: 800;
                 color: #C2410C;
                 border-top: 2px solid #C2410C;
@@ -429,20 +572,66 @@ if ($action === 'print' && $quotation):
                 margin-top: 4px;
             }
 
-            .footer {
-                margin-top: 32px;
-                padding-top: 12px;
-                border-top: 1px solid #E2E8F0;
-                font-size: 11px;
-                color: #64748B;
-                text-align: center;
+            .itinerary-box {
+                font-size: 11.5px;
+                color: #334155;
+                line-height: 1.7;
             }
 
-            .bank-info {
-                background: #FFF7ED;
-                padding: 12px;
-                border-radius: 8px;
-                margin-top: 20px;
+            .itinerary-day {
+                font-weight: 700;
+                color: #7C2D12;
+                margin-top: 8px;
+            }
+
+            .signature-area {
+                display: flex;
+                justify-content: space-between;
+                margin-top: 30px;
+            }
+
+            .notes-col {
+                flex: 1;
+                font-size: 11px;
+                color: #475569;
+            }
+
+            .sign-col {
+                width: 220px;
+                text-align: center;
+                font-size: 11.5px;
+                position: relative;
+            }
+
+            .sign-place {
+                margin-bottom: 46px;
+            }
+
+            .stamp-img {
+                position: absolute;
+                top: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 90px;
+                opacity: .9;
+                mix-blend-mode: multiply;
+            }
+
+            .sign-line {
+                border-top: 1px solid #94a3b8;
+                margin-top: 4px;
+                padding-top: 4px;
+                font-weight: 700;
+            }
+
+            .footer-note {
+                margin-top: 26px;
+                padding-top: 12px;
+                border-top: 1px solid #E2E8F0;
+                font-size: 10.5px;
+                color: #94a3b8;
+                text-align: center;
+                font-style: italic;
             }
 
             @media print {
@@ -454,37 +643,45 @@ if ($action === 'print' && $quotation):
     </head>
 
     <body onload="window.print()">
-        <div class="header">
-            <div>
-                <div class="brand">🌊 <?php echo htmlspecialchars($companyName); ?></div>
-                <div class="brand-sub">Travel Bureau</div>
-                <?php if ($companyAddress): ?><div style="margin-top:4px;color:#64748B;font-size:11px;"><?php echo nl2br(htmlspecialchars($companyAddress)); ?></div><?php endif; ?>
-                <?php if ($companyPhone): ?><div style="color:#64748B;font-size:11px;">📞 <?php echo htmlspecialchars($companyPhone); ?></div><?php endif; ?>
+        <div class="accent-bar"></div>
+        <div class="head">
+            <div style="display:flex;align-items:center;">
+                <?php if ($printLogoSrc): ?><img class="brand-logo" src="<?php echo htmlspecialchars($printLogoSrc); ?>" alt="Logo"> <?php endif; ?>
+                <div>
+                    <p class="brand-name"><?php echo htmlspecialchars($companyName); ?></p>
+                    <div class="brand-meta">
+                        <?php echo htmlspecialchars($companyAddress); ?><?php echo ($companyAddress && $companyPhone) ? ' &middot; ' : ''; ?><?php echo htmlspecialchars($companyPhone); ?>
+                    </div>
+                </div>
             </div>
-            <div class="doc-info">
-                <div class="doc-no"><?php echo htmlspecialchars($quotation['quotation_no']); ?></div>
-                <div>SURAT PENAWARAN HARGA</div>
-                <div style="color:#64748B;">Tanggal: <?php echo date('d/m/Y', strtotime($quotation['created_at'])); ?></div>
-                <div style="color:#64748B;">Berlaku s/d: <?php echo $quotation['valid_until'] ? date('d/m/Y', strtotime($quotation['valid_until'])) : '-'; ?></div>
-            </div>
-        </div>
-
-        <div class="to-from">
-            <div>
-                <div class="section-title">Kepada Yth.</div>
-                <strong><?php echo htmlspecialchars($quotation['customer_name']); ?></strong>
-                <?php if ($quotation['customer_address']): ?><div><?php echo htmlspecialchars($quotation['customer_address']); ?></div><?php endif; ?>
-                <?php if ($quotation['customer_city']): ?><div><?php echo htmlspecialchars($quotation['customer_city']); ?></div><?php endif; ?>
-                <?php if ($quotation['customer_phone']): ?><div>📞 <?php echo htmlspecialchars($quotation['customer_phone']); ?></div><?php endif; ?>
-            </div>
-            <div>
-                <div class="section-title">Info Perjalanan</div>
-                <?php if ($quotation['trip_date']): ?><div>Tanggal: <strong><?php echo date('d/m/Y', strtotime($quotation['trip_date'])); ?><?php echo $quotation['trip_end_date'] ? ' - ' . date('d/m/Y', strtotime($quotation['trip_end_date'])) : ''; ?></strong></div><?php endif; ?>
-                <div>Jumlah Peserta: <strong><?php echo $quotation['pax_count']; ?> orang</strong></div>
-                <?php if ($quotation['package_name']): ?><div>Paket: <strong><?php echo htmlspecialchars($quotation['package_name']); ?></strong></div><?php endif; ?>
+            <div style="text-align:right;">
+                <p class="quo-tag"><?php echo htmlspecialchars($quotation['quotation_no']); ?></p>
+                <div class="quo-no">SURAT PENAWARAN HARGA</div>
+                <div class="quo-no">Tanggal: <?php echo date('d M Y', strtotime($quotation['created_at'])); ?></div>
+                <div class="quo-no">Berlaku s/d: <?php echo $quotation['valid_until'] ? date('d M Y', strtotime($quotation['valid_until'])) : '-'; ?></div>
             </div>
         </div>
 
+        <div class="cust-row">
+            <div>
+                <div class="cust-label">Kepada Yth.</div>
+                <div class="cust-name"><?php echo htmlspecialchars($quotation['customer_name']); ?></div>
+                <?php if ($quotation['customer_address'] || $quotation['customer_city']): ?>
+                    <div style="font-size:11px;color:#64748B;"><?php echo htmlspecialchars(trim($quotation['customer_address'] . ' ' . $quotation['customer_city'])); ?></div>
+                <?php endif; ?>
+                <?php if ($quotation['customer_phone']): ?><div style="font-size:11px;color:#64748B;">📞 <?php echo htmlspecialchars($quotation['customer_phone']); ?></div><?php endif; ?>
+            </div>
+        </div>
+
+        <div class="meta-box">
+            <div class="item">Jumlah Peserta<b><?php echo (int)$quotation['pax_count']; ?> orang</b></div>
+            <?php if ($quotation['package_name']): ?><div class="item">Paket<b><?php echo htmlspecialchars($quotation['package_name']); ?></b></div><?php endif; ?>
+            <?php if ($quotation['trip_date']): ?>
+                <div class="item">Tanggal Trip<b><?php echo date('d M Y', strtotime($quotation['trip_date'])); ?><?php echo $quotation['trip_end_date'] ? ' - ' . date('d M Y', strtotime($quotation['trip_end_date'])) : ''; ?></b></div>
+            <?php endif; ?>
+        </div>
+
+        <div class="section-title">Rincian Penawaran</div>
         <table>
             <thead>
                 <tr>
@@ -501,43 +698,67 @@ if ($action === 'print' && $quotation):
                     <tr>
                         <td><?php echo $i + 1; ?></td>
                         <td><?php echo htmlspecialchars($item['description']); ?></td>
-                        <td style="text-align:right;"><?php echo $item['qty'] == intval($item['qty']) ? (int)$item['qty'] : $item['qty']; ?></td>
+                        <td><?php echo $item['qty'] == intval($item['qty']) ? (int)$item['qty'] : $item['qty']; ?></td>
                         <td><?php echo htmlspecialchars($item['unit']); ?></td>
-                        <td style="text-align:right;"><?php echo sunseaRupiah((float)$item['unit_price']); ?></td>
-                        <td style="text-align:right;font-weight:600;"><?php echo sunseaRupiah((float)$item['subtotal']); ?></td>
+                        <td><?php echo sunseaRupiah((float)$item['unit_price']); ?></td>
+                        <td style="font-weight:600;"><?php echo sunseaRupiah((float)$item['subtotal']); ?></td>
                     </tr>
                 <?php endforeach; ?>
             </tbody>
         </table>
 
-        <div class="total-box">
-            <div class="total-row"><span>Subtotal</span><span><?php echo sunseaRupiah((float)$quotation['subtotal']); ?></span></div>
-            <?php if ($quotation['discount_amount'] > 0): ?>
-                <div class="total-row"><span>Diskon</span><span>- <?php echo sunseaRupiah((float)$quotation['discount_amount']); ?></span></div>
-            <?php endif; ?>
-            <div class="total-row"><span>PPN <?php echo $quotation['tax_pct']; ?>%</span><span><?php echo sunseaRupiah((float)$quotation['tax_amount']); ?></span></div>
-            <div class="total-row final"><span>TOTAL</span><span><?php echo sunseaRupiah((float)$quotation['total_amount']); ?></span></div>
-        </div>
-        <div style="clear:both;"></div>
-
-        <?php if ($bankName || $bankAccount): ?>
-            <div class="bank-info">
-                <strong>Informasi Pembayaran</strong><br>
-                Bank: <?php echo htmlspecialchars($bankName); ?><br>
-                No. Rekening: <?php echo htmlspecialchars($bankAccount); ?><br>
-                Atas Nama: <?php echo htmlspecialchars($bankHolder); ?>
+        <?php if (!empty($facilityLines)): ?>
+            <div class="section-title">Fasilitas yang Didapat</div>
+            <div class="facility-box">
+                <ul class="facility-list">
+                    <?php foreach ($facilityLines as $line): ?>
+                        <li><?php echo htmlspecialchars($line); ?></li>
+                    <?php endforeach; ?>
+                </ul>
             </div>
         <?php endif; ?>
 
+        <div class="bottom-flex">
+            <div class="bank-box">
+                <?php if ($bankName || $bankAccount): ?>
+                    <div class="bank-card"><b>Transfer ke:</b> <?php echo htmlspecialchars($bankName ?: '-'); ?> &mdash; <?php echo htmlspecialchars($bankAccount ?: '-'); ?> a.n. <?php echo htmlspecialchars($bankHolder ?: '-'); ?></div>
+                <?php endif; ?>
+                <?php if ($quotation['notes']): ?><div style="margin-top:6px;"><strong>Catatan:</strong> <?php echo nl2br(htmlspecialchars($quotation['notes'])); ?></div><?php endif; ?>
+            </div>
+            <div class="total">
+                <div class="row"><span>Subtotal</span><strong><?php echo sunseaRupiah((float)$quotation['subtotal']); ?></strong></div>
+                <?php if ($quotation['discount_amount'] > 0): ?>
+                    <div class="row"><span>Diskon</span><strong>-<?php echo sunseaRupiah((float)$quotation['discount_amount']); ?></strong></div>
+                <?php endif; ?>
+                <div class="row"><span>PPN <?php echo (float)$quotation['tax_pct']; ?>%</span><strong><?php echo sunseaRupiah((float)$quotation['tax_amount']); ?></strong></div>
+                <div class="row final"><span>TOTAL</span><strong><?php echo sunseaRupiah((float)$quotation['total_amount']); ?></strong></div>
+            </div>
+        </div>
+
         <?php if (!empty($quotation['itinerary'])): ?>
-            <div style="margin-top:16px;"><strong>Itinerary (Jadwal Perjalanan):</strong><br><?php echo nl2br(htmlspecialchars($quotation['itinerary'])); ?></div>
+            <div class="section-title">Itinerary (Jadwal Perjalanan)</div>
+            <div class="itinerary-box">
+                <?php foreach (preg_split('/\r\n|\r|\n/', trim($quotation['itinerary'])) as $line):
+                    $line = trim($line);
+                    if ($line === '') continue;
+                    $isDayHeader = (bool)preg_match('/^\.?\s*Hari\s*\d+/i', $line);
+                ?>
+                    <div class="<?php echo $isDayHeader ? 'itinerary-day' : ''; ?>"><?php echo htmlspecialchars($line); ?></div>
+                <?php endforeach; ?>
+            </div>
         <?php endif; ?>
 
-        <?php if ($quotation['notes']): ?>
-            <div style="margin-top:16px;"><strong>Catatan:</strong><br><?php echo nl2br(htmlspecialchars($quotation['notes'])); ?></div>
-        <?php endif; ?>
+        <div class="signature-area">
+            <div class="notes-col"></div>
+            <div class="sign-col">
+                <div class="sign-place"><?php echo date('d M Y'); ?></div>
+                <div>Hormat kami,</div>
+                <?php if ($stampSrc): ?><img class="stamp-img" src="<?php echo htmlspecialchars($stampSrc); ?>" alt="Stempel"><?php endif; ?>
+                <div class="sign-line"><?php echo htmlspecialchars($companyName); ?></div>
+            </div>
+        </div>
 
-        <div class="footer"><?php echo htmlspecialchars($footer); ?></div>
+        <?php if ($footer): ?><div class="footer-note"><?php echo nl2br(htmlspecialchars($footer)); ?></div><?php endif; ?>
     </body>
 
     </html>
