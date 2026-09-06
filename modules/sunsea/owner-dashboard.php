@@ -154,23 +154,30 @@ $userName = $currentUser['full_name'] ?? $currentUser['username'] ?? 'Owner';
 
 <div class="ob-container">
 
+<div class="ob-quicklinks" style="margin-bottom:14px;">
+    <a href="owner-bookings.php" class="ob-qbtn"><i data-feather="briefcase"></i> Reservasi Tamu</a>
+    <a href="owner-calendar.php" class="ob-qbtn"><i data-feather="calendar"></i> Kalender Booking</a>
+    <a href="owner-invoices.php" class="ob-qbtn"><i data-feather="credit-card"></i> Invoice</a>
+    <a href="owner-finance.php" class="ob-qbtn"><i data-feather="dollar-sign"></i> Finance</a>
+</div>
+
 <div class="ob-cards">
-    <a href="bookings.php" class="ob-card">
+    <a href="owner-bookings.php?status=draft" class="ob-card">
         <div class="ob-card-label">Pending</div>
         <div class="ob-card-value" style="color:var(--ocean);"><?php echo $pendingCount; ?></div>
         <div class="ob-card-sub">Booking belum confirm</div>
     </a>
-    <a href="calendar.php" class="ob-card">
+    <a href="owner-bookings.php?status=confirmed" class="ob-card">
         <div class="ob-card-label">Confirmed</div>
         <div class="ob-card-value" style="color:var(--success);"><?php echo $confirmedCount; ?></div>
         <div class="ob-card-sub">Masuk kalender</div>
     </a>
-    <a href="invoices.php?status=issued" class="ob-card">
+    <a href="owner-invoices.php?status=issued" class="ob-card">
         <div class="ob-card-label">Invoice Belum Lunas</div>
         <div class="ob-card-value" style="color:var(--danger);"><?php echo (int)$invoiceStats['cnt']; ?></div>
         <div class="ob-card-sub"><?php echo sunseaRupiah((float)$invoiceStats['total_outstanding']); ?></div>
     </a>
-    <a href="finance.php" class="ob-card">
+    <a href="owner-finance.php" class="ob-card">
         <div class="ob-card-label">Saldo Bulan Ini</div>
         <div class="ob-card-value" style="color:<?php echo $monthBalance >= 0 ? 'var(--success)' : 'var(--danger)'; ?>;"><?php echo sunseaRupiah($monthBalance); ?></div>
         <div class="ob-card-sub">Masuk <?php echo sunseaRupiah($monthIncome, true); ?> · Keluar <?php echo sunseaRupiah($monthExpense, true); ?></div>
@@ -180,13 +187,13 @@ $userName = $currentUser['full_name'] ?? $currentUser['username'] ?? 'Owner';
 <div class="ob-section">
     <div class="ob-section-head">
         <div class="ob-section-title">Reservasi Tamu Mendatang</div>
-        <a href="calendar.php" class="ob-section-link">Lihat Kalender →</a>
+        <a href="owner-calendar.php" class="ob-section-link">Lihat Kalender →</a>
     </div>
     <?php if (empty($upcomingBookings)): ?>
         <div class="ob-empty">Belum ada reservasi confirmed yang akan datang.</div>
     <?php else: ?>
         <?php foreach ($upcomingBookings as $b): ?>
-            <a href="bookings.php?view=<?php echo (int)$b['id']; ?>" class="ob-row">
+            <a href="owner-bookings.php?status=confirmed" class="ob-row">
                 <div>
                     <div class="ob-row-title"><?php echo htmlspecialchars($b['booking_no']); ?></div>
                     <div class="ob-row-sub"><?php echo htmlspecialchars($b['customer_name']); ?> · <?php echo (int)$b['pax_count']; ?> pax</div>
@@ -202,7 +209,7 @@ $userName = $currentUser['full_name'] ?? $currentUser['username'] ?? 'Owner';
 <div class="ob-section">
     <div class="ob-section-head">
         <div class="ob-section-title">Invoice Perlu Ditagih</div>
-        <a href="invoices.php" class="ob-section-link">Lihat Semua →</a>
+        <a href="owner-invoices.php" class="ob-section-link">Lihat Semua →</a>
     </div>
     <?php if (empty($recentInvoices)): ?>
         <div class="ob-empty">Semua invoice sudah lunas. 🎉</div>
@@ -217,13 +224,6 @@ $userName = $currentUser['full_name'] ?? $currentUser['username'] ?? 'Owner';
             </div>
         <?php endforeach; ?>
     <?php endif; ?>
-</div>
-
-<div class="ob-quicklinks">
-    <a href="bookings.php" class="ob-qbtn"><i data-feather="briefcase"></i> Reservasi Tamu</a>
-    <a href="calendar.php" class="ob-qbtn"><i data-feather="calendar"></i> Kalender Booking</a>
-    <a href="invoices.php" class="ob-qbtn"><i data-feather="credit-card"></i> Invoice</a>
-    <a href="finance.php" class="ob-qbtn"><i data-feather="dollar-sign"></i> Finance</a>
 </div>
 
 </div>
