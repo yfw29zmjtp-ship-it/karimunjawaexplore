@@ -489,7 +489,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updat
         $newStatus = 'cancelled';
     }
 
-    $allowed = ['confirmed', 'cancelled'];
+    $allowed = ['draft', 'confirmed', 'cancelled'];
     if ($bookingId > 0 && in_array($newStatus, $allowed, true)) {
         try {
             $pdo->prepare("UPDATE booking_orders SET status=?, updated_at=NOW() WHERE id=?")
@@ -663,7 +663,7 @@ include 'layout-header.php';
                     <div class="ss-card-sub"><?php echo htmlspecialchars($detail['customer_name']); ?> · <?php echo date('d M Y', strtotime($detail['start_date'])); ?> - <?php echo date('d M Y', strtotime($detail['end_date'])); ?></div>
                 </div>
                 <div style="display:flex;align-items:center;gap:8px;">
-                    <span class="ss-status ss-status-<?php echo $detail['status'] === 'completed' ? 'approved' : ($detail['status'] === 'cancelled' ? 'rejected' : 'sent'); ?>"><?php echo ucfirst($detail['status']); ?></span>
+                    <span class="ss-status ss-status-<?php echo $detail['status'] === 'completed' ? 'approved' : ($detail['status'] === 'cancelled' ? 'rejected' : ($detail['status'] === 'draft' ? 'draft' : 'sent')); ?>"><?php echo $detail['status'] === 'draft' ? 'Pending' : ucfirst($detail['status']); ?></span>
                     <button type="button" class="ss-btn ss-btn-outline ss-btn-sm" onclick="var p=document.getElementById('editItemsPanel');p.style.display=(p.style.display==='none'?'block':'none');this.querySelector('span').textContent=(p.style.display==='none'?'Edit':'Tutup Edit');"><i data-feather="edit-2"></i> <span>Edit</span></button>
                 </div>
             </div>
@@ -848,6 +848,7 @@ include 'layout-header.php';
                     <input type="hidden" name="booking_id" value="<?php echo (int)$detail['id']; ?>">
                     <input type="hidden" name="return_view" value="1">
                     <select name="status" class="ss-select" style="flex:1;">
+                        <option value="draft" <?php echo $detail['status'] === 'draft' ? 'selected' : ''; ?>>Pending</option>
                         <option value="confirmed" <?php echo $detail['status'] === 'confirmed' ? 'selected' : ''; ?>>Confirmed</option>
                         <option value="cancel" <?php echo $detail['status'] === 'cancelled' ? 'selected' : ''; ?>>Cancel</option>
                     </select>
@@ -1009,6 +1010,7 @@ include 'layout-header.php';
                                     <input type="hidden" name="action" value="update_status">
                                     <input type="hidden" name="booking_id" value="<?php echo (int)$r['id']; ?>">
                                     <select name="status" class="ss-select" style="min-width:130px;height:32px;padding:4px 8px;font-size:12px;">
+                                        <option value="draft" <?php echo $r['status'] === 'draft' ? 'selected' : ''; ?>>Pending</option>
                                         <option value="confirmed" <?php echo $r['status'] === 'confirmed' ? 'selected' : ''; ?>>Confirmed</option>
                                         <option value="cancel" <?php echo $r['status'] === 'cancelled' ? 'selected' : ''; ?>>Cancel</option>
                                     </select>
