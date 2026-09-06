@@ -206,6 +206,7 @@ if (isPost()) {
     $password = getPost('password');
     $rememberMe = isset($_POST['remember_me']);
     $loginType = getPost('login_type') ?? 'normal'; // owner or normal
+    $_SESSION['debug_login_type_received'] = $loginType;
 
     // Handle remember me - save username cookie (token set after successful login)
     if ($rememberMe && $username) {
@@ -301,6 +302,7 @@ if (isPost()) {
                     // Only owner, admin, developer can access owner dashboard
                     if (in_array($roleCode, ['owner', 'admin', 'developer'])) {
                         $_SESSION['role'] = $roleCode;
+                        $_SESSION['debug_login_branch'] = 'owner_branch';
                         // Set active business to user's first assigned business
                         require_once __DIR__ . '/includes/business_access.php';
                         $ownerBizList = getUserAvailableBusinesses();
@@ -319,6 +321,7 @@ if (isPost()) {
 
                 // Developer role has full access to all businesses
                 if ($roleCode === 'developer') {
+                    $_SESSION['debug_login_branch'] = 'developer_normal_branch';
                     if ($forcedBusiness) {
                         setActiveBusinessId($forcedBusiness);
                     } else {

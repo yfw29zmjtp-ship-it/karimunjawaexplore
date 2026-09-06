@@ -36,7 +36,9 @@ echo "3) APP SESSION KEYS\n";
 echo "   logged_in: " . (isset($_SESSION['logged_in']) ? var_export($_SESSION['logged_in'], true) : 'NOT SET') . "\n";
 echo "   user_id: " . ($_SESSION['user_id'] ?? 'NOT SET') . "\n";
 echo "   role: " . ($_SESSION['role'] ?? 'NOT SET') . "\n";
-echo "   active_business_id: " . ($_SESSION['active_business_id'] ?? 'NOT SET') . "\n\n";
+echo "   active_business_id: " . ($_SESSION['active_business_id'] ?? 'NOT SET') . "\n";
+echo "   debug_login_type_received: " . ($_SESSION['debug_login_type_received'] ?? 'NOT SET') . "\n";
+echo "   debug_login_branch: " . ($_SESSION['debug_login_branch'] ?? 'NOT SET') . "\n\n";
 
 echo "4) COOKIES\n";
 echo "   NARAYANA_SESSION cookie: " . (isset($_COOKIE['NARAYANA_SESSION']) ? 'FOUND' : 'NOT FOUND') . "\n";
