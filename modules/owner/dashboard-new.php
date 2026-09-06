@@ -1,5 +1,6 @@
 <?php
-session_start();
+define('APP_ACCESS', true);
+require_once __DIR__ . '/../../config/config.php';
 if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], ['admin', 'owner', 'manager', 'developer'])) {
     header('Location: /index.php');
     exit;
