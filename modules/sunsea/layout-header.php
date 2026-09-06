@@ -897,8 +897,20 @@ if (empty($sunseaNavItemsVisible)) {
         }
 
         /* ---- MOBILE ---- */
+        .ss-sidebar-overlay {
+            display: none;
+        }
+
         @media (max-width: 768px) {
+            body {
+                zoom: 100%;
+            }
+
             .ss-sidebar {
+                position: fixed;
+                top: 0;
+                left: 0;
+                z-index: 200;
                 transform: translateX(-100%);
                 transition: transform .3s;
             }
@@ -907,17 +919,38 @@ if (empty($sunseaNavItemsVisible)) {
                 transform: translateX(0);
             }
 
+            .ss-sidebar-overlay.open {
+                display: block;
+                position: fixed;
+                inset: 0;
+                background: rgba(15, 23, 42, .45);
+                z-index: 150;
+            }
+
             .ss-main {
                 margin-left: 0;
             }
 
+            #sidebarToggle {
+                display: block !important;
+            }
+
+            .ss-topbar {
+                padding: 0 14px;
+            }
+
             .ss-content {
-                padding: 16px;
+                padding: 14px;
             }
 
             .ss-form-grid.cols-2,
             .ss-form-grid.cols-3 {
                 grid-template-columns: 1fr;
+            }
+
+            div[style*="grid-template-columns:1fr 320px"],
+            div[style*="grid-template-columns:1fr 300px"] {
+                grid-template-columns: 1fr !important;
             }
         }
     </style>
@@ -926,6 +959,7 @@ if (empty($sunseaNavItemsVisible)) {
 <body>
 
     <!-- ==================== SIDEBAR ==================== -->
+    <div class="ss-sidebar-overlay" id="sunseaSidebarOverlay" onclick="document.getElementById('sunseaSidebar').classList.remove('open');this.classList.remove('open');"></div>
     <aside class="ss-sidebar" id="sunseaSidebar">
         <div class="ss-brand">
             <?php if ($_sidebarLogoSrc): ?>
@@ -1024,7 +1058,7 @@ if (empty($sunseaNavItemsVisible)) {
     <div class="ss-main">
         <header class="ss-topbar">
             <div style="display:flex;align-items:center;gap:12px;">
-                <button onclick="document.getElementById('sunseaSidebar').classList.toggle('open')"
+                <button onclick="document.getElementById('sunseaSidebar').classList.toggle('open');document.getElementById('sunseaSidebarOverlay').classList.toggle('open');"
                     style="display:none;background:none;border:none;cursor:pointer;padding:4px;"
                     id="sidebarToggle">
                     <i data-feather="menu" style="width:20px;height:20px;"></i>
