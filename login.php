@@ -1014,7 +1014,7 @@ if (isset($_GET['biz'])) {
                     </div>
                 <?php endif; ?>
 
-                <form method="POST" action="" autocomplete="on" onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('btnSystemLogin').click();}">
+                <form method="POST" action="" autocomplete="on" onkeydown="if(event.key==='Enter' && event.target.tagName==='INPUT'){event.preventDefault();document.getElementById(window.__lastLoginBtn || 'btnSystemLogin').click();}">
                     <div class="form-group">
                         <label class="form-label">Username</label>
                         <input type="text" name="username" autocomplete="username" class="form-control" placeholder="Enter username" required autofocus value="<?= htmlspecialchars($savedUser) ?>">
@@ -1037,8 +1037,8 @@ if (isset($_GET['biz'])) {
                     </div>
 
                     <div class="login-buttons">
-                        <button type="submit" name="login_type" value="owner" class="btn-owner">Owner Login</button>
-                        <button type="submit" name="login_type" value="normal" class="btn-primary" id="btnSystemLogin">System Login</button>
+                        <button type="submit" name="login_type" value="owner" id="btnOwnerLogin" class="btn-owner" onmouseenter="window.__lastLoginBtn='btnOwnerLogin';" onfocus="window.__lastLoginBtn='btnOwnerLogin';">Owner Login</button>
+                        <button type="submit" name="login_type" value="normal" class="btn-primary" id="btnSystemLogin" onmouseenter="window.__lastLoginBtn='btnSystemLogin';" onfocus="window.__lastLoginBtn='btnSystemLogin';">System Login</button>
                     </div>
                 </form>
 
