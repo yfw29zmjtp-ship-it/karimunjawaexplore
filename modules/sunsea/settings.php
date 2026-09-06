@@ -333,7 +333,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ($userAction === 'change_role') {
             $uid = (int)($_POST['user_id'] ?? 0);
             $roleId = (int)($_POST['role_id'] ?? 0);
-            $validRoleIds = $pdo->query("SELECT id FROM roles")->fetchAll(PDO::FETCH_COLUMN);
+            $validRoleIds = array_map('intval', $pdo->query("SELECT id FROM roles")->fetchAll(PDO::FETCH_COLUMN));
             if ($uid > 0 && $uid === (int)($currentUser['id'] ?? 0)) {
                 $flashMsg = 'Anda tidak bisa mengubah role akun Anda sendiri.';
                 $flashType = 'error';
