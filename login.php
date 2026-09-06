@@ -140,7 +140,7 @@ if ($allowRememberTokenAutoLogin && !empty($_COOKIE['adf_remember_token']) && !$
                     if (!empty($ownerBizList)) {
                         setActiveBusinessId(getPreferredDefaultBusiness($ownerBizList));
                     }
-                    header('Location: ' . BASE_URL . '/modules/owner/dashboard-new.php');
+                    header('Location: ' . BASE_URL . '/modules/sunsea/owner-dashboard.php');
                     exit;
                 } else {
                     // Normal user - set first business
@@ -194,7 +194,7 @@ if ($auth->isLoggedIn() && !isPost()) {
     // If user role is owner/admin/developer, go to owner dashboard
     $currentRole = $_SESSION['role'] ?? '';
     if (in_array($currentRole, ['owner', 'admin', 'developer'])) {
-        redirect(BASE_URL . '/modules/owner/dashboard-new.php');
+        redirect(BASE_URL . '/modules/sunsea/owner-dashboard.php');
     } else {
         redirect(BASE_URL . '/index.php');
     }
@@ -311,7 +311,7 @@ if (isPost()) {
                             setActiveBusinessId($firstOwnerBiz);
                         }
                         setFlash('success', 'Owner login successful!');
-                        header('Location: ' . BASE_URL . '/modules/owner/dashboard-new.php');
+                        header('Location: ' . BASE_URL . '/modules/sunsea/owner-dashboard.php');
                         exit;
                     } else {
                         $error = 'Access denied. Only Owner role can access the Owner Dashboard.';

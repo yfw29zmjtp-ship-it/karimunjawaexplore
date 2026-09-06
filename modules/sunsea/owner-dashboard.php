@@ -16,7 +16,7 @@ $auth = new Auth();
 $auth->requireLogin();
 
 $currentUser = $auth->getCurrentUser();
-if (($currentUser['role'] ?? '') !== 'developer') {
+if (!in_array($currentUser['role'] ?? '', ['developer', 'owner'], true)) {
     header('Location: dashboard.php');
     exit;
 }

@@ -37,7 +37,7 @@ $currentUser = isset($auth) ? $auth->getCurrentUser() : [];
 $userName    = $currentUser['full_name'] ?? $currentUser['username'] ?? 'User';
 
 // Owner Dashboard menu hanya untuk role Developer/Owner
-if (($currentUser['role'] ?? '') !== 'developer') {
+if (!in_array($currentUser['role'] ?? '', ['developer', 'owner'], true)) {
     unset($sunseaNavItems['owner_dashboard']);
 }
 
