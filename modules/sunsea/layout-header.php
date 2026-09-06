@@ -147,6 +147,7 @@ if (empty($sunseaNavItemsVisible)) {
             font-size: 13px;
             min-height: 100vh;
             display: flex;
+            zoom: 80%;
         }
 
         /* ---- SIDEBAR ---- */
