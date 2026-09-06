@@ -99,7 +99,7 @@ if (!empty($_COOKIE['adf_owner_remember_token']) && !$auth->isLoggedIn() && !isP
                     } else {
                         setActiveBusinessId(array_key_first($ownerBizList));
                     }
-                    header('Location: ' . BASE_URL . '/modules/owner/dashboard-2028.php');
+                    header('Location: ' . BASE_URL . '/modules/owner/dashboard-new.php');
                     exit;
                 }
             }
@@ -117,7 +117,7 @@ if (!empty($_COOKIE['adf_owner_remember_token']) && !$auth->isLoggedIn() && !isP
 if ($auth->isLoggedIn()) {
     $currentUser = $auth->getCurrentUser();
     if (in_array($currentUser['role'], ['owner', 'admin', 'developer'])) {
-        redirect(BASE_URL . '/modules/owner/dashboard-2028.php');
+        redirect(BASE_URL . '/modules/owner/dashboard-new.php');
     } else {
         session_destroy();
     }
@@ -206,7 +206,7 @@ if (isPost()) {
                             $firstBiz = array_key_first($ownerBizList);
                             setActiveBusinessId($firstBiz);
                         }
-                        redirect(BASE_URL . '/modules/owner/dashboard-2028.php');
+                        redirect(BASE_URL . '/modules/owner/dashboard-new.php');
                     }
                 }
             }
