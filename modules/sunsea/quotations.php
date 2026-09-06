@@ -250,6 +250,7 @@ $qPackageItems = [];
 if (in_array($action, ['view', 'edit', 'print']) && $qId > 0) {
     $s = $pdo->prepare("
         SELECT q.*, c.name as customer_name, c.phone as customer_phone,
+               c.whatsapp as customer_whatsapp,
                c.email as customer_email, c.address as customer_address, c.city as customer_city,
                p.name as package_name, p.includes as package_includes
         FROM quotations q
@@ -770,10 +771,21 @@ include 'layout-header.php';
 
 <?php if ($action === 'view' && $quotation): ?>
     <!-- ============ VIEW DETAIL ============ -->
-    <div style="margin-bottom:20px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+    <?php
+    $waPhone = $quotation['customer_whatsapp'] ?: $quotation['customer_phone'];
+    $waMessage = "Halo {$quotation['customer_name']}, berikut penawaran perjalanan dari " . sunseaSetting($pdo, 'company_name', 'Explore Karimunjawa') . " nomor {$quotation['quotation_no']} sebesar " . sunseaRupiah((float)$quotation['total_amount']) . ". Berlaku sampai " . ($quotation['valid_until'] ? date('d M Y', strtotime($quotation['valid_until'])) : '-') . ". Terima kasih.";
+    $waLink = $waPhone ? sunseaWaLink($waPhone, $waMessage) : '';
+    ?>
+    <div style="margin-bottom:18px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
         <a href="quotations.php" class="ss-btn ss-btn-outline ss-btn-sm"><i data-feather="arrow-left"></i> Kembali</a>
         <a href="quotations.php?action=print&id=<?php echo $quotation['id']; ?>" target="_blank"
             class="ss-btn ss-btn-outline ss-btn-sm"><i data-feather="printer"></i> Cetak / PDF</a>
+        <?php if ($waLink): ?>
+            <a href="<?php echo htmlspecialchars($waLink); ?>" target="_blank"
+                class="ss-btn ss-btn-sm" style="background:#25D366;color:#fff;border-color:#25D366;">
+                <i data-feather="message-circle"></i> WA Customer
+            </a>
+        <?php endif; ?>
         <?php if ($quotation['status'] === 'draft'): ?>
             <a href="quotations.php?action=edit&id=<?php echo $quotation['id']; ?>" class="ss-btn ss-btn-outline ss-btn-sm">
                 <i data-feather="edit-2"></i> Edit
@@ -802,45 +814,45 @@ include 'layout-header.php';
         <?php endif; ?>
     </div>
 
-    <div style="display:grid;grid-template-columns:1fr 320px;gap:20px;">
+    <div style="display:grid;grid-template-columns:1fr 300px;gap:16px;">
         <div>
-            <div class="ss-card" style="margin-bottom:20px;">
-                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;">
+            <div class="ss-card" style="margin-bottom:16px;">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
                     <div>
-                        <div style="font-size:22px;font-weight:800;color:var(--ss-ocean);"><?php echo htmlspecialchars($quotation['quotation_no']); ?></div>
-                        <div style="font-size:13px;color:var(--ss-muted);">untuk <?php echo htmlspecialchars($quotation['customer_name']); ?></div>
+                        <div style="font-size:17px;font-weight:800;color:var(--ss-ocean);letter-spacing:.2px;"><?php echo htmlspecialchars($quotation['quotation_no']); ?></div>
+                        <div style="font-size:12px;color:var(--ss-muted);">untuk <?php echo htmlspecialchars($quotation['customer_name']); ?></div>
                     </div>
-                    <span class="ss-status ss-status-<?php echo $quotation['status']; ?>" style="font-size:13px;padding:5px 12px;">
+                    <span class="ss-status ss-status-<?php echo $quotation['status']; ?>" style="font-size:11px;padding:4px 10px;">
                         <?php echo ucfirst($quotation['status']); ?>
                     </span>
                 </div>
 
-                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px;padding:16px;background:var(--ss-sky);border-radius:8px;">
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;padding:12px 14px;background:var(--ss-sky);border-radius:8px;">
                     <div>
-                        <div style="font-size:10px;color:var(--ss-muted);text-transform:uppercase;">Tanggal Trip</div>
-                        <div style="font-weight:600;"><?php echo $quotation['trip_date'] ? date('d M Y', strtotime($quotation['trip_date'])) : '-'; ?></div>
+                        <div style="font-size:9px;color:var(--ss-muted);text-transform:uppercase;letter-spacing:.3px;">Tanggal Trip</div>
+                        <div style="font-size:12.5px;font-weight:600;"><?php echo $quotation['trip_date'] ? date('d M Y', strtotime($quotation['trip_date'])) : '-'; ?></div>
                     </div>
                     <div>
-                        <div style="font-size:10px;color:var(--ss-muted);text-transform:uppercase;">Peserta</div>
-                        <div style="font-weight:600;"><?php echo $quotation['pax_count']; ?> orang</div>
+                        <div style="font-size:9px;color:var(--ss-muted);text-transform:uppercase;letter-spacing:.3px;">Peserta</div>
+                        <div style="font-size:12.5px;font-weight:600;"><?php echo $quotation['pax_count']; ?> orang</div>
                     </div>
                     <div>
-                        <div style="font-size:10px;color:var(--ss-muted);text-transform:uppercase;">Berlaku s/d</div>
-                        <div style="font-weight:600;"><?php echo $quotation['valid_until'] ? date('d M Y', strtotime($quotation['valid_until'])) : '-'; ?></div>
+                        <div style="font-size:9px;color:var(--ss-muted);text-transform:uppercase;letter-spacing:.3px;">Berlaku s/d</div>
+                        <div style="font-size:12.5px;font-weight:600;"><?php echo $quotation['valid_until'] ? date('d M Y', strtotime($quotation['valid_until'])) : '-'; ?></div>
                     </div>
                 </div>
 
                 <!-- Items table -->
                 <div class="ss-table-wrap">
-                    <table class="ss-table">
+                    <table class="ss-table" style="font-size:12px;">
                         <thead>
                             <tr>
-                                <th>#</th>
-                                <th>Keterangan</th>
-                                <th>Qty</th>
-                                <th>Satuan</th>
-                                <th>Harga</th>
-                                <th>Subtotal</th>
+                                <th style="font-size:10px;">#</th>
+                                <th style="font-size:10px;">Keterangan</th>
+                                <th style="font-size:10px;">Qty</th>
+                                <th style="font-size:10px;">Satuan</th>
+                                <th style="font-size:10px;">Harga</th>
+                                <th style="font-size:10px;">Subtotal</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -850,8 +862,8 @@ include 'layout-header.php';
                                     <td><?php echo htmlspecialchars($item['description']); ?></td>
                                     <td><?php echo $item['qty'] == intval($item['qty']) ? (int)$item['qty'] : $item['qty']; ?></td>
                                     <td><?php echo htmlspecialchars($item['unit']); ?></td>
-                                    <td><?php echo sunseaRupiah((float)$item['unit_price']); ?></td>
-                                    <td style="font-weight:600;"><?php echo sunseaRupiah((float)$item['subtotal']); ?></td>
+                                    <td style="white-space:nowrap;"><?php echo sunseaRupiah((float)$item['unit_price']); ?></td>
+                                    <td style="font-weight:600;white-space:nowrap;"><?php echo sunseaRupiah((float)$item['subtotal']); ?></td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
@@ -861,32 +873,46 @@ include 'layout-header.php';
         </div>
 
         <div>
-            <div class="ss-card" style="margin-bottom:16px;">
-                <div class="ss-card-title" style="margin-bottom:14px;">Ringkasan Harga</div>
-                <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--ss-gray-2);">
+            <div class="ss-card" style="margin-bottom:14px;">
+                <div class="ss-card-title" style="margin-bottom:12px;font-size:13px;">Ringkasan Harga</div>
+                <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--ss-gray-2);font-size:12.5px;">
                     <span style="color:var(--ss-muted);">Subtotal</span>
                     <span style="font-weight:600;"><?php echo sunseaRupiah((float)$quotation['subtotal']); ?></span>
                 </div>
                 <?php if ($quotation['discount_amount'] > 0): ?>
-                    <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--ss-gray-2);">
+                    <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--ss-gray-2);font-size:12.5px;">
                         <span style="color:var(--ss-muted);">Diskon</span>
                         <span style="color:var(--ss-success);font-weight:600;">- <?php echo sunseaRupiah((float)$quotation['discount_amount']); ?></span>
                     </div>
                 <?php endif; ?>
-                <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--ss-gray-2);">
+                <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--ss-gray-2);font-size:12.5px;">
                     <span style="color:var(--ss-muted);">PPN <?php echo $quotation['tax_pct']; ?>%</span>
                     <span style="font-weight:600;"><?php echo sunseaRupiah((float)$quotation['tax_amount']); ?></span>
                 </div>
-                <div style="display:flex;justify-content:space-between;padding:12px 0 0;font-size:18px;font-weight:800;color:var(--ss-ocean);">
-                    <span>TOTAL</span>
-                    <span><?php echo sunseaRupiah((float)$quotation['total_amount']); ?></span>
+                <div style="display:flex;justify-content:space-between;align-items:baseline;padding:10px 0 0;">
+                    <span style="font-size:12px;font-weight:700;color:var(--ss-ocean);text-transform:uppercase;letter-spacing:.3px;">Total</span>
+                    <span style="font-size:19px;font-weight:800;color:var(--ss-ocean);"><?php echo sunseaRupiah((float)$quotation['total_amount']); ?></span>
                 </div>
             </div>
 
+            <?php if ($waPhone): ?>
+                <div class="ss-card" style="margin-bottom:14px;">
+                    <div class="ss-card-title" style="margin-bottom:8px;font-size:13px;">Kontak Customer</div>
+                    <div style="font-size:12.5px;font-weight:600;"><?php echo htmlspecialchars($quotation['customer_name']); ?></div>
+                    <div style="font-size:12px;color:var(--ss-muted);margin-bottom:10px;"><?php echo htmlspecialchars($waPhone); ?></div>
+                    <?php if ($waLink): ?>
+                        <a href="<?php echo htmlspecialchars($waLink); ?>" target="_blank"
+                            class="ss-btn ss-btn-sm" style="width:100%;justify-content:center;background:#25D366;color:#fff;border-color:#25D366;">
+                            <i data-feather="message-circle"></i> Kirim via WhatsApp
+                        </a>
+                    <?php endif; ?>
+                </div>
+            <?php endif; ?>
+
             <?php if ($quotation['notes']): ?>
                 <div class="ss-card">
-                    <div class="ss-card-title" style="margin-bottom:8px;">Catatan</div>
-                    <div style="font-size:13px;color:var(--ss-muted);"><?php echo nl2br(htmlspecialchars($quotation['notes'])); ?></div>
+                    <div class="ss-card-title" style="margin-bottom:6px;font-size:13px;">Catatan</div>
+                    <div style="font-size:12px;color:var(--ss-muted);"><?php echo nl2br(htmlspecialchars($quotation['notes'])); ?></div>
                 </div>
             <?php endif; ?>
         </div>

@@ -576,3 +576,22 @@ function sunseaAssetUrl(string $relPath): string
     return BASE_URL . '/' . $relPath . '?v=' . $v;
 }
 
+/**
+ * Build a wa.me link from a local phone number (e.g. 08123456789) with an optional prefilled message.
+ */
+function sunseaWaLink(string $phone, string $message = ''): string
+{
+    $digits = preg_replace('/\D/', '', $phone);
+    if ($digits === '') return '';
+    if (substr($digits, 0, 1) === '0') {
+        $digits = '62' . substr($digits, 1);
+    } elseif (substr($digits, 0, 2) !== '62') {
+        $digits = '62' . $digits;
+    }
+    $url = 'https://wa.me/' . $digits;
+    if ($message !== '') {
+        $url .= '?text=' . rawurlencode($message);
+    }
+    return $url;
+}
+
