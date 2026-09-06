@@ -31,7 +31,7 @@ if (in_array($statusFilter, ['draft', 'confirmed', 'cancelled'], true)) {
 }
 
 $bookings = $pdo->prepare("
-    SELECT b.id, b.booking_no, b.start_date, b.end_date, b.pax_count, b.status, c.name AS customer_name
+    SELECT b.id, b.booking_no, b.start_date, b.end_date, b.pax_count, b.status, c.name AS customer_name, c.phone AS customer_phone
     FROM booking_orders b
     JOIN customers c ON c.id = b.customer_id
     $where
@@ -64,14 +64,20 @@ include 'owner-mobile-header.php';
     <?php else: ?>
         <?php foreach ($bookings as $b): ?>
             <?php $badge = $statusBadge[$b['status']] ?? ['ob-badge-draft', $b['status']]; ?>
-            <div class="ob-row">
-                <div>
-                    <div class="ob-row-title"><?php echo htmlspecialchars($b['booking_no']); ?></div>
-                    <div class="ob-row-sub"><?php echo htmlspecialchars($b['customer_name']); ?> · <?php echo (int)$b['pax_count']; ?> pax</div>
+            <?php $waLink = sunseaWaLink((string)$b['customer_phone']); ?>
+            <a href="owner-booking-detail.php?id=<?php echo (int)$b['id']; ?>" class="ob-row" style="align-items:flex-start;">
+                <div style="flex:1;min-width:0;">
+                    <div class="ob-row-title" style="font-size:14px;"><?php echo htmlspecialchars($b['customer_name']); ?></div>
+                    <div class="ob-row-sub"><?php echo htmlspecialchars($b['booking_no']); ?> · <?php echo (int)$b['pax_count']; ?> pax</div>
                     <div class="ob-row-sub"><?php echo date('d M', strtotime($b['start_date'])); ?> - <?php echo date('d M Y', strtotime($b['end_date'])); ?></div>
                 </div>
-                <span class="ob-badge <?php echo $badge[0]; ?>"><?php echo htmlspecialchars($badge[1]); ?></span>
-            </div>
+                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+                    <span class="ob-badge <?php echo $badge[0]; ?>"><?php echo htmlspecialchars($badge[1]); ?></span>
+                    <?php if ($waLink): ?>
+                        <a href="<?php echo htmlspecialchars($waLink); ?>" target="_blank" rel="noopener" onclick="event.stopPropagation();" class="ob-wa-btn"><i data-feather="message-circle"></i> WA</a>
+                    <?php endif; ?>
+                </div>
+            </a>
         <?php endforeach; ?>
     <?php endif; ?>
 </div>

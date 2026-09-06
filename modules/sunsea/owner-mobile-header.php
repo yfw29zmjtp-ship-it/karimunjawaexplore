@@ -71,6 +71,21 @@ $backUrl = $backUrl ?? 'owner-dashboard.php';
         font-size:11px; font-weight:700; color:var(--ocean); margin:14px 0 6px; text-transform:uppercase;
     }
     .ob-agenda-date:first-child { margin-top:0; }
+    .ob-wa-btn {
+        display:inline-flex; align-items:center; gap:3px; padding:3px 8px; border-radius:999px;
+        background:#25D366; color:#fff; font-size:10px; font-weight:700; text-decoration:none;
+    }
+    .ob-wa-btn svg { width:11px; height:11px; }
+    .ob-detail-label { font-size:10px; color:var(--muted); text-transform:uppercase; font-weight:600; margin-bottom:2px; }
+    .ob-detail-value { font-size:13px; font-weight:600; margin-bottom:12px; }
+    .ob-item-row { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border); font-size:12px; }
+    .ob-item-row:last-child { border-bottom:none; }
+    .ob-qbtn {
+        display:flex; align-items:center; justify-content:center; gap:6px;
+        background:#fff; border:1.5px solid var(--ocean); color:var(--ocean);
+        border-radius:10px; padding:12px 8px; text-decoration:none; font-size:12.5px; font-weight:700;
+    }
+    .ob-qbtn svg { width:16px; height:16px; }
 </style>
 </head>
 <body>
