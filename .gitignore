@@ -124,6 +124,9 @@ _*.php
 # Sunsea live feature page, not a throwaway "-new" script - must stay tracked
 !modules/sunsea/bookings-new.php
 
+# Owner dashboard live feature page, not a throwaway "-new" script - must stay tracked
+!modules/owner/dashboard-new.php
+
 # =============================================
 # Security-sensitive / Deploy scripts
 # =============================================
