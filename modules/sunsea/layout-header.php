@@ -13,6 +13,7 @@ if (!defined('APP_ACCESS')) define('APP_ACCESS', true);
 
 $sunseaNavItems = [
     'dashboard'     => ['icon' => 'home',       'label' => 'Dashboard',         'url' => 'dashboard.php'],
+    'owner_dashboard' => ['icon' => 'smartphone', 'label' => 'Owner Dashboard', 'url' => 'owner-dashboard.php'],
     'database'      => ['icon' => 'database',   'label' => 'Database',          'url' => 'database.php'],
     'bookings'      => ['icon' => 'briefcase',  'label' => 'Booking',           'url' => 'bookings.php'],
     'calendar'      => ['icon' => 'calendar',   'label' => 'Kalender Booking',  'url' => 'calendar.php'],
@@ -34,6 +35,11 @@ $sunseaNavGroups = [
 $activePage = $activePage ?? '';
 $currentUser = isset($auth) ? $auth->getCurrentUser() : [];
 $userName    = $currentUser['full_name'] ?? $currentUser['username'] ?? 'User';
+
+// Owner Dashboard menu hanya untuk role Developer/Owner
+if (($currentUser['role'] ?? '') !== 'developer') {
+    unset($sunseaNavItems['owner_dashboard']);
+}
 
 $visibleMenuKeys = array_keys($sunseaNavItems);
 
@@ -79,6 +85,11 @@ foreach ($visibleMenuKeys as $__k) {
 
 if (!isset($sunseaNavItemsVisible[$activePage]) && isset($sunseaNavItems[$activePage])) {
     $sunseaNavItemsVisible[$activePage] = $sunseaNavItems[$activePage];
+}
+
+// Owner Dashboard always shown to Developer/Owner, regardless of saved sidebar menu selection
+if (isset($sunseaNavItems['owner_dashboard']) && !isset($sunseaNavItemsVisible['owner_dashboard'])) {
+    $sunseaNavItemsVisible = ['owner_dashboard' => $sunseaNavItems['owner_dashboard']] + $sunseaNavItemsVisible;
 }
 
 if (empty($sunseaNavItemsVisible)) {

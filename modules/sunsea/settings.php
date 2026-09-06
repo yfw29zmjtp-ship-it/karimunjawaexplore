@@ -330,6 +330,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $flashMsg = 'Status user berhasil diubah.';
                 $flashType = 'success';
             }
+        } elseif ($userAction === 'change_role') {
+            $uid = (int)($_POST['user_id'] ?? 0);
+            $roleId = (int)($_POST['role_id'] ?? 0);
+            $validRoleIds = $pdo->query("SELECT id FROM roles")->fetchAll(PDO::FETCH_COLUMN);
+            if ($uid > 0 && $uid === (int)($currentUser['id'] ?? 0)) {
+                $flashMsg = 'Anda tidak bisa mengubah role akun Anda sendiri.';
+                $flashType = 'error';
+            } elseif ($uid > 0 && in_array($roleId, $validRoleIds, true)) {
+                $pdo->prepare("UPDATE users SET role_id = ?, updated_at = NOW() WHERE id = ?")->execute([$roleId, $uid]);
+                $flashMsg = 'Role user berhasil diubah. Owner Dashboard hanya bisa diakses role "Developer / Owner".';
+                $flashType = 'success';
+            } else {
+                $flashMsg = 'Role tidak valid.';
+                $flashType = 'error';
+            }
         }
         $tab = 'users';
     }
@@ -791,7 +806,10 @@ $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : '
 <?php elseif ($tab === 'users'): ?>
     <div style="display:grid;grid-template-columns:1fr 340px;gap:18px;align-items:start;">
         <div style="background:#fff;border:1px solid #dde5ef;border-radius:8px;padding:20px;">
-            <div style="font-size:16px;font-weight:700;color:#7C2D12;margin-bottom:16px;">👤 Daftar User</div>
+            <div style="font-size:16px;font-weight:700;color:#7C2D12;margin-bottom:8px;">👤 Daftar User</div>
+            <div style="background:#FFF7ED;border:1px solid #FDE4CC;border-radius:6px;padding:10px 14px;font-size:12px;color:#7C2D12;margin-bottom:14px;">
+                📱 Menu <strong>Owner Dashboard</strong> (ringkasan Booking, Kalender, Invoice &amp; Finance untuk HP) hanya tampil dan bisa diakses oleh user dengan role <strong>Developer / Owner</strong>. Atur role tiap user di kolom "Role" di bawah.
+            </div>
             <div style="overflow-x:auto;">
                 <table style="width:100%;border-collapse:collapse;font-size:13px;">
                     <thead>
@@ -816,7 +834,23 @@ $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : '
                                     <?php echo htmlspecialchars($u['full_name']); ?><br>
                                     <small style="color:#888;"><?php echo htmlspecialchars($u['email'] ?? ''); ?></small>
                                 </td>
-                                <td style="padding:8px 10px;border-bottom:1px solid #f1f5f9;"><?php echo htmlspecialchars($roleNameById[$u['role_id']] ?? '-'); ?></td>
+                                <td style="padding:8px 10px;border-bottom:1px solid #f1f5f9;">
+                                    <?php if ((int)$u['id'] === (int)($currentUser['id'] ?? 0)): ?>
+                                        <?php echo htmlspecialchars($roleNameById[$u['role_id']] ?? '-'); ?>
+                                    <?php else: ?>
+                                        <form method="POST" style="display:flex;gap:4px;align-items:center;">
+                                            <input type="hidden" name="tab" value="users">
+                                            <input type="hidden" name="user_action" value="change_role">
+                                            <input type="hidden" name="user_id" value="<?php echo (int)$u['id']; ?>">
+                                            <select name="role_id" style="padding:4px 6px;font-size:11px;border:1px solid #ccc;border-radius:4px;">
+                                                <?php foreach ($roles as $r): ?>
+                                                    <option value="<?php echo (int)$r['id']; ?>" <?php echo ((int)$u['role_id'] === (int)$r['id']) ? 'selected' : ''; ?>><?php echo htmlspecialchars($r['role_name']); ?></option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                            <button type="submit" title="Simpan role" style="padding:4px 7px;font-size:11px;border:1px solid #C2410C;color:#C2410C;background:#fff;border-radius:4px;cursor:pointer;">✓</button>
+                                        </form>
+                                    <?php endif; ?>
+                                </td>
                                 <td style="padding:8px 10px;border-bottom:1px solid #f1f5f9;">
                                     <?php if ((int)$u['is_active'] === 1): ?>
                                         <span style="padding:2px 8px;border-radius:99px;background:#d1fae5;color:#065f46;font-size:11px;font-weight:600;">Aktif</span>
