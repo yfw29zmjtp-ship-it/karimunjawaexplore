@@ -84,6 +84,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($postAction === 'save') {
         $id         = (int)($_POST['id'] ?? 0);
         $customerId = (int)($_POST['customer_id'] ?? 0);
+        $newCustomerName = trim($_POST['new_customer_name'] ?? '');
         $taxPct     = (float)($_POST['tax_pct'] ?? 11);
         $discount   = (float)str_replace(['.', ','], ['', '.'], $_POST['discount_amount'] ?? '0');
         $tripDate   = $_POST['trip_date']     ?: null;
@@ -93,6 +94,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $invoiceDate = $_POST['invoice_date']  ?: date('Y-m-d');
         $notes      = trim($_POST['notes'] ?? '');
         $user       = $auth->getCurrentUser()['username'] ?? 'system';
+
+        // Buat customer baru inline jika panel "Tambah Customer Baru" dipakai.
+        if ($customerId <= 0 && $newCustomerName !== '') {
+            $lastCode = $pdo->query("SELECT code FROM customers ORDER BY id DESC LIMIT 1")->fetchColumn();
+            $nextNum = 1;
+            if ($lastCode && preg_match('/(\d+)$/', $lastCode, $mCode)) $nextNum = (int)$mCode[1] + 1;
+            $newCode = 'SS-CUST-' . str_pad($nextNum, 3, '0', STR_PAD_LEFT);
+            $pdo->prepare("INSERT INTO customers (code, name, type, email, phone, whatsapp, country) VALUES (?,?,?,?,?,?,?)")
+                ->execute([
+                    $newCode,
+                    $newCustomerName,
+                    'individual',
+                    trim($_POST['new_customer_email'] ?? ''),
+                    trim($_POST['new_customer_phone'] ?? ''),
+                    trim($_POST['new_customer_phone'] ?? ''),
+                    'Indonesia'
+                ]);
+            $customerId = (int)$pdo->lastInsertId();
+        }
+
+        if ($customerId <= 0) {
+            $_SESSION['flash_message'] = 'Customer wajib dipilih atau diisi datanya.';
+            $_SESSION['flash_type']    = 'error';
+            header('Location: invoices.php?action=' . ($id > 0 ? 'edit&id=' . $id : 'add'));
+            exit;
+        }
 
         $descriptions = $_POST['item_description'] ?? [];
         $itemTypes    = $_POST['item_type']         ?? [];
@@ -181,6 +208,86 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['flash_type']    = 'success';
         header('Location: invoices.php?action=view&id=' . $id);
         exit;
+
+        // Konfirmasi invoice manual jadi Booking, supaya operasional & keuangan ikut tercatat
+    } elseif ($postAction === 'convert_to_booking') {
+        $iId = (int)($_POST['invoice_id'] ?? 0);
+        $user = $auth->getCurrentUser()['username'] ?? 'system';
+        $invRow = $pdo->prepare("SELECT * FROM invoices WHERE id=?");
+        $invRow->execute([$iId]);
+        $inv = $invRow->fetch(PDO::FETCH_ASSOC);
+
+        if (!$inv) {
+            $_SESSION['flash_message'] = 'Invoice tidak ditemukan.';
+            $_SESSION['flash_type']    = 'error';
+        } elseif (preg_match('/Generated from Reservasi:/', (string)($inv['internal_notes'] ?? ''))) {
+            $_SESSION['flash_message'] = 'Invoice ini sudah terhubung ke booking.';
+            $_SESSION['flash_type']    = 'error';
+        } elseif (empty($inv['trip_date']) || empty($inv['trip_end_date'])) {
+            $_SESSION['flash_message'] = 'Isi Tanggal Trip & Tanggal Selesai di invoice ini dulu sebelum dikonfirmasi jadi booking.';
+            $_SESSION['flash_type']    = 'error';
+        } else {
+            sunseaEnsureBookingSchema($pdo);
+            $itemsStmt = $pdo->prepare("SELECT * FROM invoice_items WHERE invoice_id=? ORDER BY sort_order");
+            $itemsStmt->execute([$iId]);
+            $iiRows = $itemsStmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $pdo->beginTransaction();
+            try {
+                $bookingNo = sunseaNextNumber($pdo, 'booking');
+                $pdo->prepare("INSERT INTO booking_orders
+                    (booking_no, customer_id, booking_mode, start_date, end_date, pax_count, status, cost_total, sell_total, margin_amount, notes, created_by)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?)")
+                    ->execute([
+                        $bookingNo,
+                        (int)$inv['customer_id'],
+                        'ecer',
+                        $inv['trip_date'],
+                        $inv['trip_end_date'],
+                        (int)$inv['pax_count'],
+                        'confirmed',
+                        0,
+                        (float)$inv['total_amount'],
+                        (float)$inv['total_amount'],
+                        'Dibuat dari Invoice ' . $inv['invoice_no'],
+                        $user,
+                    ]);
+                $bookingId = (int)$pdo->lastInsertId();
+
+                $insItem = $pdo->prepare("INSERT INTO booking_order_items
+                    (booking_id, component_code, component_name, qty, unit, price_cost, price_sell, total_cost, total_sell, sort_order)
+                    VALUES (?,?,?,?,?,?,?,?,?,?)");
+                foreach ($iiRows as $idx => $ii) {
+                    $insItem->execute([
+                        $bookingId,
+                        'manual',
+                        (string)$ii['description'],
+                        (float)$ii['qty'],
+                        (string)$ii['unit'],
+                        0,
+                        (float)$ii['unit_price'],
+                        0,
+                        (float)$ii['subtotal'],
+                        $idx,
+                    ]);
+                }
+
+                $pdo->prepare("UPDATE invoices SET internal_notes=? WHERE id=?")
+                    ->execute(['Generated from Reservasi: ' . $bookingNo, $iId]);
+
+                $pdo->commit();
+                $_SESSION['flash_message'] = "Booking $bookingNo berhasil dibuat dari invoice ini.";
+                $_SESSION['flash_type']    = 'success';
+            } catch (Exception $e) {
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+                $_SESSION['flash_message'] = 'Gagal membuat booking: ' . $e->getMessage();
+                $_SESSION['flash_type']    = 'error';
+            }
+        }
+        header('Location: invoices.php?action=view&id=' . $iId);
+        exit;
     }
 }
 
@@ -207,16 +314,20 @@ if (in_array($action, ['view', 'print']) && $invId > 0) {
 
     // Invoice dari booking paket: sembunyikan rincian modal internal (harga Rp 0) yang sudah terlanjur
     // tersimpan dari sebelum fix, cukup tampilkan baris "Paket: ..." + fasilitas/manual bernilai > 0.
+    $linkedBooking = null;
     if (preg_match('/Generated from Reservasi:\s*(\S+)/', (string)($invoice['internal_notes'] ?? ''), $m)) {
-        $boStmt = $pdo->prepare("SELECT booking_mode FROM booking_orders WHERE booking_no=?");
+        $boStmt = $pdo->prepare("SELECT id, booking_mode FROM booking_orders WHERE booking_no=?");
         $boStmt->execute([$m[1]]);
-        $bookingMode = $boStmt->fetchColumn();
-        if ($bookingMode === 'paket') {
-            $invItems = array_values(array_filter($invItems, function ($it) {
-                $isZero = (float)$it['unit_price'] === 0.0 && (float)$it['subtotal'] === 0.0;
-                $isPaketLine = stripos((string)$it['description'], 'Paket:') === 0;
-                return !$isZero || $isPaketLine;
-            }));
+        $bo = $boStmt->fetch(PDO::FETCH_ASSOC);
+        if ($bo) {
+            $linkedBooking = ['id' => (int)$bo['id'], 'booking_no' => $m[1]];
+            if ($bo['booking_mode'] === 'paket') {
+                $invItems = array_values(array_filter($invItems, function ($it) {
+                    $isZero = (float)$it['unit_price'] === 0.0 && (float)$it['subtotal'] === 0.0;
+                    $isPaketLine = stripos((string)$it['description'], 'Paket:') === 0;
+                    return !$isZero || $isPaketLine;
+                }));
+            }
         }
     }
 
@@ -695,7 +806,17 @@ $prefillPaxCount = max(1, (int)($_GET['pax_count'] ?? 1));
                 <i data-feather="dollar-sign"></i> Catat Pembayaran
             </button>
         <?php endif; ?>
+        <?php if ($linkedBooking): ?>
+            <a href="bookings.php?view=<?php echo $linkedBooking['id']; ?>" class="ss-btn ss-btn-outline ss-btn-sm" style="color:#15803D;border-color:#15803D;"><i data-feather="check-circle"></i> Terhubung Booking <?php echo htmlspecialchars($linkedBooking['booking_no']); ?></a>
+        <?php else: ?>
+            <form method="POST" style="display:inline;" onsubmit="return confirm('Konfirmasi invoice ini jadi Booking? Data akan masuk ke menu Booking agar operasional & keuangan tercatat.');">
+                <input type="hidden" name="action" value="convert_to_booking">
+                <input type="hidden" name="invoice_id" value="<?php echo $invoice['id']; ?>">
+                <button type="submit" class="ss-btn ss-btn-outline ss-btn-sm" style="color:#C2410C;border-color:#C2410C;"><i data-feather="check-square"></i> Konfirmasi jadi Booking</button>
+            </form>
+        <?php endif; ?>
     </div>
+
 
     <div class="ss-card" style="max-width:900px;margin-bottom:16px;">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;">
@@ -907,8 +1028,11 @@ $prefillPaxCount = max(1, (int)($_GET['pax_count'] ?? 1));
                 <div class="ss-card-title">Informasi Invoice</div>
                 <div class="ss-form-grid cols-2">
                     <div class="ss-form-group" style="grid-column:1/-1;">
-                        <label class="ss-label">Customer *</label>
-                        <select name="customer_id" class="ss-select" required>
+                        <div style="display:flex;justify-content:space-between;align-items:center;">
+                            <label class="ss-label">Customer *</label>
+                            <a href="javascript:void(0)" onclick="toggleNewInvoiceCustomer()" id="newInvCustomerToggleLink" style="font-size:11.5px;color:#C2410C;font-weight:600;text-decoration:none;">+ Tambah Customer Baru</a>
+                        </div>
+                        <select name="customer_id" id="invCustomerSelect" class="ss-select" required>
                             <option value="">-- Pilih Customer --</option>
                             <?php foreach ($customers as $c): ?>
                                 <option value="<?php echo $c['id']; ?>" <?php echo ($editInvoice['customer_id'] ?? $_GET['customer_id'] ?? 0) == $c['id'] ? 'selected' : ''; ?>>
@@ -916,6 +1040,23 @@ $prefillPaxCount = max(1, (int)($_GET['pax_count'] ?? 1));
                                 </option>
                             <?php endforeach; ?>
                         </select>
+                        <div id="newInvCustomerBox" style="display:none;margin-top:8px;padding:10px;background:#FFF7ED;border:1px solid #FDE4CC;border-radius:6px;">
+                            <div class="ss-form-grid cols-2" style="gap:8px;">
+                                <div class="ss-form-group" style="grid-column:1/-1;margin:0;">
+                                    <label class="ss-label">Nama Customer *</label>
+                                    <input type="text" name="new_customer_name" id="newInvCustomerName" class="ss-input" placeholder="Nama lengkap tamu">
+                                </div>
+                                <div class="ss-form-group" style="margin:0;">
+                                    <label class="ss-label">No. HP / WA</label>
+                                    <input type="text" name="new_customer_phone" class="ss-input" placeholder="08xxxxxxxxxx">
+                                </div>
+                                <div class="ss-form-group" style="margin:0;">
+                                    <label class="ss-label">Email (opsional)</label>
+                                    <input type="email" name="new_customer_email" class="ss-input" placeholder="email@contoh.com">
+                                </div>
+                            </div>
+                            <div style="font-size:10.5px;color:#888;margin-top:5px;">* Otomatis tersimpan ke database Pelanggan saat invoice disimpan.</div>
+                        </div>
                     </div>
                     <div class="ss-form-group"><label class="ss-label">Tanggal Invoice *</label><input type="date" name="invoice_date" class="ss-input" value="<?php echo htmlspecialchars(substr($editInvoice['issued_at'] ?? $editInvoice['created_at'] ?? '', 0, 10) ?: date('Y-m-d')); ?>" required></div>
                     <div class="ss-form-group"><label class="ss-label">Jatuh Tempo</label><input type="date" name="due_date" class="ss-input" value="<?php echo $editInvoice['due_date'] ?? date('Y-m-d', strtotime('+14 days')); ?>"></div>
@@ -1201,6 +1342,25 @@ function invItemRow($type = '', $desc = '', $qty = 1, $unit = 'pax', $price = 0)
         if (itemsBlock) itemsBlock.style.display = mode === 'simple' ? 'none' : '';
         if (simpleBlock) simpleBlock.style.display = mode === 'simple' ? '' : 'none';
         calcTotals2();
+    }
+
+    function toggleNewInvoiceCustomer() {
+        var box = document.getElementById('newInvCustomerBox');
+        var select = document.getElementById('invCustomerSelect');
+        var link = document.getElementById('newInvCustomerToggleLink');
+        var showing = box.style.display !== 'none';
+        if (showing) {
+            box.style.display = 'none';
+            select.required = true;
+            select.disabled = false;
+            link.textContent = '+ Tambah Customer Baru';
+        } else {
+            box.style.display = 'block';
+            select.value = '';
+            select.required = false;
+            select.disabled = true;
+            link.textContent = '← Pilih dari Daftar Customer';
+        }
     }
 
     function prepareInvoiceSubmit() {
