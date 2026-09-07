@@ -21,14 +21,15 @@ $action = $_GET['action'] ?? 'list';
 $pkgId  = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
 $packageItemTypes = [
-    'tiket_kapal' => 'Tiket Kapal',
-    'penginapan'  => 'Penginapan',
-    'transport'   => 'Transport / Rental',
-    'guide'       => 'Guide/Pemandu',
-    'catering'    => 'Catering/Konsumsi',
-    'fasilitas'   => 'Fasilitas',
-    'dokumentasi' => 'Dokumentasi',
-    'lainnya'     => 'Lainnya',
+    'tiket_kapal'   => 'Tiket Kapal',
+    'tiket_lainnya' => 'Tiket Lainnya (Pesawat/BTN/Retribusi)',
+    'penginapan'    => 'Penginapan',
+    'transport'     => 'Transport / Rental',
+    'guide'         => 'Guide/Pemandu',
+    'catering'      => 'Catering/Konsumsi',
+    'fasilitas'     => 'Fasilitas',
+    'dokumentasi'   => 'Dokumentasi',
+    'lainnya'       => 'Lainnya',
 ];
 
 // ---- HANDLE POST ----
@@ -208,6 +209,12 @@ try {
         if ($r['transport_type'] === 'laut') {
             $masterItemOptions['tiket_kapal'][] = ['label' => $r['name'], 'name' => $r['name'], 'cost' => (float)$r['cost'], 'sell' => (float)$r['sell']];
         }
+    }
+    $tk = $pdo->query("SELECT ticket_type, ticket_name, price_cost AS cost, price_sell AS sell FROM tickets WHERE is_active=1 ORDER BY ticket_name")->fetchAll();
+    $tiketKapalTypes = ['express_bahari', 'ferry'];
+    foreach ($tk as $r) {
+        $itemType = in_array($r['ticket_type'], $tiketKapalTypes, true) ? 'tiket_kapal' : 'tiket_lainnya';
+        $masterItemOptions[$itemType][] = ['label' => $r['ticket_name'], 'name' => $r['ticket_name'], 'cost' => (float)$r['cost'], 'sell' => (float)$r['sell']];
     }
     $a = $pdo->query("SELECT ap.name AS partner_name, ar.room_type, ar.price_cost AS cost, ar.price_sell AS sell
                        FROM accommodation_rooms ar JOIN accommodation_partners ap ON ap.id = ar.partner_id
