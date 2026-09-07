@@ -86,6 +86,34 @@ $backUrl = $backUrl ?? 'owner-dashboard.php';
         border-radius:10px; padding:12px 8px; text-decoration:none; font-size:12.5px; font-weight:700;
     }
     .ob-qbtn svg { width:16px; height:16px; }
+
+    /* Elegant booking/reservation card */
+    .ob-bcard {
+        background:#fff; border:1px solid var(--border); border-radius:14px;
+        padding:14px; margin-bottom:12px; box-shadow:0 1px 3px rgba(0,0,0,.05);
+    }
+    .ob-bcard-top { display:flex; align-items:flex-start; gap:10px; margin-bottom:10px; }
+    .ob-bcard-avatar {
+        width:38px; height:38px; border-radius:50%; flex-shrink:0;
+        background:linear-gradient(135deg,#0369A1,#0EA5E9); color:#fff;
+        display:flex; align-items:center; justify-content:center; font-weight:800; font-size:15px;
+    }
+    .ob-bcard-info { flex:1; min-width:0; }
+    .ob-bcard-name { font-size:14.5px; font-weight:800; color:var(--text); line-height:1.25; }
+    .ob-bcard-no { font-size:11px; color:var(--muted); margin-top:1px; }
+    .ob-bcard-meta {
+        display:flex; align-items:center; gap:5px; font-size:11.5px; color:var(--muted);
+        background:var(--sky); border-radius:8px; padding:7px 10px; margin-bottom:10px;
+    }
+    .ob-bcard-meta svg { width:12px; height:12px; flex-shrink:0; color:var(--ocean); }
+    .ob-bcard-actions { display:flex; gap:8px; }
+    .ob-bcard-actions a {
+        flex:1; display:flex; align-items:center; justify-content:center; gap:5px;
+        padding:9px; border-radius:9px; font-size:12px; font-weight:700; text-decoration:none;
+    }
+    .ob-bcard-actions svg { width:13px; height:13px; }
+    .ob-btn-detail { background:var(--sky); color:var(--ocean); border:1px solid #BAE6FD; }
+    .ob-btn-wa { background:#25D366; color:#fff; }
 </style>
 </head>
 <body>

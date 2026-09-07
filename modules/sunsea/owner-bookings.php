@@ -58,28 +58,37 @@ include 'owner-mobile-header.php';
     <a href="owner-bookings.php?status=cancelled" class="ob-tab <?php echo $statusFilter === 'cancelled' ? 'active' : ''; ?>">Batal</a>
 </div>
 
-<div class="ob-section">
-    <?php if (empty($bookings)): ?>
-        <div class="ob-empty">Belum ada data reservasi.</div>
-    <?php else: ?>
-        <?php foreach ($bookings as $b): ?>
-            <?php $badge = $statusBadge[$b['status']] ?? ['ob-badge-draft', $b['status']]; ?>
-            <?php $waLink = sunseaWaLink((string)$b['customer_phone']); ?>
-            <a href="owner-booking-detail.php?id=<?php echo (int)$b['id']; ?>" class="ob-row" style="align-items:flex-start;">
-                <div style="flex:1;min-width:0;">
-                    <div class="ob-row-title" style="font-size:14px;"><?php echo htmlspecialchars($b['customer_name']); ?></div>
-                    <div class="ob-row-sub"><?php echo htmlspecialchars($b['booking_no']); ?> · <?php echo (int)$b['pax_count']; ?> pax</div>
-                    <div class="ob-row-sub"><?php echo date('d M', strtotime($b['start_date'])); ?> - <?php echo date('d M Y', strtotime($b['end_date'])); ?></div>
+<?php if (empty($bookings)): ?>
+    <div class="ob-section"><div class="ob-empty">Belum ada data reservasi.</div></div>
+<?php else: ?>
+    <?php foreach ($bookings as $b): ?>
+        <?php
+        $badge = $statusBadge[$b['status']] ?? ['ob-badge-draft', $b['status']];
+        $waLink = sunseaWaLink((string)$b['customer_phone']);
+        $initial = strtoupper(mb_substr(trim((string)$b['customer_name']), 0, 1)) ?: '?';
+        ?>
+        <div class="ob-bcard">
+            <div class="ob-bcard-top">
+                <div class="ob-bcard-avatar"><?php echo htmlspecialchars($initial); ?></div>
+                <div class="ob-bcard-info">
+                    <div class="ob-bcard-name"><?php echo htmlspecialchars($b['customer_name']); ?></div>
+                    <div class="ob-bcard-no"><?php echo htmlspecialchars($b['booking_no']); ?></div>
                 </div>
-                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
-                    <span class="ob-badge <?php echo $badge[0]; ?>"><?php echo htmlspecialchars($badge[1]); ?></span>
-                    <?php if ($waLink): ?>
-                        <a href="<?php echo htmlspecialchars($waLink); ?>" target="_blank" rel="noopener" onclick="event.stopPropagation();" class="ob-wa-btn"><i data-feather="message-circle"></i> WA</a>
-                    <?php endif; ?>
-                </div>
-            </a>
-        <?php endforeach; ?>
-    <?php endif; ?>
-</div>
+                <span class="ob-badge <?php echo $badge[0]; ?>"><?php echo htmlspecialchars($badge[1]); ?></span>
+            </div>
+            <div class="ob-bcard-meta">
+                <i data-feather="calendar"></i>
+                <?php echo date('d M', strtotime($b['start_date'])); ?> - <?php echo date('d M Y', strtotime($b['end_date'])); ?>
+                &nbsp;·&nbsp;<i data-feather="users"></i> <?php echo (int)$b['pax_count']; ?> pax
+            </div>
+            <div class="ob-bcard-actions">
+                <a href="owner-booking-detail.php?id=<?php echo (int)$b['id']; ?>" class="ob-btn-detail"><i data-feather="file-text"></i> Detail</a>
+                <?php if ($waLink): ?>
+                    <a href="<?php echo htmlspecialchars($waLink); ?>" target="_blank" rel="noopener" class="ob-btn-wa"><i data-feather="message-circle"></i> WhatsApp</a>
+                <?php endif; ?>
+            </div>
+        </div>
+    <?php endforeach; ?>
+<?php endif; ?>
 
 <?php include 'owner-mobile-footer.php'; ?>
