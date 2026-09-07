@@ -11,6 +11,7 @@ require_once '../../includes/functions.php';
 require_once 'db-helper.php';
 
 $auth = new Auth();
+if (!$auth->isLoggedIn()) { header('Location: owner-login.php'); exit; }
 $auth->requireLogin();
 
 $currentUser = $auth->getCurrentUser();

@@ -25,7 +25,7 @@ echo json_encode([
     'name'             => $companyName . ' — Owner Portal',
     'short_name'       => 'Owner Portal',
     'description'      => 'Portal owner: reservasi, kalender booking, invoice, dan finance',
-    'start_url'        => $moduleUrl . '/owner-dashboard.php',
+    'start_url'        => $moduleUrl . '/owner-login.php',
     'scope'            => $moduleUrl . '/',
     'display'          => 'standalone',
     'orientation'      => 'portrait',

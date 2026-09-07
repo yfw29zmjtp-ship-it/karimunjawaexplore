@@ -13,6 +13,7 @@ require_once '../../includes/functions.php';
 require_once 'db-helper.php';
 
 $auth = new Auth();
+if (!$auth->isLoggedIn()) { header('Location: owner-login.php'); exit; }
 $auth->requireLogin();
 
 $currentUser = $auth->getCurrentUser();
@@ -232,7 +233,7 @@ $monthIncomePct = $financePieTotal > 0 ? round($monthIncome / $financePieTotal *
         <div class="ob-user">
             <div class="ob-avatar"><?php echo strtoupper(substr($userName, 0, 1)); ?></div>
             <?php echo htmlspecialchars($userName); ?>
-            <a href="<?php echo BASE_URL; ?>/logout.php" class="ob-logout-btn" title="Logout">
+            <a href="<?php echo BASE_URL; ?>/logout.php?redirect=owner" class="ob-logout-btn" title="Logout">
                 <i data-feather="log-out"></i>
             </a>
         </div>

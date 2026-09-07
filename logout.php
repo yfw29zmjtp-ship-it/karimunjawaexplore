@@ -20,5 +20,9 @@ setcookie('adf_owner_remember_token', '', time() - 3600, $cookiePath, '', $isSec
 setcookie('adf_saved_user', '', time() - 3600, $cookiePath, '', $isSecure, true);
 setcookie('adf_owner_saved_user', '', time() - 3600, $cookiePath, '', $isSecure, true);
 
+if (($_GET['redirect'] ?? '') === 'owner') {
+    redirect(BASE_URL . '/modules/sunsea/owner-login.php');
+}
+
 redirect(BASE_URL . '/login.php');
 ?>
