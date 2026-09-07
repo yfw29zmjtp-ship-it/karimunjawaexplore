@@ -60,11 +60,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save'
 // ---- DELETE ----
 if (($_GET['action'] ?? '') === 'delete' && (int)($_GET['id'] ?? 0) > 0) {
     $delId = (int)$_GET['id'];
-    $row = $pdo->prepare("SELECT invoice_id FROM cash_book WHERE id=?");
+    $row = $pdo->prepare("SELECT invoice_id, booking_item_id FROM cash_book WHERE id=?");
     $row->execute([$delId]);
     $existing = $row->fetch();
     if ($existing && $existing['invoice_id']) {
         $_SESSION['flash_message'] = 'Transaksi ini tercatat otomatis dari pembayaran invoice dan tidak bisa dihapus dari sini.';
+        $_SESSION['flash_type']    = 'error';
+    } elseif ($existing && $existing['booking_item_id']) {
+        $_SESSION['flash_message'] = 'Transaksi ini tercatat otomatis dari Pembayaran ke Mitra. Batalkan centang di halaman booking untuk menghapusnya.';
         $_SESSION['flash_type']    = 'error';
     } else {
         $pdo->prepare("DELETE FROM cash_book WHERE id=?")->execute([$delId]);

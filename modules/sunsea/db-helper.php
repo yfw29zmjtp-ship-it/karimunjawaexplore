@@ -449,6 +449,7 @@ function sunseaEnsureFinanceSchema(PDO $pdo): void
 
         $requiredColumns = [
             'booking_id' => "ALTER TABLE cash_book ADD COLUMN booking_id INT NULL AFTER customer_id",
+            'booking_item_id' => "ALTER TABLE cash_book ADD COLUMN booking_item_id INT NULL AFTER booking_id",
         ];
         $check = $pdo->prepare("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cash_book' AND COLUMN_NAME = ?");
         foreach ($requiredColumns as $column => $alterSql) {

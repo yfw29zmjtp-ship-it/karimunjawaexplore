@@ -541,14 +541,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updat
 
     if ($bookingId > 0) {
         try {
-            $itemsStmt = $pdo->prepare("SELECT id FROM booking_order_items WHERE booking_id=? AND component_code != 'paket'");
+            $bkStmt = $pdo->prepare("SELECT bo.booking_no, c.name AS customer_name FROM booking_orders bo LEFT JOIN customers c ON c.id = bo.customer_id WHERE bo.id=?");
+            $bkStmt->execute([$bookingId]);
+            $bk = $bkStmt->fetch(PDO::FETCH_ASSOC) ?: [];
+            $bookingNo = $bk['booking_no'] ?? ('#' . $bookingId);
+            $customerName = $bk['customer_name'] ?? '-';
+
+            $itemsStmt = $pdo->prepare("SELECT id, component_name, total_cost, is_paid_mitra FROM booking_order_items WHERE booking_id=? AND component_code != 'paket'");
             $itemsStmt->execute([$bookingId]);
-            $allIds = $itemsStmt->fetchAll(PDO::FETCH_COLUMN);
+            $items = $itemsStmt->fetchAll(PDO::FETCH_ASSOC);
+
             $upd = $pdo->prepare("UPDATE booking_order_items SET is_paid_mitra=? WHERE id=?");
-            foreach ($allIds as $iid) {
-                $upd->execute([in_array((int)$iid, $paidIds, true) ? 1 : 0, (int)$iid]);
+            $user = $auth->getCurrentUser()['username'] ?? 'system';
+
+            foreach ($items as $it) {
+                $itemId = (int)$it['id'];
+                $wasPaid = !empty($it['is_paid_mitra']);
+                $nowPaid = in_array($itemId, $paidIds, true);
+                $upd->execute([$nowPaid ? 1 : 0, $itemId]);
+
+                if ($nowPaid && !$wasPaid) {
+                    // Catat pengeluaran ke Finance hanya sekali per item mitra
+                    $exists = $pdo->prepare("SELECT COUNT(*) FROM cash_book WHERE booking_item_id=?");
+                    $exists->execute([$itemId]);
+                    if ((int)$exists->fetchColumn() === 0) {
+                        $pdo->prepare("
+                            INSERT INTO cash_book (transaction_date, type, category, description, amount, reference, booking_id, booking_item_id, created_by)
+                            VALUES (?,?,?,?,?,?,?,?,?)
+                        ")->execute([
+                            date('Y-m-d'),
+                            'expense',
+                            'Pembayaran Mitra',
+                            "Pembayaran Mitra: {$it['component_name']} — $bookingNo ($customerName)",
+                            (float)$it['total_cost'],
+                            $bookingNo,
+                            $bookingId,
+                            $itemId,
+                            $user,
+                        ]);
+                    }
+                } elseif (!$nowPaid && $wasPaid) {
+                    // Batal centang: hapus kembali catatan pengeluaran otomatis
+                    $pdo->prepare("DELETE FROM cash_book WHERE booking_item_id=?")->execute([$itemId]);
+                }
             }
-            $_SESSION['flash_message'] = 'Checklist pembayaran mitra berhasil disimpan.';
+
+            $_SESSION['flash_message'] = 'Checklist pembayaran mitra berhasil disimpan & pengeluaran tercatat di Finance.';
             $_SESSION['flash_type'] = 'success';
         } catch (Exception $e) {
             $_SESSION['flash_message'] = 'Gagal simpan checklist mitra: ' . $e->getMessage();
