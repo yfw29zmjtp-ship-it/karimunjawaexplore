@@ -90,6 +90,9 @@ $monthIncomePct = $financePieTotal > 0 ? round($monthIncome / $financePieTotal *
 <meta charset="UTF-8">
 <title>Owner Dashboard - Explore Karimunjawa</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0369A1">
+<link rel="manifest" href="owner-manifest.php">
+<link rel="apple-touch-icon" href="<?php echo htmlspecialchars($companyLogoSrc ?: (BASE_URL . '/img/favicon.png')); ?>">
 <script src="https://unpkg.com/feather-icons"></script>
 <style>
     * { margin:0; padding:0; box-sizing:border-box; }
@@ -99,7 +102,7 @@ $monthIncomePct = $financePieTotal > 0 ? round($monthIncome / $financePieTotal *
     }
     body {
         font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
-        background:#F8FAFC; color:var(--text); font-size:14px; padding-bottom:24px;
+        background:#F8FAFC; color:var(--text); font-size:14px; padding-bottom:90px;
     }
     .ob-header {
         background:linear-gradient(135deg,#0369A1 0%,#0EA5E9 100%);
@@ -112,18 +115,24 @@ $monthIncomePct = $financePieTotal > 0 ? round($monthIncome / $financePieTotal *
         display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px;
     }
     .ob-user { display:flex; align-items:center; gap:8px; font-size:12.5px; }
+    .ob-logout-btn {
+        width:28px; height:28px; border-radius:50%; background:rgba(255,255,255,.18);
+        border:none; display:flex; align-items:center; justify-content:center; color:#fff;
+        text-decoration:none; flex-shrink:0;
+    }
+    .ob-logout-btn svg { width:15px; height:15px; }
     .ob-greeting { font-size:12px; opacity:.85; }
     .ob-title { font-size:19px; font-weight:800; margin-top:2px; }
     .ob-container { padding:14px; max-width:520px; margin:0 auto; }
-    .ob-cards { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:14px; }
+    .ob-cards { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin-bottom:14px; }
     .ob-card {
-        background:#fff; border-radius:12px; padding:14px; text-decoration:none; color:inherit;
+        background:#fff; border-radius:11px; padding:10px 11px; text-decoration:none; color:inherit;
         box-shadow:0 1px 3px rgba(0,0,0,.06); border:1px solid var(--border);
         display:block;
     }
-    .ob-card-label { font-size:10px; color:var(--muted); text-transform:uppercase; font-weight:600; }
-    .ob-card-value { font-size:20px; font-weight:800; margin:4px 0 2px; }
-    .ob-card-sub { font-size:11px; color:var(--muted); }
+    .ob-card-label { font-size:9px; color:var(--muted); text-transform:uppercase; font-weight:600; }
+    .ob-card-value { font-size:16px; font-weight:700; margin:3px 0 1px; }
+    .ob-card-sub { font-size:9.5px; color:var(--muted); }
     .ob-section {
         background:#fff; border-radius:12px; padding:14px; margin-bottom:14px;
         box-shadow:0 1px 3px rgba(0,0,0,.06); border:1px solid var(--border);
@@ -182,6 +191,28 @@ $monthIncomePct = $financePieTotal > 0 ? round($monthIncome / $financePieTotal *
     .ob-pie-legend { display:flex; justify-content:center; gap:10px; font-size:9px; color:var(--muted); font-weight:500; }
     .ob-pie-legend span { display:inline-flex; align-items:center; gap:3px; }
     .ob-pie-dot { width:7px; height:7px; border-radius:50%; display:inline-block; box-shadow:0 0 0 3px rgba(255,255,255,.5); }
+    .ob-install-banner {
+        position:fixed; left:12px; right:12px; bottom:12px; z-index:900;
+        background:linear-gradient(135deg,#0369A1 0%,#0EA5E9 100%); color:#fff;
+        border-radius:16px; padding:12px 14px; display:none; align-items:center; gap:10px;
+        box-shadow:0 10px 26px rgba(3,105,161,.35); cursor:pointer;
+    }
+    .ob-install-banner.show { display:flex; animation:obIbUp .4s cubic-bezier(.16,1,.3,1); }
+    @keyframes obIbUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+    .ob-ib-icon {
+        width:38px; height:38px; border-radius:11px; background:rgba(255,255,255,.2);
+        display:flex; align-items:center; justify-content:center; font-size:19px; flex-shrink:0;
+    }
+    .ob-ib-text { flex:1; min-width:0; }
+    .ob-ib-title { font-size:12.5px; font-weight:700; }
+    .ob-ib-sub { font-size:10.5px; opacity:.85; margin-top:1px; }
+    .ob-ib-action {
+        background:#fff; color:var(--ocean); border:none; padding:8px 14px; border-radius:9px;
+        font-size:11.5px; font-weight:700; white-space:nowrap;
+    }
+    .ob-ib-close {
+        background:none; border:none; color:rgba(255,255,255,.7); font-size:14px; padding:2px 4px; flex-shrink:0;
+    }
 </style>
 </head>
 <body>
@@ -201,6 +232,9 @@ $monthIncomePct = $financePieTotal > 0 ? round($monthIncome / $financePieTotal *
         <div class="ob-user">
             <div class="ob-avatar"><?php echo strtoupper(substr($userName, 0, 1)); ?></div>
             <?php echo htmlspecialchars($userName); ?>
+            <a href="<?php echo BASE_URL; ?>/logout.php" class="ob-logout-btn" title="Logout">
+                <i data-feather="log-out"></i>
+            </a>
         </div>
     </div>
     <div class="ob-greeting">Welcome back,</div>
@@ -308,6 +342,100 @@ $monthIncomePct = $financePieTotal > 0 ? round($monthIncome / $financePieTotal *
 
 </div>
 
+<div class="ob-install-banner" id="obInstallBanner">
+    <div class="ob-ib-icon">📲</div>
+    <div class="ob-ib-text">
+        <div class="ob-ib-title" id="obIbTitle">Install Owner Portal</div>
+        <div class="ob-ib-sub" id="obIbSub">Akses lebih cepat dari home screen</div>
+    </div>
+    <button class="ob-ib-action" id="obIbAction">Install</button>
+    <button class="ob-ib-close" onclick="event.stopPropagation();this.parentElement.classList.remove('show');localStorage.setItem('ob_ib_dismissed','1');">✕</button>
+</div>
+
 <script>if (window.feather) feather.replace();</script>
+<script>
+(function() {
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('owner-sw.js', { scope: './' }).catch(function() {});
+    }
+
+    var deferredPrompt = null;
+    var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    var isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+    var wasDismissed = localStorage.getItem('ob_ib_dismissed') === '1';
+    var banner = document.getElementById('obInstallBanner');
+    var ibBtn = document.getElementById('obIbAction');
+
+    if (isStandalone || wasDismissed || !banner) return;
+
+    function showBanner(mode) {
+        if (banner.classList.contains('show')) return;
+        if (mode === 'manual') {
+            document.getElementById('obIbSub').textContent = 'Tap ⋮ menu Chrome → "Install app"';
+            ibBtn.textContent = 'Cara Install';
+            ibBtn.dataset.mode = 'manual';
+        } else {
+            document.getElementById('obIbSub').textContent = 'Buka langsung dari home screen';
+            ibBtn.textContent = 'Install';
+            ibBtn.dataset.mode = 'native';
+        }
+        banner.classList.add('show');
+    }
+
+    window.addEventListener('beforeinstallprompt', function(e) {
+        e.preventDefault();
+        deferredPrompt = e;
+        showBanner('native');
+    });
+
+    if (!isIOS) {
+        [4000, 10000].forEach(function(ms) {
+            setTimeout(function() {
+                if (!deferredPrompt && !isStandalone) showBanner('manual');
+            }, ms);
+        });
+    } else {
+        setTimeout(function() { showBanner('manual'); }, 3000);
+    }
+
+    ibBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        if (!deferredPrompt || ibBtn.dataset.mode === 'manual') {
+            showManualGuide();
+            return;
+        }
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.finally(function() {
+            banner.classList.remove('show');
+            deferredPrompt = null;
+        });
+    });
+
+    banner.addEventListener('click', function(e) {
+        if (e.target.closest('.ob-ib-close') || e.target.closest('.ob-ib-action')) return;
+        ibBtn.click();
+    });
+
+    window.addEventListener('appinstalled', function() {
+        banner.classList.remove('show');
+        localStorage.removeItem('ob_ib_dismissed');
+        deferredPrompt = null;
+    });
+
+    function showManualGuide() {
+        var ov = document.createElement('div');
+        ov.style.cssText = 'position:fixed;inset:0;z-index:2000;background:rgba(5,10,24,.94);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;';
+        ov.innerHTML = '<div style="text-align:center;max-width:300px;">' +
+            '<div style="font-size:48px;margin-bottom:14px;">📲</div>' +
+            '<h3 style="color:#fff;font-size:16px;font-weight:700;margin:0 0 6px;">Install Owner Portal</h3>' +
+            '<p style="color:rgba(255,255,255,.5);font-size:11.5px;margin:0 0 22px;">' + (isIOS ? 'Di Safari: tap ikon Share (kotak+panah) → "Add to Home Screen".' : 'Tap menu ⋮ Chrome → "Install app" atau "Add to Home screen".') + '</p>' +
+            '<button style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:#fff;padding:10px 28px;border-radius:11px;font-size:12.5px;font-weight:600;width:100%;">Mengerti</button>' +
+            '</div>';
+        ov.querySelector('button').addEventListener('click', function() { ov.remove(); });
+        ov.addEventListener('click', function(e) { if (e.target === ov) ov.remove(); });
+        document.body.appendChild(ov);
+    }
+})();
+</script>
 </body>
 </html>
