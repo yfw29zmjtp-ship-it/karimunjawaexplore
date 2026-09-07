@@ -461,7 +461,7 @@ include 'layout-header.php';
                 <option value="cepat">Cepat</option>
             </select>
             <div style="display:flex;gap:10px;flex-wrap:wrap;">
-                <div class="mode-card" data-mode="ecer" onclick="selectMode('ecer')" style="flex:1;min-width:160px;padding:8px;text-align:center;border:2px solid #C2410C;background:#FFF7ED;border-radius:8px;cursor:pointer;">
+                <div class="mode-card" data-mode="ecer" onclick="selectMode('ecer')" style="flex:1;min-width:160px;padding:8px;text-align:center;border:2px solid #ddd;border-radius:8px;cursor:pointer;">
                     <div style="font-size:18px;">🧩</div>
                     <div style="font-weight:700;margin-top:3px;color:#7C2D12;font-size:12px;">Ecer</div>
                     <div style="font-size:10.5px;color:#777;margin-top:1px;">Susun sendiri per komponen (tiket, transport, dll)</div>
@@ -514,7 +514,7 @@ include 'layout-header.php';
             <div style="text-align:right;margin-top:6px;font-size:11px;">Subtotal Harga Jual: <strong id="cepatSubtotal" style="color:#7C2D12;">Rp 0</strong></div>
         </div>
 
-        <div id="ecerSection" style="padding:10px 12px;background:#ffffff;border:1px solid #ddd;border-radius:6px;">
+        <div id="ecerSection" style="display:none;padding:10px 12px;background:#ffffff;border:1px solid #ddd;border-radius:6px;">
             <div style="margin-bottom:6px;font-size:13px;font-weight:600;color:#7C2D12;">🧩 3. Pilih Komponen dari Database</div>
 
             <!-- Tiket -->
@@ -1022,7 +1022,6 @@ include 'layout-header.php';
     }
 
     document.addEventListener('DOMContentLoaded', function() {
-        selectMode('ecer');
         syncTicketQty();
         syncStayNights();
         syncCateringQty();
