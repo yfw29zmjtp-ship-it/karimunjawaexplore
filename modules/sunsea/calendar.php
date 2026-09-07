@@ -52,13 +52,9 @@ if (($_GET['ajax'] ?? '') === 'detail' && (int)($_GET['id'] ?? 0) > 0) {
         $accommodationInfo = trim($mHotel[1]);
     }
 
-    // Durasi: pakai durasi paket jika ada, kalau tidak dihitung dari selisih tanggal.
-    if (!empty($booking['package_duration_nights']) || !empty($booking['package_duration_days'])) {
-        $durationLabel = (int)$booking['package_duration_days'] . 'H' . (int)$booking['package_duration_nights'] . 'M';
-    } else {
-        $nights = max(0, (strtotime($booking['end_date']) - strtotime($booking['start_date'])) / 86400);
-        $durationLabel = ($nights + 1) . 'H' . $nights . 'M';
-    }
+    // Durasi selalu dibaca dari selisih tanggal mulai & selesai aktual (bukan durasi baku paket).
+    $nights = max(0, (int)round((strtotime($booking['end_date']) - strtotime($booking['start_date'])) / 86400));
+    $durationLabel = ($nights + 1) . 'H' . $nights . 'M';
 
     $expenses = $pdo->prepare("SELECT transaction_date, category, description, amount, reference, created_by FROM cash_book WHERE booking_id=? AND type='expense' ORDER BY transaction_date, id");
     $expenses->execute([$bId]);
@@ -203,12 +199,18 @@ include 'layout-header.php';
                     <th>Booking</th>
                     <th>Customer</th>
                     <th>Tanggal</th>
+                    <th>Durasi</th>
                     <th>Pax</th>
                     <th>Status</th>
                 </tr>
             </thead>
             <tbody>
                 <?php foreach ($bookings as $b): ?>
+                    <?php
+                        // Durasi paket dibaca otomatis dari selisih tanggal mulai & selesai (mis. 3H2M, 4H3M).
+                        $nights = max(0, (int)round((strtotime($b['end_date']) - strtotime($b['start_date'])) / 86400));
+                        $durationLabel = ($nights + 1) . 'H' . $nights . 'M';
+                    ?>
                     <tr style="cursor:pointer;" onclick="openBookingDetail(<?php echo $b['id']; ?>)">
                         <td><a href="javascript:void(0)" onclick="event.stopPropagation();openBookingDetail(<?php echo $b['id']; ?>)" style="color:var(--ss-ocean);font-weight:600;text-decoration:none;"><?php echo htmlspecialchars($b['booking_no']); ?></a></td>
                         <td>
@@ -218,13 +220,14 @@ include 'layout-header.php';
                             <?php echo htmlspecialchars($b['customer_name']); ?>
                         </td>
                         <td><?php echo date('d M Y', strtotime($b['start_date'])); ?> - <?php echo date('d M Y', strtotime($b['end_date'])); ?></td>
+                        <td><?php echo $durationLabel; ?></td>
                         <td><?php echo (int)$b['pax_count']; ?></td>
                         <td><span class="ss-status ss-status-sent"><?php echo ucfirst($b['status']); ?></span></td>
                     </tr>
                 <?php endforeach; ?>
                 <?php if (empty($bookings)): ?>
                     <tr>
-                        <td colspan="5" style="text-align:center;color:#64748b;">Belum ada data reservasi confirmed.</td>
+                        <td colspan="6" style="text-align:center;color:#64748b;">Belum ada data reservasi confirmed.</td>
                     </tr>
                 <?php endif; ?>
             </tbody>
