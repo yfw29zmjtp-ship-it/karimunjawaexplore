@@ -378,6 +378,7 @@ if ($action === 'print' && $invoice):
     $companyName    = sunseaSetting($pdo, 'company_name', 'Explore Karimunjawa');
     $companyAddress = sunseaSetting($pdo, 'company_address', '');
     $companyPhone   = sunseaSetting($pdo, 'company_phone', '');
+    $companyEmail   = sunseaSetting($pdo, 'company_email', '');
     $printLogoPath  = sunseaSetting($pdo, 'invoice_logo', '') ?: sunseaSetting($pdo, 'company_logo', '');
     $printLogoSrc   = sunseaAssetUrl($printLogoPath);
     $stampPath      = sunseaSetting($pdo, 'invoice_stamp', '');
@@ -415,57 +416,91 @@ if ($action === 'print' && $invoice):
                 box-sizing: border-box;
             }
 
+            @page {
+                size: A4 portrait;
+                margin: 14mm 12mm;
+            }
+
+            html, body {
+                background: #E2E8F0;
+            }
+
             body {
                 font-family: 'Segoe UI', Arial, sans-serif;
                 font-size: 12.5px;
-                padding: 32px 40px;
                 color: #1e293b;
+            }
+
+            .page {
+                width: 210mm;
+                min-height: 297mm;
+                margin: 12px auto;
                 background: #fff;
+                padding: 16mm 14mm;
+                box-shadow: 0 4px 18px rgba(15,23,42,.12);
             }
 
             .accent-bar {
                 height: 6px;
                 border-radius: 4px;
                 background: linear-gradient(90deg, #7C2D12, #C2410C 55%, #EA580C);
-                margin-bottom: 22px;
+                margin-bottom: 20px;
             }
 
             .head {
                 display: flex;
                 justify-content: space-between;
                 align-items: flex-start;
-                padding-bottom: 18px;
-                border-bottom: 1px solid #E2E8F0;
+                padding-bottom: 16px;
+                border-bottom: 2px solid #E2E8F0;
             }
 
-            .brand-logo {
-                width: 64px;
-                height: 64px;
+            .brand-row {
+                display: flex;
+                align-items: center;
+                gap: 14px;
+            }
+
+            .brand-logo-box {
+                width: 66px;
+                height: 66px;
+                flex-shrink: 0;
+                border: 1px solid #E2E8F0;
+                border-radius: 10px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                overflow: hidden;
+                background: #fff;
+            }
+
+            .brand-logo-box img {
+                width: 100%;
+                height: 100%;
                 object-fit: contain;
-                margin-right: 14px;
-                border-radius: 6px;
             }
 
             .brand-name {
-                font-size: 19px;
+                font-size: 20px;
                 font-weight: 800;
                 margin: 0;
                 color: #7C2D12;
                 letter-spacing: .2px;
+                line-height: 1.25;
             }
 
             .brand-meta {
-                font-size: 11px;
+                font-size: 10.5px;
                 color: #64748B;
-                margin-top: 3px;
-                line-height: 1.5;
+                margin-top: 4px;
+                line-height: 1.6;
                 max-width: 320px;
             }
 
             .invoice-tag {
-                font-size: 26px;
+                font-size: 25px;
                 font-weight: 800;
-                letter-spacing: 2px;
+                letter-spacing: 2.5px;
                 color: #C2410C;
                 margin: 0;
             }
@@ -473,52 +508,8 @@ if ($action === 'print' && $invoice):
             .invoice-no {
                 font-size: 12px;
                 color: #64748B;
-                margin-top: 4px;
-                font-weight: 600;
-            }
-
-            .meta-box {
-                display: flex;
-                justify-content: space-between;
-                gap: 16px;
-                background: #FFF7ED;
-                border: 1px solid #FDE4CC;
-                border-radius: 8px;
-                padding: 14px 18px;
-                margin-top: 18px;
-            }
-
-            .meta-box .item {
-                font-size: 11px;
-                color: #7C2D12;
-            }
-
-            .meta-box .item b {
-                display: block;
-                font-size: 12.5px;
-                color: #1e293b;
-                margin-top: 2px;
+                margin-top: 5px;
                 font-weight: 700;
-            }
-
-            .cust-row {
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                margin-top: 18px;
-            }
-
-            .cust-row .cust-name {
-                font-size: 15px;
-                font-weight: 700;
-                color: #1e293b;
-            }
-
-            .cust-row .cust-label {
-                font-size: 10px;
-                color: #94a3b8;
-                text-transform: uppercase;
-                letter-spacing: .5px;
             }
 
             .status-badge {
@@ -528,12 +519,62 @@ if ($action === 'print' && $invoice):
                 padding: 4px 14px;
                 border-radius: 20px;
                 letter-spacing: .3px;
+                margin-top: 9px;
+            }
+
+            .info-cols {
+                display: flex;
+                justify-content: space-between;
+                gap: 20px;
+                margin-top: 18px;
+            }
+
+            .info-box {
+                flex: 1;
+                border: 1px solid #E2E8F0;
+                border-radius: 8px;
+                padding: 12px 16px;
+            }
+
+            .info-box .info-title {
+                font-size: 10px;
+                color: #94a3b8;
+                text-transform: uppercase;
+                letter-spacing: .5px;
+                font-weight: 700;
+                margin-bottom: 6px;
+            }
+
+            .info-box .cust-name {
+                font-size: 14.5px;
+                font-weight: 700;
+                color: #1e293b;
+                margin-bottom: 3px;
+            }
+
+            .info-box .cust-detail {
+                font-size: 11px;
+                color: #475569;
+                line-height: 1.6;
+            }
+
+            .meta-list .meta-row {
+                display: flex;
+                justify-content: space-between;
+                font-size: 11.5px;
+                padding: 3px 0;
+                color: #475569;
+            }
+
+            .meta-list .meta-row b {
+                color: #1e293b;
+                font-weight: 700;
             }
 
             table {
                 width: 100%;
                 border-collapse: collapse;
-                margin-top: 16px;
+                margin-top: 18px;
             }
 
             thead th {
@@ -546,9 +587,19 @@ if ($action === 'print' && $invoice):
                 text-align: left;
             }
 
-            thead th:nth-child(2),
+            thead th:first-child {
+                border-radius: 6px 0 0 0;
+                width: 26px;
+                text-align: center;
+            }
+
+            thead th:last-child {
+                border-radius: 0 6px 0 0;
+            }
+
             thead th:nth-child(3),
-            thead th:nth-child(4) {
+            thead th:nth-child(4),
+            thead th:nth-child(5) {
                 text-align: right;
             }
 
@@ -558,9 +609,14 @@ if ($action === 'print' && $invoice):
                 font-size: 12px;
             }
 
-            tbody td:nth-child(2),
+            tbody td:first-child {
+                text-align: center;
+                color: #94a3b8;
+            }
+
             tbody td:nth-child(3),
-            tbody td:nth-child(4) {
+            tbody td:nth-child(4),
+            tbody td:nth-child(5) {
                 text-align: right;
                 white-space: nowrap;
             }
@@ -569,11 +625,15 @@ if ($action === 'print' && $invoice):
                 background: #FAFBFC;
             }
 
+            tbody tr:last-child td {
+                border-bottom: 2px solid #E2E8F0;
+            }
+
             .bottom-flex {
                 display: flex;
                 justify-content: space-between;
                 gap: 24px;
-                margin-top: 20px;
+                margin-top: 18px;
             }
 
             .bank-box {
@@ -607,7 +667,7 @@ if ($action === 'print' && $invoice):
             }
 
             .final {
-                font-size: 16px;
+                font-size: 17px;
                 font-weight: 800;
                 border-top: 2px solid #C2410C;
                 margin-top: 4px;
@@ -615,11 +675,36 @@ if ($action === 'print' && $invoice):
                 color: #C2410C;
             }
 
+            .terms-box {
+                margin-top: 22px;
+                background: #F8FAFC;
+                border: 1px solid #E2E8F0;
+                border-radius: 8px;
+                padding: 12px 16px;
+            }
+
+            .terms-box .terms-title {
+                font-size: 10.5px;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: .4px;
+                color: #7C2D12;
+                margin-bottom: 6px;
+            }
+
+            .terms-box ol {
+                margin: 0;
+                padding-left: 16px;
+                font-size: 10.5px;
+                color: #475569;
+                line-height: 1.7;
+            }
+
             .signature-area {
                 display: flex;
                 justify-content: space-between;
                 align-items: flex-end;
-                margin-top: 48px;
+                margin-top: 36px;
                 gap: 24px;
             }
 
@@ -662,7 +747,7 @@ if ($action === 'print' && $invoice):
 
             .footer-note {
                 clear: both;
-                margin-top: 28px;
+                margin-top: 26px;
                 padding-top: 12px;
                 border-top: 1px dashed #E2E8F0;
                 font-size: 10.5px;
@@ -671,52 +756,83 @@ if ($action === 'print' && $invoice):
                 font-style: italic;
             }
 
+            .thanks-note {
+                text-align: center;
+                margin-top: 10px;
+                font-size: 12px;
+                font-weight: 700;
+                color: #7C2D12;
+            }
+
             @media print {
-                body {
-                    padding: 10px 18px;
+                html, body {
+                    background: #fff;
+                }
+
+                .page {
+                    width: auto;
+                    min-height: 0;
+                    margin: 0;
+                    padding: 0;
+                    box-shadow: none;
                 }
             }
         </style>
     </head>
 
     <body onload="window.print()">
+        <div class="page">
         <div class="accent-bar"></div>
         <div class="head">
-            <div style="display:flex;align-items:center;">
-                <?php if ($printLogoSrc): ?><img class="brand-logo" src="<?php echo htmlspecialchars($printLogoSrc); ?>" alt="Logo"> <?php endif; ?>
+            <div class="brand-row">
+                <?php if ($printLogoSrc): ?><div class="brand-logo-box"><img src="<?php echo htmlspecialchars($printLogoSrc); ?>" alt="Logo"></div><?php endif; ?>
                 <div>
                     <p class="brand-name"><?php echo htmlspecialchars($companyName); ?></p>
                     <div class="brand-meta">
-                        <?php echo htmlspecialchars($companyAddress); ?><?php echo ($companyAddress && $companyPhone) ? ' &middot; ' : ''; ?><?php echo htmlspecialchars($companyPhone); ?>
+                        <?php if ($companyAddress): ?><div><?php echo htmlspecialchars($companyAddress); ?></div><?php endif; ?>
+                        <div>
+                            <?php echo htmlspecialchars($companyPhone); ?><?php echo ($companyPhone && $companyEmail) ? ' &middot; ' : ''; ?><?php echo htmlspecialchars($companyEmail); ?>
+                        </div>
                     </div>
                 </div>
             </div>
             <div style="text-align:right;">
                 <p class="invoice-tag">INVOICE</p>
                 <div class="invoice-no">No. <?php echo htmlspecialchars($invoice['invoice_no']); ?></div>
-                <div style="margin-top:8px;"><span class="status-badge" style="background:<?php echo $statusBg; ?>;color:<?php echo $statusColor; ?>;"><?php echo $statusLabel; ?></span></div>
+                <div><span class="status-badge" style="background:<?php echo $statusBg; ?>;color:<?php echo $statusColor; ?>;"><?php echo $statusLabel; ?></span></div>
             </div>
         </div>
 
-        <div class="cust-row">
-            <div>
-                <div class="cust-label">Ditagihkan kepada</div>
+        <div class="info-cols">
+            <div class="info-box">
+                <div class="info-title">Ditagihkan Kepada</div>
                 <div class="cust-name"><?php echo htmlspecialchars($invoice['customer_name']); ?></div>
+                <div class="cust-detail">
+                    <?php if (!empty($invoice['customer_phone'])): ?><?php echo htmlspecialchars($invoice['customer_phone']); ?><br><?php endif; ?>
+                    <?php if (!empty($invoice['customer_email'])): ?><?php echo htmlspecialchars($invoice['customer_email']); ?><br><?php endif; ?>
+                    <?php if (!empty($invoice['customer_address']) || !empty($invoice['customer_city'])): ?>
+                        <?php echo htmlspecialchars(trim($invoice['customer_address'] . ' ' . $invoice['customer_city'])); ?>
+                    <?php endif; ?>
+                </div>
             </div>
-        </div>
-
-        <div class="meta-box">
-            <div class="item">Tanggal Invoice<b><?php echo date('d M Y', strtotime($invoice['issued_at'] ?: $invoice['created_at'])); ?></b></div>
-            <div class="item">Jatuh Tempo<b><?php echo $invoice['due_date'] ? date('d M Y', strtotime($invoice['due_date'])) : '-'; ?></b></div>
-            <div class="item">Jumlah Pax<b><?php echo (int)$invoice['pax_count']; ?> orang</b></div>
-            <?php if ($invoice['trip_date']): ?>
-                <div class="item">Tanggal Trip<b><?php echo date('d M Y', strtotime($invoice['trip_date'])); ?><?php echo $invoice['trip_end_date'] ? ' - ' . date('d M Y', strtotime($invoice['trip_end_date'])) : ''; ?></b></div>
-            <?php endif; ?>
+            <div class="info-box meta-list">
+                <div class="info-title">Detail Invoice</div>
+                <div class="meta-row"><span>Tanggal Invoice</span><b><?php echo date('d M Y', strtotime($invoice['issued_at'] ?: $invoice['created_at'])); ?></b></div>
+                <div class="meta-row"><span>Jatuh Tempo</span><b><?php echo $invoice['due_date'] ? date('d M Y', strtotime($invoice['due_date'])) : '-'; ?></b></div>
+                <div class="meta-row"><span>Jumlah Pax</span><b><?php echo (int)$invoice['pax_count']; ?> orang</b></div>
+                <?php if ($invoice['trip_date']): ?>
+                    <div class="meta-row"><span>Tanggal Trip</span><b><?php echo date('d M Y', strtotime($invoice['trip_date'])); ?><?php echo $invoice['trip_end_date'] ? ' - ' . date('d M Y', strtotime($invoice['trip_end_date'])) : ''; ?></b></div>
+                <?php endif; ?>
+                <?php if ($linkedBooking): ?>
+                    <div class="meta-row"><span>No. Booking</span><b><?php echo htmlspecialchars($linkedBooking['booking_no']); ?></b></div>
+                <?php endif; ?>
+            </div>
         </div>
 
         <table>
             <thead>
                 <tr>
+                    <th>#</th>
                     <th>Keterangan</th>
                     <th>Qty</th>
                     <th>Harga</th>
@@ -724,14 +840,20 @@ if ($action === 'print' && $invoice):
                 </tr>
             </thead>
             <tbody>
-                <?php foreach ($invItems as $item): ?>
+                <?php foreach ($invItems as $idx => $item): ?>
                     <tr>
+                        <td><?php echo $idx + 1; ?></td>
                         <td><?php echo htmlspecialchars($item['description']); ?></td>
                         <td><?php echo $item['qty'] == (int)$item['qty'] ? (int)$item['qty'] : (float)$item['qty']; ?> <?php echo htmlspecialchars($item['unit']); ?></td>
                         <td><?php echo sunseaRupiah((float)$item['unit_price']); ?></td>
                         <td><?php echo sunseaRupiah((float)$item['subtotal']); ?></td>
                     </tr>
                 <?php endforeach; ?>
+                <?php if (empty($invItems)): ?>
+                    <tr>
+                        <td colspan="5" style="text-align:center;color:#94a3b8;">Belum ada item.</td>
+                    </tr>
+                <?php endif; ?>
             </tbody>
         </table>
 
@@ -743,7 +865,6 @@ if ($action === 'print' && $invoice):
                 <?php if ($bankName2 || $bankAccount2): ?>
                     <div class="bank-card"><b>Transfer ke:</b> <?php echo htmlspecialchars($bankName2 ?: '-'); ?> &mdash; <?php echo htmlspecialchars($bankAccount2 ?: '-'); ?> a.n. <?php echo htmlspecialchars($bankHolder2 ?: '-'); ?></div>
                 <?php endif; ?>
-                <?php if ($invoiceNotes): ?><div style="margin-top:6px;"><?php echo nl2br(htmlspecialchars($invoiceNotes)); ?></div><?php endif; ?>
                 <?php if ($invoice['notes']): ?><div style="margin-top:6px;"><strong>Catatan:</strong> <?php echo nl2br(htmlspecialchars($invoice['notes'])); ?></div><?php endif; ?>
             </div>
             <div class="total">
@@ -760,6 +881,13 @@ if ($action === 'print' && $invoice):
             </div>
         </div>
 
+        <?php if ($invoiceNotes): ?>
+            <div class="terms-box">
+                <div class="terms-title">Ketentuan &amp; Catatan</div>
+                <div style="font-size:10.5px;color:#475569;line-height:1.7;"><?php echo nl2br(htmlspecialchars($invoiceNotes)); ?></div>
+            </div>
+        <?php endif; ?>
+
         <div class="signature-area">
             <div class="notes-col"></div>
             <div class="sign-col">
@@ -770,7 +898,10 @@ if ($action === 'print' && $invoice):
             </div>
         </div>
 
+        <div class="thanks-note">Terima kasih atas kepercayaan Anda memilih <?php echo htmlspecialchars($companyName); ?></div>
+
         <?php if ($footer): ?><div class="footer-note"><?php echo nl2br(htmlspecialchars($footer)); ?></div><?php endif; ?>
+        </div>
     </body>
 
     </html>
