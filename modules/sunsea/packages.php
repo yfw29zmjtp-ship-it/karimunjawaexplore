@@ -84,6 +84,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->prepare("UPDATE trip_packages SET is_active = !is_active WHERE id=?")->execute([$id]);
         header('Location: packages.php');
         exit;
+    } elseif ($postAction === 'delete') {
+        $id = (int)($_POST['id'] ?? 0);
+        if ($id > 0) {
+            $chk = $pdo->prepare("SELECT COUNT(*) FROM quotations WHERE package_id=?");
+            $chk->execute([$id]);
+            if ((int)$chk->fetchColumn() > 0) {
+                $_SESSION['flash_message'] = 'Paket tidak bisa dihapus karena sudah dipakai di penawaran. Nonaktifkan saja paketnya.';
+                $_SESSION['flash_type']    = 'error';
+            } else {
+                $pdo->prepare("DELETE FROM trip_package_items WHERE package_id=?")->execute([$id]);
+                $pdo->prepare("DELETE FROM trip_packages WHERE id=?")->execute([$id]);
+                $_SESSION['flash_message'] = 'Paket berhasil dihapus.';
+                $_SESSION['flash_type']    = 'success';
+            }
+        }
+        header('Location: packages.php');
+        exit;
     } elseif ($postAction === 'save_package_item') {
         $packageId = (int)($_POST['package_id'] ?? 0);
         $itemName  = trim($_POST['item_name'] ?? '');
@@ -160,6 +177,14 @@ if (in_array($action, ['edit', 'view']) && $pkgId > 0) {
     $itemsStmt->execute([$pkgId]);
     $packageItems = $itemsStmt->fetchAll();
 }
+
+$pkgItemsCostTotal = 0.0;
+$pkgItemsSellTotal = 0.0;
+foreach ($packageItems as $pi) {
+    $pkgItemsCostTotal += (float)$pi['estimated_cost'];
+    $pkgItemsSellTotal += (float)$pi['estimated_sell'];
+}
+$pkgItemsMargin = $pkgItemsSellTotal - $pkgItemsCostTotal;
 
 // ---- MASTER DATA (untuk dropdown referensi harga otomatis) ----
 $masterItemOptions = []; // grouped by item_type => [ [label, cost, sell, name], ... ]
@@ -262,6 +287,12 @@ include 'layout-header.php';
                             <input type="text" name="base_price" class="ss-input"
                                 value="<?php echo number_format($editPkg['base_price'] ?? 0, 0, ',', '.'); ?>"
                                 placeholder="0" id="basePriceInput">
+                            <?php if ($editPkg && !empty($packageItems)): ?>
+                                <div style="font-size:11px;margin-top:4px;color:var(--ss-muted);">
+                                    Total Modal Aktual (dari Detail Layanan): <strong style="color:#dc2626;"><?php echo sunseaRupiah($pkgItemsCostTotal); ?></strong>
+                                    · Margin saat ini: <strong style="color:<?php echo ((float)($editPkg['base_price'] ?? 0) - $pkgItemsCostTotal) < 0 ? '#dc2626' : '#16a34a'; ?>;"><?php echo sunseaRupiah((float)($editPkg['base_price'] ?? 0) - $pkgItemsCostTotal); ?></strong>
+                                </div>
+                            <?php endif; ?>
                         </div>
                         <div class="ss-form-group">
                             <label class="ss-label">Durasi (Hari)</label>
@@ -338,13 +369,14 @@ include 'layout-header.php';
                     </div>
                     <script>
                         var pkgMasterOptions = <?php echo json_encode($masterItemOptions); ?>;
+
                         function pkgRefreshOptions(prefix) {
                             var typeSel = document.getElementById(prefix + '_item_type');
                             var refSel = document.getElementById(prefix + '_item_ref');
                             if (!typeSel || !refSel) return;
                             var list = pkgMasterOptions[typeSel.value] || [];
                             refSel.innerHTML = '<option value="">-- Pilih manual --</option>';
-                            list.forEach(function (item, idx) {
+                            list.forEach(function(item, idx) {
                                 var opt = document.createElement('option');
                                 opt.value = idx;
                                 opt.textContent = item.label + ' (Modal Rp' + item.cost.toLocaleString('id-ID') + ' / Jual Rp' + item.sell.toLocaleString('id-ID') + ')';
@@ -354,6 +386,7 @@ include 'layout-header.php';
                                 refSel.appendChild(opt);
                             });
                         }
+
                         function pkgApplyRef(prefix) {
                             var refSel = document.getElementById(prefix + '_item_ref');
                             var opt = refSel.options[refSel.selectedIndex];
@@ -362,6 +395,7 @@ include 'layout-header.php';
                             document.getElementById(prefix + '_item_cost').value = opt.dataset.cost;
                             document.getElementById(prefix + '_item_sell').value = opt.dataset.sell;
                         }
+
                         function togglePkgItemEdit(id) {
                             var editRow = document.getElementById('pkg-item-edit-' + id);
                             if (!editRow) return;
@@ -369,21 +403,14 @@ include 'layout-header.php';
                             editRow.style.display = opening ? 'table-row' : 'none';
                             if (opening) pkgRefreshOptions('edit' + id);
                         }
-                        document.addEventListener('DOMContentLoaded', function () { pkgRefreshOptions('add'); });
+                        document.addEventListener('DOMContentLoaded', function() {
+                            pkgRefreshOptions('add');
+                        });
                     </script>
 
                     <?php if (empty($packageItems)): ?>
                         <div style="font-size:12.5px;color:var(--ss-muted);margin-bottom:10px;">Belum ada detail layanan. Tambahkan minimal tiket kapal, penginapan, dan transport supaya checklist pembayaran mitra bisa dihitung otomatis.</div>
                     <?php else: ?>
-                        <?php
-                        $pkgItemsCostTotal = 0.0;
-                        $pkgItemsSellTotal = 0.0;
-                        foreach ($packageItems as $pi) {
-                            $pkgItemsCostTotal += (float)$pi['estimated_cost'];
-                            $pkgItemsSellTotal += (float)$pi['estimated_sell'];
-                        }
-                        $pkgItemsMargin = $pkgItemsSellTotal - $pkgItemsCostTotal;
-                        ?>
                         <div class="ss-table-wrap" style="margin-bottom:12px;">
                             <table class="ss-table">
                                 <thead>
@@ -595,6 +622,13 @@ include 'layout-header.php';
                                 <button type="submit" class="ss-btn ss-btn-outline ss-btn-sm"
                                     title="<?php echo $pkg['is_active'] ? 'Nonaktifkan' : 'Aktifkan'; ?>">
                                     <i data-feather="<?php echo $pkg['is_active'] ? 'eye-off' : 'eye'; ?>"></i>
+                                </button>
+                            </form>
+                            <form method="POST" style="display:inline;" onsubmit="return confirm('Hapus paket <?php echo htmlspecialchars(addslashes($pkg['name'])); ?>? Tindakan ini tidak bisa dibatalkan.');">
+                                <input type="hidden" name="action" value="delete">
+                                <input type="hidden" name="id" value="<?php echo $pkg['id']; ?>">
+                                <button type="submit" class="ss-btn ss-btn-outline ss-btn-sm" title="Hapus" style="color:#dc2626;border-color:#dc2626;">
+                                    <i data-feather="trash-2"></i>
                                 </button>
                             </form>
                         </div>
