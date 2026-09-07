@@ -15,6 +15,8 @@ $auth->requireLogin();
 
 $pdo    = getSunseaConnection();
 sunseaEnsurePackageItemsSchema($pdo);
+sunseaEnsureMasterDataSchema($pdo);
+sunseaEnsureAccommodationSchema($pdo);
 $action = $_GET['action'] ?? 'list';
 $pkgId  = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
@@ -159,6 +161,41 @@ if (in_array($action, ['edit', 'view']) && $pkgId > 0) {
     $packageItems = $itemsStmt->fetchAll();
 }
 
+// ---- MASTER DATA (untuk dropdown referensi harga otomatis) ----
+$masterItemOptions = []; // grouped by item_type => [ [label, cost, sell, name], ... ]
+try {
+    $g = $pdo->query("SELECT name, daily_rate_cost AS cost, daily_rate_sell AS sell FROM guides WHERE is_active=1 ORDER BY name")->fetchAll();
+    foreach ($g as $r) {
+        $masterItemOptions['guide'][] = ['label' => $r['name'], 'name' => $r['name'], 'cost' => (float)$r['cost'], 'sell' => (float)$r['sell']];
+    }
+    $c = $pdo->query("SELECT vendor_name, menu_name, price_cost AS cost, price_sell AS sell FROM caterings WHERE is_active=1 ORDER BY vendor_name")->fetchAll();
+    foreach ($c as $r) {
+        $label = $r['vendor_name'] . ' - ' . $r['menu_name'];
+        $masterItemOptions['catering'][] = ['label' => $label, 'name' => $label, 'cost' => (float)$r['cost'], 'sell' => (float)$r['sell']];
+    }
+    $f = $pdo->query("SELECT name, price_cost AS cost, price_sell AS sell FROM facilities WHERE is_active=1 ORDER BY name")->fetchAll();
+    foreach ($f as $r) {
+        $masterItemOptions['fasilitas'][] = ['label' => $r['name'], 'name' => $r['name'], 'cost' => (float)$r['cost'], 'sell' => (float)$r['sell']];
+    }
+    $t = $pdo->query("SELECT name, transport_type, price_cost AS cost, price_sell AS sell FROM transport_items WHERE is_active=1 ORDER BY name")->fetchAll();
+    foreach ($t as $r) {
+        $masterItemOptions['transport'][] = ['label' => $r['name'], 'name' => $r['name'], 'cost' => (float)$r['cost'], 'sell' => (float)$r['sell']];
+        if ($r['transport_type'] === 'laut') {
+            $masterItemOptions['tiket_kapal'][] = ['label' => $r['name'], 'name' => $r['name'], 'cost' => (float)$r['cost'], 'sell' => (float)$r['sell']];
+        }
+    }
+    $a = $pdo->query("SELECT ap.name AS partner_name, ar.room_type, ar.price_cost AS cost, ar.price_sell AS sell
+                       FROM accommodation_rooms ar JOIN accommodation_partners ap ON ap.id = ar.partner_id
+                       WHERE ar.is_active=1 AND ap.is_active=1 ORDER BY ap.name")->fetchAll();
+    foreach ($a as $r) {
+        $label = $r['partner_name'] . ' - ' . $r['room_type'];
+        $masterItemOptions['penginapan'][] = ['label' => $label, 'name' => $label, 'cost' => (float)$r['cost'], 'sell' => (float)$r['sell']];
+    }
+} catch (Exception $e) {
+    error_log('packages.php masterItemOptions error: ' . $e->getMessage());
+}
+
+
 $categoryMap = [
     'open_trip'   => ['label' => 'Open Trip',    'icon' => '🌍'],
     'private_trip' => ['label' => 'Private Trip',  'icon' => '👥'],
@@ -299,6 +336,41 @@ include 'layout-header.php';
                             <div class="ss-card-sub">Isi tiket kapal, penginapan, transport, guide, dll agar tagihan mitra yang belum dibayar akurat saat booking memakai paket ini.</div>
                         </div>
                     </div>
+                    <script>
+                        var pkgMasterOptions = <?php echo json_encode($masterItemOptions); ?>;
+                        function pkgRefreshOptions(prefix) {
+                            var typeSel = document.getElementById(prefix + '_item_type');
+                            var refSel = document.getElementById(prefix + '_item_ref');
+                            if (!typeSel || !refSel) return;
+                            var list = pkgMasterOptions[typeSel.value] || [];
+                            refSel.innerHTML = '<option value="">-- Pilih manual --</option>';
+                            list.forEach(function (item, idx) {
+                                var opt = document.createElement('option');
+                                opt.value = idx;
+                                opt.textContent = item.label + ' (Modal Rp' + item.cost.toLocaleString('id-ID') + ' / Jual Rp' + item.sell.toLocaleString('id-ID') + ')';
+                                opt.dataset.name = item.name;
+                                opt.dataset.cost = item.cost;
+                                opt.dataset.sell = item.sell;
+                                refSel.appendChild(opt);
+                            });
+                        }
+                        function pkgApplyRef(prefix) {
+                            var refSel = document.getElementById(prefix + '_item_ref');
+                            var opt = refSel.options[refSel.selectedIndex];
+                            if (!opt || opt.dataset.name === undefined) return;
+                            document.getElementById(prefix + '_item_name').value = opt.dataset.name;
+                            document.getElementById(prefix + '_item_cost').value = opt.dataset.cost;
+                            document.getElementById(prefix + '_item_sell').value = opt.dataset.sell;
+                        }
+                        function togglePkgItemEdit(id) {
+                            var editRow = document.getElementById('pkg-item-edit-' + id);
+                            if (!editRow) return;
+                            var opening = editRow.style.display === 'none';
+                            editRow.style.display = opening ? 'table-row' : 'none';
+                            if (opening) pkgRefreshOptions('edit' + id);
+                        }
+                        document.addEventListener('DOMContentLoaded', function () { pkgRefreshOptions('add'); });
+                    </script>
 
                     <?php if (empty($packageItems)): ?>
                         <div style="font-size:12.5px;color:var(--ss-muted);margin-bottom:10px;">Belum ada detail layanan. Tambahkan minimal tiket kapal, penginapan, dan transport supaya checklist pembayaran mitra bisa dihitung otomatis.</div>
@@ -353,15 +425,21 @@ include 'layout-header.php';
                                                     <input type="hidden" name="item_id" value="<?php echo (int)$pi['id']; ?>">
                                                     <div class="ss-form-group" style="margin:0;min-width:130px;">
                                                         <label class="ss-label">Tipe</label>
-                                                        <select name="item_type" class="ss-select">
+                                                        <select name="item_type" id="edit<?php echo (int)$pi['id']; ?>_item_type" class="ss-select" onchange="pkgRefreshOptions('edit<?php echo (int)$pi['id']; ?>')">
                                                             <?php foreach ($packageItemTypes as $v => $label): ?>
                                                                 <option value="<?php echo $v; ?>" <?php echo $pi['item_type'] === $v ? 'selected' : ''; ?>><?php echo htmlspecialchars($label); ?></option>
                                                             <?php endforeach; ?>
                                                         </select>
                                                     </div>
+                                                    <div class="ss-form-group" style="margin:0;min-width:190px;">
+                                                        <label class="ss-label">Pilih dari Database</label>
+                                                        <select id="edit<?php echo (int)$pi['id']; ?>_item_ref" class="ss-select" onchange="pkgApplyRef('edit<?php echo (int)$pi['id']; ?>')">
+                                                            <option value="">-- Pilih manual --</option>
+                                                        </select>
+                                                    </div>
                                                     <div class="ss-form-group" style="margin:0;min-width:160px;flex:1;">
                                                         <label class="ss-label">Nama Layanan</label>
-                                                        <input type="text" name="item_name" class="ss-input" required value="<?php echo htmlspecialchars($pi['item_name']); ?>">
+                                                        <input type="text" name="item_name" id="edit<?php echo (int)$pi['id']; ?>_item_name" class="ss-input" required value="<?php echo htmlspecialchars($pi['item_name']); ?>">
                                                     </div>
                                                     <div class="ss-form-group" style="margin:0;min-width:140px;">
                                                         <label class="ss-label">Basis Biaya</label>
@@ -372,11 +450,11 @@ include 'layout-header.php';
                                                     </div>
                                                     <div class="ss-form-group" style="margin:0;width:120px;">
                                                         <label class="ss-label">Modal (Rp)</label>
-                                                        <input type="text" name="estimated_cost" class="ss-input" value="<?php echo (float)$pi['estimated_cost']; ?>">
+                                                        <input type="text" name="estimated_cost" id="edit<?php echo (int)$pi['id']; ?>_item_cost" class="ss-input" value="<?php echo (float)$pi['estimated_cost']; ?>">
                                                     </div>
                                                     <div class="ss-form-group" style="margin:0;width:120px;">
                                                         <label class="ss-label">Jual (Rp)</label>
-                                                        <input type="text" name="estimated_sell" class="ss-input" value="<?php echo (float)$pi['estimated_sell']; ?>">
+                                                        <input type="text" name="estimated_sell" id="edit<?php echo (int)$pi['id']; ?>_item_sell" class="ss-input" value="<?php echo (float)$pi['estimated_sell']; ?>">
                                                     </div>
                                                     <div class="ss-form-group" style="margin:0;min-width:160px;flex:1;">
                                                         <label class="ss-label">Catatan</label>
@@ -400,12 +478,6 @@ include 'layout-header.php';
                                 </tfoot>
                             </table>
                         </div>
-                        <script>
-                            function togglePkgItemEdit(id) {
-                                var editRow = document.getElementById('pkg-item-edit-' + id);
-                                if (editRow) editRow.style.display = editRow.style.display === 'none' ? 'table-row' : 'none';
-                            }
-                        </script>
                         <div style="font-size:11.5px;color:var(--ss-muted);margin:-6px 0 12px;">* Total Harga Jual rincian layanan sebaiknya mendekati/menyamai Harga Dasar paket per pax, agar margin paket akurat.</div>
                     <?php endif; ?>
 
@@ -416,15 +488,21 @@ include 'layout-header.php';
                         <div class="ss-form-grid cols-2">
                             <div class="ss-form-group">
                                 <label class="ss-label">Tipe Layanan</label>
-                                <select name="item_type" class="ss-select">
+                                <select name="item_type" id="add_item_type" class="ss-select" onchange="pkgRefreshOptions('add')">
                                     <?php foreach ($packageItemTypes as $v => $label): ?>
                                         <option value="<?php echo $v; ?>"><?php echo htmlspecialchars($label); ?></option>
                                     <?php endforeach; ?>
                                 </select>
                             </div>
                             <div class="ss-form-group">
+                                <label class="ss-label">Pilih dari Database (opsional)</label>
+                                <select id="add_item_ref" class="ss-select" onchange="pkgApplyRef('add')">
+                                    <option value="">-- Pilih manual --</option>
+                                </select>
+                            </div>
+                            <div class="ss-form-group">
                                 <label class="ss-label">Nama Layanan *</label>
-                                <input type="text" name="item_name" class="ss-input" required placeholder="Contoh: Tiket Kapal Express PP">
+                                <input type="text" name="item_name" id="add_item_name" class="ss-input" required placeholder="Contoh: Tiket Kapal Express PP">
                             </div>
                             <div class="ss-form-group">
                                 <label class="ss-label">Basis Biaya</label>
@@ -435,11 +513,11 @@ include 'layout-header.php';
                             </div>
                             <div class="ss-form-group">
                                 <label class="ss-label">Estimasi Modal (Rp)</label>
-                                <input type="text" name="estimated_cost" class="ss-input" placeholder="0">
+                                <input type="text" name="estimated_cost" id="add_item_cost" class="ss-input" placeholder="0">
                             </div>
                             <div class="ss-form-group">
                                 <label class="ss-label">Harga Jual (Rp)</label>
-                                <input type="text" name="estimated_sell" class="ss-input" placeholder="0">
+                                <input type="text" name="estimated_sell" id="add_item_sell" class="ss-input" placeholder="0">
                             </div>
                             <div class="ss-form-group" style="grid-column:1/-1;">
                                 <label class="ss-label">Catatan</label>
