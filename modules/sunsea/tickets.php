@@ -36,6 +36,17 @@ try {
     // table may already exist or no permission — continue
 }
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete') {
+    $id = (int)($_POST['id'] ?? 0);
+    if ($id > 0) {
+        $pdo->prepare("DELETE FROM tickets WHERE id=?")->execute([$id]);
+        $_SESSION['flash_message'] = 'Data tiket dihapus.';
+        $_SESSION['flash_type'] = 'success';
+    }
+    header('Location: tickets.php');
+    exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save') {
     $id = (int)($_POST['id'] ?? 0);
     $payload = [
@@ -118,6 +129,14 @@ try {
     $dbError = $e->getMessage();
 }
 
+$editRow = null;
+$editId = (int)($_GET['edit'] ?? 0);
+if ($editId > 0) {
+    $stmt = $pdo->prepare("SELECT * FROM tickets WHERE id=?");
+    $stmt->execute([$editId]);
+    $editRow = $stmt->fetch();
+}
+
 $pageTitle = 'Database Tiket';
 $activePage = 'database';
 include 'layout-header.php';
@@ -131,59 +150,63 @@ include 'layout-header.php';
     <?php endif; ?>
 
     <div class="ss-card">
-        <div class="ss-card-title" style="margin-bottom:12px;">Input Tiket</div>
+        <div class="ss-card-title" style="margin-bottom:12px;"><?php echo $editRow ? 'Update Harga / Edit Tiket' : 'Input Tiket'; ?></div>
         <form method="POST" style="display:flex;flex-direction:column;gap:12px;">
             <input type="hidden" name="action" value="save">
+            <input type="hidden" name="id" value="<?php echo $editRow['id'] ?? 0; ?>">
 
             <div class="ss-form-group">
                 <label class="ss-label" style="display:block;margin-bottom:6px;font-weight:500;">Tipe Tiket</label>
                 <select name="ticket_type" class="ss-select" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:4px;font-family:inherit;font-size:inherit;">
-                    <option value="express_bahari">Express Bahari</option>
-                    <option value="ferry">Ferry Siginjal</option>
-                    <option value="pesawat_susi">Pesawat Susi Air</option>
-                    <option value="btn_destinasi">BTN Tiket Destinasi</option>
-                    <option value="retribusi">Tiket Retribusi</option>
+                    <option value="express_bahari" <?php echo ($editRow['ticket_type'] ?? '') === 'express_bahari' ? 'selected' : ''; ?>>Express Bahari</option>
+                    <option value="ferry" <?php echo ($editRow['ticket_type'] ?? '') === 'ferry' ? 'selected' : ''; ?>>Ferry Siginjal</option>
+                    <option value="pesawat_susi" <?php echo ($editRow['ticket_type'] ?? '') === 'pesawat_susi' ? 'selected' : ''; ?>>Pesawat Susi Air</option>
+                    <option value="btn_destinasi" <?php echo ($editRow['ticket_type'] ?? '') === 'btn_destinasi' ? 'selected' : ''; ?>>BTN Tiket Destinasi</option>
+                    <option value="retribusi" <?php echo ($editRow['ticket_type'] ?? '') === 'retribusi' ? 'selected' : ''; ?>>Tiket Retribusi</option>
                 </select>
             </div>
 
             <div class="ss-form-group">
                 <label class="ss-label" style="display:block;margin-bottom:6px;font-weight:500;">Nama Tiket *</label>
-                <input type="text" class="ss-input" name="ticket_name" required placeholder="Kapal Reguler PP / BTN Anak" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:4px;font-family:inherit;font-size:inherit;box-sizing:border-box;">
+                <input type="text" class="ss-input" name="ticket_name" required placeholder="Kapal Reguler PP / BTN Anak" value="<?php echo htmlspecialchars($editRow['ticket_name'] ?? ''); ?>" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:4px;font-family:inherit;font-size:inherit;box-sizing:border-box;">
             </div>
 
             <div class="ss-form-group">
                 <label class="ss-label" style="display:block;margin-bottom:6px;font-weight:500;">Deskripsi</label>
-                <input type="text" class="ss-input" name="description" placeholder="Jam berangkat, estimasi waktu, dll" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:4px;font-family:inherit;font-size:inherit;box-sizing:border-box;">
+                <input type="text" class="ss-input" name="description" placeholder="Jam berangkat, estimasi waktu, dll" value="<?php echo htmlspecialchars($editRow['description'] ?? ''); ?>" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:4px;font-family:inherit;font-size:inherit;box-sizing:border-box;">
             </div>
 
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                 <div class="ss-form-group">
                     <label class="ss-label" style="display:block;margin-bottom:6px;font-weight:500;">Unit</label>
-                    <input type="text" class="ss-input" name="unit" value="pax" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:4px;font-family:inherit;font-size:inherit;box-sizing:border-box;">
+                    <input type="text" class="ss-input" name="unit" value="<?php echo htmlspecialchars($editRow['unit'] ?? 'pax'); ?>" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:4px;font-family:inherit;font-size:inherit;box-sizing:border-box;">
                 </div>
                 <div class="ss-form-group">
                     <label class="ss-label" style="display:block;margin-bottom:6px;font-weight:500;">Harga Modal</label>
-                    <input type="number" class="ss-input" name="price_cost" placeholder="0" step="0.01" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:4px;font-family:inherit;font-size:inherit;box-sizing:border-box;">
+                    <input type="number" class="ss-input" name="price_cost" placeholder="0" step="0.01" value="<?php echo htmlspecialchars($editRow['price_cost'] ?? ''); ?>" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:4px;font-family:inherit;font-size:inherit;box-sizing:border-box;">
                 </div>
             </div>
 
             <div class="ss-form-group">
                 <label class="ss-label" style="display:block;margin-bottom:6px;font-weight:500;">Harga Jual</label>
-                <input type="number" class="ss-input" name="price_sell" placeholder="0" step="0.01" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:4px;font-family:inherit;font-size:inherit;box-sizing:border-box;">
+                <input type="number" class="ss-input" name="price_sell" placeholder="0" step="0.01" value="<?php echo htmlspecialchars($editRow['price_sell'] ?? ''); ?>" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:4px;font-family:inherit;font-size:inherit;box-sizing:border-box;">
             </div>
 
             <div class="ss-form-group">
                 <label class="ss-label" style="display:block;margin-bottom:6px;font-weight:500;">Catatan</label>
-                <textarea class="ss-textarea" name="notes" placeholder="Catatan khusus" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:4px;font-family:inherit;font-size:inherit;box-sizing:border-box;min-height:80px;"></textarea>
+                <textarea class="ss-textarea" name="notes" placeholder="Catatan khusus" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:4px;font-family:inherit;font-size:inherit;box-sizing:border-box;min-height:80px;"><?php echo htmlspecialchars($editRow['notes'] ?? ''); ?></textarea>
             </div>
 
             <div class="ss-form-group" style="margin-bottom:0;">
                 <label style="display:flex;align-items:center;gap:8px;font-weight:500;">
-                    <input type="checkbox" name="is_active" checked style="width:16px;height:16px;cursor:pointer;"> Aktif
+                    <input type="checkbox" name="is_active" <?php echo ($editRow['is_active'] ?? 1) ? 'checked' : ''; ?> style="width:16px;height:16px;cursor:pointer;"> Aktif
                 </label>
             </div>
 
-            <button class="ss-btn ss-btn-primary" type="submit" style="padding:10px 16px;background:#C2410C;color:white;border:none;border-radius:4px;font-weight:600;cursor:pointer;font-size:14px;">💾 Simpan Tiket</button>
+            <div style="display:flex;gap:8px;">
+                <button class="ss-btn ss-btn-primary" type="submit" style="padding:10px 16px;background:#C2410C;color:white;border:none;border-radius:4px;font-weight:600;cursor:pointer;font-size:14px;">💾 <?php echo $editRow ? 'Simpan Perubahan Harga' : 'Simpan Tiket'; ?></button>
+                <?php if ($editRow): ?><a href="tickets.php" class="ss-btn ss-btn-outline" style="padding:10px 16px;border:1px solid #ccc;border-radius:4px;text-decoration:none;color:#333;">Batal</a><?php endif; ?>
+            </div>
         </form>
     </div>
 
@@ -200,12 +223,13 @@ include 'layout-header.php';
                         <th style="padding:10px;text-align:right;border:1px solid #ddd;font-weight:600;">Harga Modal</th>
                         <th style="padding:10px;text-align:right;border:1px solid #ddd;font-weight:600;">Harga Jual</th>
                         <th style="padding:10px;text-align:center;border:1px solid #ddd;font-weight:600;">Status</th>
+                        <th style="padding:10px;text-align:center;border:1px solid #ddd;font-weight:600;">Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($rows)): ?>
                         <tr>
-                            <td colspan="7" style="text-align:center;color:#999;padding:20px;border:1px solid #ddd;">Belum ada data tiket.</td>
+                            <td colspan="8" style="text-align:center;color:#999;padding:20px;border:1px solid #ddd;">Belum ada data tiket.</td>
                         </tr>
                     <?php else: ?>
                         <?php foreach ($rows as $r): ?>
@@ -217,6 +241,16 @@ include 'layout-header.php';
                                 <td style="padding:10px;border:1px solid #ddd;text-align:right;">Rp <?php echo number_format((float)($r['price_cost'] ?? 0), 0, ',', '.'); ?></td>
                                 <td style="padding:10px;border:1px solid #ddd;text-align:right;font-weight:600;color:#C2410C;">Rp <?php echo number_format((float)($r['price_sell'] ?? 0), 0, ',', '.'); ?></td>
                                 <td style="padding:10px;border:1px solid #ddd;text-align:center;"><?php echo $r['is_active'] ? '<span style="background:#e6f7ff;color:#C2410C;padding:4px 8px;border-radius:3px;font-size:12px;font-weight:600;">Aktif</span>' : '<span style="background:#f5f5f5;color:#666;padding:4px 8px;border-radius:3px;font-size:12px;font-weight:600;">Nonaktif</span>'; ?></td>
+                                <td style="padding:10px;border:1px solid #ddd;text-align:center;">
+                                    <div style="display:flex;gap:6px;justify-content:center;">
+                                        <a href="tickets.php?edit=<?php echo $r['id']; ?>" title="Update Harga" style="padding:6px 10px;border:1px solid #C2410C;color:#C2410C;border-radius:4px;text-decoration:none;font-size:12px;">✏️ Edit</a>
+                                        <form method="POST" style="display:inline;" onsubmit="return confirm('Hapus tiket <?php echo htmlspecialchars(addslashes($r['ticket_name'])); ?>?');">
+                                            <input type="hidden" name="action" value="delete">
+                                            <input type="hidden" name="id" value="<?php echo $r['id']; ?>">
+                                            <button type="submit" title="Hapus" style="padding:6px 10px;border:1px solid #dc2626;color:#dc2626;border-radius:4px;background:#fff;cursor:pointer;font-size:12px;">🗑️</button>
+                                        </form>
+                                    </div>
+                                </td>
                             </tr>
                         <?php endforeach; ?>
                     <?php endif; ?>
