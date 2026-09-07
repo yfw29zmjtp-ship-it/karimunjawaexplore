@@ -205,6 +205,21 @@ if (in_array($action, ['view', 'print']) && $invId > 0) {
     $si->execute([$invId]);
     $invItems = $si->fetchAll();
 
+    // Invoice dari booking paket: sembunyikan rincian modal internal (harga Rp 0) yang sudah terlanjur
+    // tersimpan dari sebelum fix, cukup tampilkan baris "Paket: ..." + fasilitas/manual bernilai > 0.
+    if (preg_match('/Generated from Reservasi:\s*(\S+)/', (string)($invoice['internal_notes'] ?? ''), $m)) {
+        $boStmt = $pdo->prepare("SELECT booking_mode FROM booking_orders WHERE booking_no=?");
+        $boStmt->execute([$m[1]]);
+        $bookingMode = $boStmt->fetchColumn();
+        if ($bookingMode === 'paket') {
+            $invItems = array_values(array_filter($invItems, function ($it) {
+                $isZero = (float)$it['unit_price'] === 0.0 && (float)$it['subtotal'] === 0.0;
+                $isPaketLine = stripos((string)$it['description'], 'Paket:') === 0;
+                return !$isZero || $isPaketLine;
+            }));
+        }
+    }
+
     $sp = $pdo->prepare("SELECT * FROM payments WHERE invoice_id=? ORDER BY payment_date");
     $sp->execute([$invId]);
     $payments = $sp->fetchAll();
