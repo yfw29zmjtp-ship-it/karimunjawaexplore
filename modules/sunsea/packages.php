@@ -107,6 +107,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         header('Location: packages.php?action=edit&id=' . $packageId);
         exit;
+    } elseif ($postAction === 'update_package_item') {
+        $packageId = (int)($_POST['package_id'] ?? 0);
+        $itemId    = (int)($_POST['item_id'] ?? 0);
+        $itemName  = trim($_POST['item_name'] ?? '');
+        if ($packageId > 0 && $itemId > 0 && $itemName !== '') {
+            $pdo->prepare("UPDATE trip_package_items
+                SET item_type=?, item_name=?, cost_basis=?, estimated_cost=?, estimated_sell=?, notes=?
+                WHERE id=? AND package_id=?")
+                ->execute([
+                    $_POST['item_type'] ?? 'lainnya',
+                    $itemName,
+                    ($_POST['cost_basis'] ?? 'per_pax') === 'flat' ? 'flat' : 'per_pax',
+                    (float)str_replace(['.', ','], ['', '.'], $_POST['estimated_cost'] ?? '0'),
+                    (float)str_replace(['.', ','], ['', '.'], $_POST['estimated_sell'] ?? '0'),
+                    trim($_POST['notes'] ?? ''),
+                    $itemId,
+                    $packageId,
+                ]);
+            $_SESSION['flash_message'] = 'Harga layanan paket berhasil diperbarui.';
+            $_SESSION['flash_type'] = 'success';
+        }
+        header('Location: packages.php?action=edit&id=' . $packageId);
+        exit;
     } elseif ($postAction === 'delete_package_item') {
         $packageId = (int)($_POST['package_id'] ?? 0);
         $itemId    = (int)($_POST['item_id'] ?? 0);
@@ -168,119 +191,119 @@ include 'layout-header.php';
 
     <div style="display:grid;grid-template-columns:<?php echo $editPkg ? '1fr 1fr' : '1fr'; ?>;gap:20px;align-items:start;">
         <div>
-        <div class="ss-card">
-            <div class="ss-card-header">
-                <div>
-                    <div class="ss-card-title"><?php echo $editPkg ? 'Edit Paket Wisata' : 'Tambah Paket Baru'; ?></div>
-                    <div class="ss-card-sub"><?php echo $editPkg ? htmlspecialchars($editPkg['code']) : 'Kode otomatis'; ?></div>
+            <div class="ss-card">
+                <div class="ss-card-header">
+                    <div>
+                        <div class="ss-card-title"><?php echo $editPkg ? 'Edit Paket Wisata' : 'Tambah Paket Baru'; ?></div>
+                        <div class="ss-card-sub"><?php echo $editPkg ? htmlspecialchars($editPkg['code']) : 'Kode otomatis'; ?></div>
+                    </div>
                 </div>
+
+                <form method="POST">
+                    <input type="hidden" name="action" value="save">
+                    <input type="hidden" name="id" value="<?php echo $editPkg['id'] ?? 0; ?>">
+
+                    <div class="ss-form-grid cols-2">
+                        <div class="ss-form-group" style="grid-column:1/-1;">
+                            <label class="ss-label">Nama Paket *</label>
+                            <input type="text" name="name" class="ss-input" required
+                                value="<?php echo htmlspecialchars($editPkg['name'] ?? ''); ?>"
+                                placeholder="Contoh: Karimunjawa Open Trip 3D2N">
+                        </div>
+                        <div class="ss-form-group">
+                            <label class="ss-label">Kategori</label>
+                            <select name="category" class="ss-select">
+                                <?php foreach ($categoryMap as $v => $info): ?>
+                                    <option value="<?php echo $v; ?>" <?php echo ($editPkg['category'] ?? 'open_trip') === $v ? 'selected' : ''; ?>>
+                                        <?php echo $info['icon'] . ' ' . $info['label']; ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="ss-form-group">
+                            <label class="ss-label">Harga Dasar / Orang (Rp)</label>
+                            <input type="text" name="base_price" class="ss-input"
+                                value="<?php echo number_format($editPkg['base_price'] ?? 0, 0, ',', '.'); ?>"
+                                placeholder="0" id="basePriceInput">
+                        </div>
+                        <div class="ss-form-group">
+                            <label class="ss-label">Durasi (Hari)</label>
+                            <input type="number" name="duration_days" class="ss-input" min="1"
+                                value="<?php echo $editPkg['duration_days'] ?? 1; ?>">
+                        </div>
+                        <div class="ss-form-group">
+                            <label class="ss-label">Durasi (Malam)</label>
+                            <input type="number" name="duration_nights" class="ss-input" min="0"
+                                value="<?php echo $editPkg['duration_nights'] ?? 0; ?>">
+                        </div>
+                        <div class="ss-form-group">
+                            <label class="ss-label">Min. Peserta</label>
+                            <input type="number" name="min_pax" class="ss-input" min="1"
+                                value="<?php echo $editPkg['min_pax'] ?? 1; ?>">
+                        </div>
+                        <div class="ss-form-group">
+                            <label class="ss-label">Maks. Peserta</label>
+                            <input type="number" name="max_pax" class="ss-input" min="1"
+                                value="<?php echo $editPkg['max_pax'] ?? 20; ?>">
+                        </div>
+                        <div class="ss-form-group" style="grid-column:1/-1;">
+                            <label class="ss-label">Deskripsi Paket</label>
+                            <textarea name="description" class="ss-textarea" rows="3"
+                                placeholder="Deskripsi singkat paket wisata ini"><?php echo htmlspecialchars($editPkg['description'] ?? ''); ?></textarea>
+                        </div>
+                        <div class="ss-form-group">
+                            <label class="ss-label">Sudah Termasuk (Include)</label>
+                            <textarea name="includes" class="ss-textarea" rows="5"
+                                placeholder="- Transportasi laut&#10;- Penginapan&#10;- Makan 3x sehari&#10;- Guide lokal"><?php echo htmlspecialchars($editPkg['includes'] ?? ''); ?></textarea>
+                        </div>
+                        <div class="ss-form-group">
+                            <label class="ss-label">Belum Termasuk (Exclude)</label>
+                            <textarea name="excludes" class="ss-textarea" rows="5"
+                                placeholder="- Tiket kereta/pesawat ke Semarang&#10;- Pengeluaran pribadi&#10;- Tips guide"><?php echo htmlspecialchars($editPkg['excludes'] ?? ''); ?></textarea>
+                        </div>
+                        <div class="ss-form-group" style="grid-column:1/-1;">
+                            <label class="ss-label">Itinerary (Jadwal Perjalanan)</label>
+                            <textarea name="itinerary" class="ss-textarea" rows="6"
+                                placeholder="Hari 1: Check-in, Snorkeling spot A&#10;Hari 2: Island hopping&#10;Hari 3: Check-out"><?php echo htmlspecialchars($editPkg['itinerary'] ?? ''); ?></textarea>
+                        </div>
+                        <div class="ss-form-group" style="grid-column:1/-1;">
+                            <label class="ss-label">Catatan Tambahan</label>
+                            <textarea name="notes" class="ss-textarea" rows="2"><?php echo htmlspecialchars($editPkg['notes'] ?? ''); ?></textarea>
+                        </div>
+                        <div class="ss-form-group">
+                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                                <input type="checkbox" name="is_active" value="1"
+                                    <?php echo ($editPkg['is_active'] ?? 1) ? 'checked' : ''; ?>>
+                                <span class="ss-label" style="margin:0;">Paket Aktif (ditampilkan saat buat penawaran)</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px;">
+                        <a href="packages.php" class="ss-btn ss-btn-outline">Batal</a>
+                        <button type="submit" class="ss-btn ss-btn-primary">
+                            <i data-feather="save"></i> <?php echo $editPkg ? 'Simpan Perubahan' : 'Tambah Paket'; ?>
+                        </button>
+                    </div>
+                </form>
             </div>
-
-            <form method="POST">
-                <input type="hidden" name="action" value="save">
-                <input type="hidden" name="id" value="<?php echo $editPkg['id'] ?? 0; ?>">
-
-                <div class="ss-form-grid cols-2">
-                    <div class="ss-form-group" style="grid-column:1/-1;">
-                        <label class="ss-label">Nama Paket *</label>
-                        <input type="text" name="name" class="ss-input" required
-                            value="<?php echo htmlspecialchars($editPkg['name'] ?? ''); ?>"
-                            placeholder="Contoh: Karimunjawa Open Trip 3D2N">
-                    </div>
-                    <div class="ss-form-group">
-                        <label class="ss-label">Kategori</label>
-                        <select name="category" class="ss-select">
-                            <?php foreach ($categoryMap as $v => $info): ?>
-                                <option value="<?php echo $v; ?>" <?php echo ($editPkg['category'] ?? 'open_trip') === $v ? 'selected' : ''; ?>>
-                                    <?php echo $info['icon'] . ' ' . $info['label']; ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="ss-form-group">
-                        <label class="ss-label">Harga Dasar / Orang (Rp)</label>
-                        <input type="text" name="base_price" class="ss-input"
-                            value="<?php echo number_format($editPkg['base_price'] ?? 0, 0, ',', '.'); ?>"
-                            placeholder="0" id="basePriceInput">
-                    </div>
-                    <div class="ss-form-group">
-                        <label class="ss-label">Durasi (Hari)</label>
-                        <input type="number" name="duration_days" class="ss-input" min="1"
-                            value="<?php echo $editPkg['duration_days'] ?? 1; ?>">
-                    </div>
-                    <div class="ss-form-group">
-                        <label class="ss-label">Durasi (Malam)</label>
-                        <input type="number" name="duration_nights" class="ss-input" min="0"
-                            value="<?php echo $editPkg['duration_nights'] ?? 0; ?>">
-                    </div>
-                    <div class="ss-form-group">
-                        <label class="ss-label">Min. Peserta</label>
-                        <input type="number" name="min_pax" class="ss-input" min="1"
-                            value="<?php echo $editPkg['min_pax'] ?? 1; ?>">
-                    </div>
-                    <div class="ss-form-group">
-                        <label class="ss-label">Maks. Peserta</label>
-                        <input type="number" name="max_pax" class="ss-input" min="1"
-                            value="<?php echo $editPkg['max_pax'] ?? 20; ?>">
-                    </div>
-                    <div class="ss-form-group" style="grid-column:1/-1;">
-                        <label class="ss-label">Deskripsi Paket</label>
-                        <textarea name="description" class="ss-textarea" rows="3"
-                            placeholder="Deskripsi singkat paket wisata ini"><?php echo htmlspecialchars($editPkg['description'] ?? ''); ?></textarea>
-                    </div>
-                    <div class="ss-form-group">
-                        <label class="ss-label">Sudah Termasuk (Include)</label>
-                        <textarea name="includes" class="ss-textarea" rows="5"
-                            placeholder="- Transportasi laut&#10;- Penginapan&#10;- Makan 3x sehari&#10;- Guide lokal"><?php echo htmlspecialchars($editPkg['includes'] ?? ''); ?></textarea>
-                    </div>
-                    <div class="ss-form-group">
-                        <label class="ss-label">Belum Termasuk (Exclude)</label>
-                        <textarea name="excludes" class="ss-textarea" rows="5"
-                            placeholder="- Tiket kereta/pesawat ke Semarang&#10;- Pengeluaran pribadi&#10;- Tips guide"><?php echo htmlspecialchars($editPkg['excludes'] ?? ''); ?></textarea>
-                    </div>
-                    <div class="ss-form-group" style="grid-column:1/-1;">
-                        <label class="ss-label">Itinerary (Jadwal Perjalanan)</label>
-                        <textarea name="itinerary" class="ss-textarea" rows="6"
-                            placeholder="Hari 1: Check-in, Snorkeling spot A&#10;Hari 2: Island hopping&#10;Hari 3: Check-out"><?php echo htmlspecialchars($editPkg['itinerary'] ?? ''); ?></textarea>
-                    </div>
-                    <div class="ss-form-group" style="grid-column:1/-1;">
-                        <label class="ss-label">Catatan Tambahan</label>
-                        <textarea name="notes" class="ss-textarea" rows="2"><?php echo htmlspecialchars($editPkg['notes'] ?? ''); ?></textarea>
-                    </div>
-                    <div class="ss-form-group">
-                        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-                            <input type="checkbox" name="is_active" value="1"
-                                <?php echo ($editPkg['is_active'] ?? 1) ? 'checked' : ''; ?>>
-                            <span class="ss-label" style="margin:0;">Paket Aktif (ditampilkan saat buat penawaran)</span>
-                        </label>
-                    </div>
-                </div>
-
-                <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px;">
-                    <a href="packages.php" class="ss-btn ss-btn-outline">Batal</a>
-                    <button type="submit" class="ss-btn ss-btn-primary">
-                        <i data-feather="save"></i> <?php echo $editPkg ? 'Simpan Perubahan' : 'Tambah Paket'; ?>
-                    </button>
-                </div>
-            </form>
-        </div>
 
         </div>
 
         <div>
-        <?php if ($editPkg): ?>
-            <div class="ss-card">
-                <div class="ss-card-header">
-                    <div>
-                        <div class="ss-card-title">Detail Layanan dalam Paket</div>
-                        <div class="ss-card-sub">Isi tiket kapal, penginapan, transport, guide, dll agar tagihan mitra yang belum dibayar akurat saat booking memakai paket ini.</div>
+            <?php if ($editPkg): ?>
+                <div class="ss-card">
+                    <div class="ss-card-header">
+                        <div>
+                            <div class="ss-card-title">Detail Layanan dalam Paket</div>
+                            <div class="ss-card-sub">Isi tiket kapal, penginapan, transport, guide, dll agar tagihan mitra yang belum dibayar akurat saat booking memakai paket ini.</div>
+                        </div>
                     </div>
-                </div>
 
-                <?php if (empty($packageItems)): ?>
-                    <div style="font-size:12.5px;color:var(--ss-muted);margin-bottom:10px;">Belum ada detail layanan. Tambahkan minimal tiket kapal, penginapan, dan transport supaya checklist pembayaran mitra bisa dihitung otomatis.</div>
-                <?php else: ?>
-                    <?php
+                    <?php if (empty($packageItems)): ?>
+                        <div style="font-size:12.5px;color:var(--ss-muted);margin-bottom:10px;">Belum ada detail layanan. Tambahkan minimal tiket kapal, penginapan, dan transport supaya checklist pembayaran mitra bisa dihitung otomatis.</div>
+                    <?php else: ?>
+                        <?php
                         $pkgItemsCostTotal = 0.0;
                         $pkgItemsSellTotal = 0.0;
                         foreach ($packageItems as $pi) {
@@ -288,96 +311,145 @@ include 'layout-header.php';
                             $pkgItemsSellTotal += (float)$pi['estimated_sell'];
                         }
                         $pkgItemsMargin = $pkgItemsSellTotal - $pkgItemsCostTotal;
-                    ?>
-                    <div class="ss-table-wrap" style="margin-bottom:12px;">
-                        <table class="ss-table">
-                            <thead>
-                                <tr>
-                                    <th>Tipe</th>
-                                    <th>Nama Layanan</th>
-                                    <th>Basis Biaya</th>
-                                    <th>Estimasi Modal</th>
-                                    <th>Harga Jual</th>
-                                    <th>Margin</th>
-                                    <th></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($packageItems as $pi): ?>
-                                    <?php $piMargin = (float)$pi['estimated_sell'] - (float)$pi['estimated_cost']; ?>
+                        ?>
+                        <div class="ss-table-wrap" style="margin-bottom:12px;">
+                            <table class="ss-table">
+                                <thead>
                                     <tr>
-                                        <td><?php echo htmlspecialchars($packageItemTypes[$pi['item_type']] ?? $pi['item_type']); ?></td>
-                                        <td><?php echo htmlspecialchars($pi['item_name']); ?><?php if (!empty($pi['notes'])): ?><br><small style="color:var(--ss-muted);"><?php echo htmlspecialchars($pi['notes']); ?></small><?php endif; ?></td>
-                                        <td><?php echo $pi['cost_basis'] === 'flat' ? 'Flat (sekali)' : 'Per Pax'; ?></td>
-                                        <td><?php echo sunseaRupiah((float)$pi['estimated_cost']); ?></td>
-                                        <td><?php echo sunseaRupiah((float)$pi['estimated_sell']); ?></td>
-                                        <td style="color:<?php echo $piMargin < 0 ? '#dc2626' : '#16a34a'; ?>;font-weight:700;"><?php echo sunseaRupiah($piMargin); ?></td>
-                                        <td>
-                                            <form method="POST" onsubmit="return confirm('Hapus layanan ini dari paket?');">
-                                                <input type="hidden" name="action" value="delete_package_item">
-                                                <input type="hidden" name="package_id" value="<?php echo (int)$editPkg['id']; ?>">
-                                                <input type="hidden" name="item_id" value="<?php echo (int)$pi['id']; ?>">
-                                                <button type="submit" class="ss-btn ss-btn-outline ss-btn-sm" style="color:#dc2626;border-color:#dc2626;"><i data-feather="trash-2"></i></button>
-                                            </form>
-                                        </td>
+                                        <th>Tipe</th>
+                                        <th>Nama Layanan</th>
+                                        <th>Basis Biaya</th>
+                                        <th>Estimasi Modal</th>
+                                        <th>Harga Jual</th>
+                                        <th>Margin</th>
+                                        <th></th>
                                     </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                            <tfoot>
-                                <tr style="font-weight:700;">
-                                    <td colspan="3" style="text-align:right;">Total Rincian Layanan</td>
-                                    <td><?php echo sunseaRupiah($pkgItemsCostTotal); ?></td>
-                                    <td><?php echo sunseaRupiah($pkgItemsSellTotal); ?></td>
-                                    <td style="color:<?php echo $pkgItemsMargin < 0 ? '#dc2626' : '#16a34a'; ?>;"><?php echo sunseaRupiah($pkgItemsMargin); ?></td>
-                                    <td></td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
-                    <div style="font-size:11.5px;color:var(--ss-muted);margin:-6px 0 12px;">* Total Harga Jual rincian layanan sebaiknya mendekati/menyamai Harga Dasar paket per pax, agar margin paket akurat.</div>
-                <?php endif; ?>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($packageItems as $pi): ?>
+                                        <?php $piMargin = (float)$pi['estimated_sell'] - (float)$pi['estimated_cost']; ?>
+                                        <tr id="pkg-item-row-<?php echo (int)$pi['id']; ?>">
+                                            <td><?php echo htmlspecialchars($packageItemTypes[$pi['item_type']] ?? $pi['item_type']); ?></td>
+                                            <td><?php echo htmlspecialchars($pi['item_name']); ?><?php if (!empty($pi['notes'])): ?><br><small style="color:var(--ss-muted);"><?php echo htmlspecialchars($pi['notes']); ?></small><?php endif; ?></td>
+                                            <td><?php echo $pi['cost_basis'] === 'flat' ? 'Flat (sekali)' : 'Per Pax'; ?></td>
+                                            <td><?php echo sunseaRupiah((float)$pi['estimated_cost']); ?></td>
+                                            <td><?php echo sunseaRupiah((float)$pi['estimated_sell']); ?></td>
+                                            <td style="color:<?php echo $piMargin < 0 ? '#dc2626' : '#16a34a'; ?>;font-weight:700;"><?php echo sunseaRupiah($piMargin); ?></td>
+                                            <td style="white-space:nowrap;">
+                                                <button type="button" class="ss-btn ss-btn-outline ss-btn-sm" onclick="togglePkgItemEdit(<?php echo (int)$pi['id']; ?>)"><i data-feather="edit-2"></i></button>
+                                                <form method="POST" style="display:inline;" onsubmit="return confirm('Hapus layanan ini dari paket?');">
+                                                    <input type="hidden" name="action" value="delete_package_item">
+                                                    <input type="hidden" name="package_id" value="<?php echo (int)$editPkg['id']; ?>">
+                                                    <input type="hidden" name="item_id" value="<?php echo (int)$pi['id']; ?>">
+                                                    <button type="submit" class="ss-btn ss-btn-outline ss-btn-sm" style="color:#dc2626;border-color:#dc2626;"><i data-feather="trash-2"></i></button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                        <tr id="pkg-item-edit-<?php echo (int)$pi['id']; ?>" style="display:none;background:#fffbeb;">
+                                            <td colspan="7">
+                                                <form method="POST" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;padding:8px 2px;">
+                                                    <input type="hidden" name="action" value="update_package_item">
+                                                    <input type="hidden" name="package_id" value="<?php echo (int)$editPkg['id']; ?>">
+                                                    <input type="hidden" name="item_id" value="<?php echo (int)$pi['id']; ?>">
+                                                    <div class="ss-form-group" style="margin:0;min-width:130px;">
+                                                        <label class="ss-label">Tipe</label>
+                                                        <select name="item_type" class="ss-select">
+                                                            <?php foreach ($packageItemTypes as $v => $label): ?>
+                                                                <option value="<?php echo $v; ?>" <?php echo $pi['item_type'] === $v ? 'selected' : ''; ?>><?php echo htmlspecialchars($label); ?></option>
+                                                            <?php endforeach; ?>
+                                                        </select>
+                                                    </div>
+                                                    <div class="ss-form-group" style="margin:0;min-width:160px;flex:1;">
+                                                        <label class="ss-label">Nama Layanan</label>
+                                                        <input type="text" name="item_name" class="ss-input" required value="<?php echo htmlspecialchars($pi['item_name']); ?>">
+                                                    </div>
+                                                    <div class="ss-form-group" style="margin:0;min-width:140px;">
+                                                        <label class="ss-label">Basis Biaya</label>
+                                                        <select name="cost_basis" class="ss-select">
+                                                            <option value="per_pax" <?php echo $pi['cost_basis'] === 'per_pax' ? 'selected' : ''; ?>>Per Pax</option>
+                                                            <option value="flat" <?php echo $pi['cost_basis'] === 'flat' ? 'selected' : ''; ?>>Flat (sekali)</option>
+                                                        </select>
+                                                    </div>
+                                                    <div class="ss-form-group" style="margin:0;width:120px;">
+                                                        <label class="ss-label">Modal (Rp)</label>
+                                                        <input type="text" name="estimated_cost" class="ss-input" value="<?php echo (float)$pi['estimated_cost']; ?>">
+                                                    </div>
+                                                    <div class="ss-form-group" style="margin:0;width:120px;">
+                                                        <label class="ss-label">Jual (Rp)</label>
+                                                        <input type="text" name="estimated_sell" class="ss-input" value="<?php echo (float)$pi['estimated_sell']; ?>">
+                                                    </div>
+                                                    <div class="ss-form-group" style="margin:0;min-width:160px;flex:1;">
+                                                        <label class="ss-label">Catatan</label>
+                                                        <input type="text" name="notes" class="ss-input" value="<?php echo htmlspecialchars($pi['notes'] ?? ''); ?>">
+                                                    </div>
+                                                    <button type="submit" class="ss-btn ss-btn-primary ss-btn-sm"><i data-feather="save"></i> Simpan</button>
+                                                    <button type="button" class="ss-btn ss-btn-outline ss-btn-sm" onclick="togglePkgItemEdit(<?php echo (int)$pi['id']; ?>)">Batal</button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                                <tfoot>
+                                    <tr style="font-weight:700;">
+                                        <td colspan="3" style="text-align:right;">Total Rincian Layanan</td>
+                                        <td><?php echo sunseaRupiah($pkgItemsCostTotal); ?></td>
+                                        <td><?php echo sunseaRupiah($pkgItemsSellTotal); ?></td>
+                                        <td style="color:<?php echo $pkgItemsMargin < 0 ? '#dc2626' : '#16a34a'; ?>;"><?php echo sunseaRupiah($pkgItemsMargin); ?></td>
+                                        <td></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                        <script>
+                            function togglePkgItemEdit(id) {
+                                var editRow = document.getElementById('pkg-item-edit-' + id);
+                                if (editRow) editRow.style.display = editRow.style.display === 'none' ? 'table-row' : 'none';
+                            }
+                        </script>
+                        <div style="font-size:11.5px;color:var(--ss-muted);margin:-6px 0 12px;">* Total Harga Jual rincian layanan sebaiknya mendekati/menyamai Harga Dasar paket per pax, agar margin paket akurat.</div>
+                    <?php endif; ?>
 
-                <div class="ss-card-title" style="margin:10px 0 8px;font-size:13px;">+ Tambah Layanan</div>
-                <form method="POST">
-                    <input type="hidden" name="action" value="save_package_item">
-                    <input type="hidden" name="package_id" value="<?php echo (int)$editPkg['id']; ?>">
-                    <div class="ss-form-grid cols-2">
-                        <div class="ss-form-group">
-                            <label class="ss-label">Tipe Layanan</label>
-                            <select name="item_type" class="ss-select">
-                                <?php foreach ($packageItemTypes as $v => $label): ?>
-                                    <option value="<?php echo $v; ?>"><?php echo htmlspecialchars($label); ?></option>
-                                <?php endforeach; ?>
-                            </select>
+                    <div class="ss-card-title" style="margin:10px 0 8px;font-size:13px;">+ Tambah Layanan</div>
+                    <form method="POST">
+                        <input type="hidden" name="action" value="save_package_item">
+                        <input type="hidden" name="package_id" value="<?php echo (int)$editPkg['id']; ?>">
+                        <div class="ss-form-grid cols-2">
+                            <div class="ss-form-group">
+                                <label class="ss-label">Tipe Layanan</label>
+                                <select name="item_type" class="ss-select">
+                                    <?php foreach ($packageItemTypes as $v => $label): ?>
+                                        <option value="<?php echo $v; ?>"><?php echo htmlspecialchars($label); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="ss-form-group">
+                                <label class="ss-label">Nama Layanan *</label>
+                                <input type="text" name="item_name" class="ss-input" required placeholder="Contoh: Tiket Kapal Express PP">
+                            </div>
+                            <div class="ss-form-group">
+                                <label class="ss-label">Basis Biaya</label>
+                                <select name="cost_basis" class="ss-select">
+                                    <option value="per_pax">Per Pax (dikali jumlah tamu)</option>
+                                    <option value="flat">Flat (sekali per booking)</option>
+                                </select>
+                            </div>
+                            <div class="ss-form-group">
+                                <label class="ss-label">Estimasi Modal (Rp)</label>
+                                <input type="text" name="estimated_cost" class="ss-input" placeholder="0">
+                            </div>
+                            <div class="ss-form-group">
+                                <label class="ss-label">Harga Jual (Rp)</label>
+                                <input type="text" name="estimated_sell" class="ss-input" placeholder="0">
+                            </div>
+                            <div class="ss-form-group" style="grid-column:1/-1;">
+                                <label class="ss-label">Catatan</label>
+                                <input type="text" name="notes" class="ss-input" placeholder="Contoh: dibayar ke mitra kapal Bahari Express">
+                            </div>
                         </div>
-                        <div class="ss-form-group">
-                            <label class="ss-label">Nama Layanan *</label>
-                            <input type="text" name="item_name" class="ss-input" required placeholder="Contoh: Tiket Kapal Express PP">
-                        </div>
-                        <div class="ss-form-group">
-                            <label class="ss-label">Basis Biaya</label>
-                            <select name="cost_basis" class="ss-select">
-                                <option value="per_pax">Per Pax (dikali jumlah tamu)</option>
-                                <option value="flat">Flat (sekali per booking)</option>
-                            </select>
-                        </div>
-                        <div class="ss-form-group">
-                            <label class="ss-label">Estimasi Modal (Rp)</label>
-                            <input type="text" name="estimated_cost" class="ss-input" placeholder="0">
-                        </div>
-                        <div class="ss-form-group">
-                            <label class="ss-label">Harga Jual (Rp)</label>
-                            <input type="text" name="estimated_sell" class="ss-input" placeholder="0">
-                        </div>
-                        <div class="ss-form-group" style="grid-column:1/-1;">
-                            <label class="ss-label">Catatan</label>
-                            <input type="text" name="notes" class="ss-input" placeholder="Contoh: dibayar ke mitra kapal Bahari Express">
-                        </div>
-                    </div>
-                    <button type="submit" class="ss-btn ss-btn-primary ss-btn-sm" style="margin-top:6px;"><i data-feather="plus"></i> Tambah Layanan</button>
-                </form>
-            </div>
-        <?php endif; ?>
+                        <button type="submit" class="ss-btn ss-btn-primary ss-btn-sm" style="margin-top:6px;"><i data-feather="plus"></i> Tambah Layanan</button>
+                    </form>
+                </div>
+            <?php endif; ?>
         </div>
     </div>
 
