@@ -760,7 +760,9 @@ include 'layout-header.php';
                                     </tr>
                                 <?php endforeach; ?>
                                 <?php if (empty($detailItems)): ?>
-                                    <tr><td colspan="5" style="color:var(--ss-muted);">Belum ada layanan pada pesanan ini.</td></tr>
+                                    <tr>
+                                        <td colspan="5" style="color:var(--ss-muted);">Belum ada layanan pada pesanan ini.</td>
+                                    </tr>
                                 <?php endif; ?>
                             </tbody>
                         </table>
@@ -892,8 +894,7 @@ include 'layout-header.php';
                     </select>
                     <button class="ss-btn ss-btn-outline" type="submit"><i data-feather="save"></i></button>
                 </form>
-                <a href="rab.php?booking_id=<?php echo $detail['id']; ?>" class="ss-btn ss-btn-primary" style="margin-top:10px;"><i data-feather="printer"></i> Cetak RAB</a>
-                <a href="bookings.php?action=print_invoice&id=<?php echo $detail['id']; ?>" class="ss-btn ss-btn-outline" style="margin-top:8px;"><i data-feather="file-text"></i> Cetak Invoice</a>
+                <a href="bookings.php?action=print_invoice&id=<?php echo $detail['id']; ?>" class="ss-btn ss-btn-outline" style="margin-top:10px;"><i data-feather="file-text"></i> Cetak Invoice</a>
                 <a href="bookings.php?action=pay_invoice&id=<?php echo $detail['id']; ?>&pay_mode=dp" class="ss-btn ss-btn-outline" style="margin-top:8px;"><i data-feather="dollar-sign"></i> Bayar DP</a>
                 <a href="bookings.php?action=pay_invoice&id=<?php echo $detail['id']; ?>&pay_mode=full" class="ss-btn ss-btn-outline" style="margin-top:8px;"><i data-feather="check-circle"></i> Pelunasan</a>
             </div>
@@ -1062,7 +1063,6 @@ include 'layout-header.php';
                             <td><strong style="color:var(--ss-success)"><?php echo sunseaRupiah((float)$r['margin_amount']); ?></strong></td>
                             <td>
                                 <a class="ss-btn ss-btn-outline ss-btn-sm" href="bookings.php?view=<?php echo $r['id']; ?>"><i data-feather="eye"></i></a>
-                                <a class="ss-btn ss-btn-outline ss-btn-sm" href="rab.php?booking_id=<?php echo $r['id']; ?>"><i data-feather="printer"></i></a>
                                 <a class="ss-btn ss-btn-outline ss-btn-sm" href="bookings.php?action=print_invoice&id=<?php echo $r['id']; ?>" title="Cetak Invoice"><i data-feather="file-text"></i></a>
                                 <a class="ss-btn ss-btn-outline ss-btn-sm" href="bookings.php?action=pay_invoice&id=<?php echo $r['id']; ?>&pay_mode=dp" title="Bayar DP"><i data-feather="dollar-sign"></i></a>
                                 <a class="ss-btn ss-btn-outline ss-btn-sm" href="bookings.php?action=pay_invoice&id=<?php echo $r['id']; ?>&pay_mode=full" title="Pelunasan"><i data-feather="check-circle"></i></a>

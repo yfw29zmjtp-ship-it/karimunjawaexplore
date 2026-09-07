@@ -19,7 +19,6 @@ $sunseaNavItems = [
     'calendar'      => ['icon' => 'calendar',   'label' => 'Kalender Booking',  'url' => 'calendar.php'],
     'coordinators'  => ['icon' => 'user-check', 'label' => 'Koordinator',       'url' => 'coordinators.php'],
     'packages'      => ['icon' => 'package',    'label' => 'Paket Wisata',      'url' => 'packages.php'],
-    'rab'           => ['icon' => 'file-minus', 'label' => 'Cetak RAB',         'url' => 'rab.php'],
     'quotations'    => ['icon' => 'file-text',  'label' => 'Penawaran',         'url' => 'quotations.php'],
     'invoices'      => ['icon' => 'credit-card', 'label' => 'Invoice',          'url' => 'invoices.php'],
     'finance'       => ['icon' => 'dollar-sign', 'label' => 'Finance',          'url' => 'finance.php'],
@@ -28,7 +27,7 @@ $sunseaNavItems = [
 
 // Sub-menu grouping: parent key => list of child keys shown in a collapsible dropdown
 $sunseaNavGroups = [
-    'bookings' => ['calendar', 'packages', 'rab'],
+    'bookings' => ['calendar', 'packages'],
     'settings' => ['database', 'coordinators'],
 ];
 

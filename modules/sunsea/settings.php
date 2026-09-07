@@ -62,7 +62,6 @@ $sidebarMenuOptions = [
     'calendar'     => 'Kalender Booking',
     'coordinators' => 'Koordinator',
     'packages'     => 'Paket Wisata',
-    'rab'          => 'Cetak RAB',
     'quotations'   => 'Penawaran',
     'invoices'     => 'Invoice',
     'finance'      => 'Finance (Kas Operasional)',

@@ -682,7 +682,6 @@ $prefillPaxCount = max(1, (int)($_GET['pax_count'] ?? 1));
         <?php endif; ?>
     </div>
 
-    <!-- Card style modelled directly after rab.php's "Cetak RAB" on-screen layout -->
     <div class="ss-card" style="max-width:900px;margin-bottom:16px;">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;">
             <div>
