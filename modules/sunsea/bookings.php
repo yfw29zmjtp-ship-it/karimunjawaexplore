@@ -510,6 +510,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updat
     exit;
 }
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete_booking') {
+    $bookingId = (int)($_POST['booking_id'] ?? 0);
+    if ($bookingId > 0) {
+        $stStmt = $pdo->prepare("SELECT status FROM booking_orders WHERE id=?");
+        $stStmt->execute([$bookingId]);
+        $bkStatus = $stStmt->fetchColumn();
+
+        if ($bkStatus !== 'cancelled') {
+            $_SESSION['flash_message'] = 'Hanya reservasi berstatus Cancel yang bisa dihapus.';
+            $_SESSION['flash_type'] = 'error';
+        } else {
+            $internalRef = 'booking_id:' . $bookingId;
+            $paidStmt = $pdo->prepare("SELECT COALESCE(SUM(paid_amount),0) FROM invoices WHERE internal_notes=?");
+            $paidStmt->execute([$internalRef]);
+            if ((float)$paidStmt->fetchColumn() > 0) {
+                $_SESSION['flash_message'] = 'Reservasi tidak bisa dihapus karena sudah ada pembayaran invoice. Batalkan/refund invoice dulu.';
+                $_SESSION['flash_type'] = 'error';
+            } else {
+                try {
+                    $pdo->prepare("DELETE FROM cash_book WHERE booking_id=?")->execute([$bookingId]);
+                    $pdo->prepare("DELETE FROM invoices WHERE internal_notes=?")->execute([$internalRef]);
+                    $pdo->prepare("DELETE FROM booking_schedule WHERE booking_id=?")->execute([$bookingId]);
+                    $pdo->prepare("DELETE FROM booking_order_items WHERE booking_id=?")->execute([$bookingId]);
+                    $pdo->prepare("DELETE FROM booking_orders WHERE id=?")->execute([$bookingId]);
+                    $_SESSION['flash_message'] = 'Reservasi berhasil dihapus.';
+                    $_SESSION['flash_type'] = 'success';
+                } catch (Exception $e) {
+                    $_SESSION['flash_message'] = 'Gagal hapus reservasi: ' . $e->getMessage();
+                    $_SESSION['flash_type'] = 'error';
+                }
+            }
+        }
+    }
+    header('Location: bookings.php');
+    exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'update_checklist') {
     $bookingId = (int)($_POST['booking_id'] ?? 0);
     $doneIds = array_map('intval', $_POST['done_items'] ?? []);
@@ -1066,6 +1103,13 @@ include 'layout-header.php';
                                 <a class="ss-btn ss-btn-outline ss-btn-sm" href="bookings.php?action=print_invoice&id=<?php echo $r['id']; ?>" title="Cetak Invoice"><i data-feather="file-text"></i></a>
                                 <a class="ss-btn ss-btn-outline ss-btn-sm" href="bookings.php?action=pay_invoice&id=<?php echo $r['id']; ?>&pay_mode=dp" title="Bayar DP"><i data-feather="dollar-sign"></i></a>
                                 <a class="ss-btn ss-btn-outline ss-btn-sm" href="bookings.php?action=pay_invoice&id=<?php echo $r['id']; ?>&pay_mode=full" title="Pelunasan"><i data-feather="check-circle"></i></a>
+                                <?php if ($r['status'] === 'cancelled'): ?>
+                                    <form method="POST" style="display:inline;" onsubmit="return confirm('Hapus reservasi <?php echo htmlspecialchars(addslashes($r['booking_no'])); ?>? Tindakan ini tidak bisa dibatalkan.');">
+                                        <input type="hidden" name="action" value="delete_booking">
+                                        <input type="hidden" name="booking_id" value="<?php echo (int)$r['id']; ?>">
+                                        <button type="submit" class="ss-btn ss-btn-outline ss-btn-sm" style="color:#dc2626;border-color:#dc2626;" title="Hapus"><i data-feather="trash-2"></i></button>
+                                    </form>
+                                <?php endif; ?>
                             </td>
                         </tr>
                     <?php endforeach; ?>
