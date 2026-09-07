@@ -165,21 +165,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
         }
     }
 
-    // 0b. Booking Cepat (input manual ringkas: tipe trip, hotel, harga jual)
+    // 0b. Booking Manual (input ringkas: tipe trip, harga jual; nama hotel hanya catatan)
     if ($bookingMode === 'cepat') {
         $cepatTripType = ($_POST['cepat_trip_type'] ?? 'open') === 'private' ? 'Private Trip' : 'Open Trip';
         $cepatHarga = (float)str_replace(['.', ','], ['', '.'], $_POST['cepat_harga'] ?? '0');
-
-        if (!empty($_POST['cepat_room_id'])) {
-            $roomId = (int)$_POST['cepat_room_id'];
-            $nights = max(1, (int)($_POST['cepat_nights'] ?? 1));
-            $roomStmt = $pdo->prepare("SELECT r.room_type, r.price_cost, p.name as partner_name FROM accommodation_rooms r JOIN accommodation_partners p ON p.id=r.partner_id WHERE r.id=?");
-            $roomStmt->execute([$roomId]);
-            if ($room = $roomStmt->fetch(PDO::FETCH_ASSOC)) {
-                // component_code 'pkg_detail' = modal hotel internal, tidak ditampilkan di invoice pelanggan
-                $addComponent('pkg_detail', 'Penginapan: ' . $room['partner_name'] . ' - ' . $room['room_type'], $nights, 'malam', (float)$room['price_cost'], 0);
-            }
-        }
 
         if ($cepatHarga > 0) {
             $addComponent('manual', 'Paket Trip (' . $cepatTripType . ')', 1, 'paket', 0, $cepatHarga);
@@ -308,11 +297,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
     $coordId = (int)($_POST['coordinator_id'] ?? 0) ?: null;
     $packageId = ($bookingMode === 'paket') ? ((int)($_POST['package_id'] ?? 0) ?: null) : null;
 
-    // Kolom booking_mode di database hanya mengenal 'paket'/'ecer'; Booking Cepat disimpan sebagai 'ecer'.
+    // Kolom booking_mode di database hanya mengenal 'paket'/'ecer'; Booking Manual disimpan sebagai 'ecer'.
     $notes = trim($_POST['notes'] ?? '');
     if ($bookingMode === 'cepat') {
         $cepatTripTypeLabel = ($_POST['cepat_trip_type'] ?? 'open') === 'private' ? 'Private Trip' : 'Open Trip';
-        $notes = trim('⚡ Booking Cepat (' . $cepatTripTypeLabel . ') ' . $notes);
+        $cepatHotelName = trim($_POST['cepat_hotel_name'] ?? '');
+        $notes = trim('✍️ Booking Manual (' . $cepatTripTypeLabel . ')' . ($cepatHotelName !== '' ? ' - Hotel: ' . $cepatHotelName : '') . ' ' . $notes);
         $bookingMode = 'ecer';
     }
 
@@ -471,20 +461,20 @@ include 'layout-header.php';
                 <option value="cepat">Cepat</option>
             </select>
             <div style="display:flex;gap:10px;flex-wrap:wrap;">
-                <div class="mode-card" data-mode="paket" onclick="selectMode('paket')" style="flex:1;min-width:160px;padding:8px;text-align:center;border:2px solid #ddd;border-radius:8px;cursor:pointer;">
-                    <div style="font-size:18px;">📦</div>
-                    <div style="font-weight:700;margin-top:3px;color:#7C2D12;font-size:12px;">Paket (Sudah Jadi)</div>
-                    <div style="font-size:10.5px;color:#777;margin-top:1px;">Pilih 1 paket trip yang sudah lengkap</div>
-                </div>
                 <div class="mode-card" data-mode="ecer" onclick="selectMode('ecer')" style="flex:1;min-width:160px;padding:8px;text-align:center;border:2px solid #C2410C;background:#FFF7ED;border-radius:8px;cursor:pointer;">
                     <div style="font-size:18px;">🧩</div>
-                    <div style="font-weight:700;margin-top:3px;color:#7C2D12;font-size:12px;">Ecer (Custom)</div>
+                    <div style="font-weight:700;margin-top:3px;color:#7C2D12;font-size:12px;">Ecer</div>
                     <div style="font-size:10.5px;color:#777;margin-top:1px;">Susun sendiri per komponen (tiket, transport, dll)</div>
                 </div>
+                <div class="mode-card" data-mode="paket" onclick="selectMode('paket')" style="flex:1;min-width:160px;padding:8px;text-align:center;border:2px solid #ddd;border-radius:8px;cursor:pointer;">
+                    <div style="font-size:18px;">📦</div>
+                    <div style="font-weight:700;margin-top:3px;color:#7C2D12;font-size:12px;">Paket</div>
+                    <div style="font-size:10.5px;color:#777;margin-top:1px;">Pilih 1 paket trip yang sudah lengkap</div>
+                </div>
                 <div class="mode-card" data-mode="cepat" onclick="selectMode('cepat')" style="flex:1;min-width:160px;padding:8px;text-align:center;border:2px solid #ddd;border-radius:8px;cursor:pointer;">
-                    <div style="font-size:18px;">⚡</div>
-                    <div style="font-weight:700;margin-top:3px;color:#7C2D12;font-size:12px;">Cepat (Manual)</div>
-                    <div style="font-size:10.5px;color:#777;margin-top:1px;">Cukup isi tipe trip, hotel &amp; harga jual</div>
+                    <div style="font-size:18px;">✍️</div>
+                    <div style="font-weight:700;margin-top:3px;color:#7C2D12;font-size:12px;">Manual</div>
+                    <div style="font-size:10.5px;color:#777;margin-top:1px;">Cukup isi tipe trip, harga jual &amp; nama hotel (opsional)</div>
                 </div>
             </div>
         </div>
@@ -502,8 +492,8 @@ include 'layout-header.php';
         </div>
 
         <div id="cepatSection" style="display:none;padding:10px 12px;background:#ffffff;border:1px solid #ddd;border-radius:6px;">
-            <div style="margin-bottom:6px;font-size:13px;font-weight:600;color:#7C2D12;">⚡ 3. Booking Cepat (Manual)</div>
-            <div style="font-size:11px;color:#888;margin-bottom:8px;">* Cukup isi tipe trip, hotel (opsional), dan harga jual paket. Tanggal &amp; jumlah pax mengikuti bagian atas.</div>
+            <div style="margin-bottom:6px;font-size:13px;font-weight:600;color:#7C2D12;">✍️ 3. Booking Manual</div>
+            <div style="font-size:11px;color:#888;margin-bottom:8px;">* Cukup isi tipe trip dan harga jual paket. Nama hotel opsional, hanya sebagai catatan (tidak punya harga/modal). Tanggal &amp; jumlah pax mengikuti bagian atas.</div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;">
                 <div>
                     <label style="display:block;margin-bottom:3px;font-weight:500;font-size:12px;">Tipe Trip *</label>
@@ -516,21 +506,11 @@ include 'layout-header.php';
                     <label style="display:block;margin-bottom:3px;font-weight:500;font-size:12px;">Harga Jual Paket (Rp) *</label>
                     <input type="text" name="cepat_harga" id="cepatHarga" placeholder="0" oninput="calculateTotal()" style="width:100%;padding:6px 7px;border:1px solid #ccc;border-radius:4px;font-family:inherit;font-size:12.5px;box-sizing:border-box;">
                 </div>
-                <div>
-                    <label style="display:block;margin-bottom:3px;font-weight:500;font-size:12px;">Nama Hotel</label>
-                    <select name="cepat_room_id" id="cepatRoomSelect" onchange="loadPrice('room', this.value, 'cepatRoomPrice'); calculateTotal();" style="width:100%;padding:6px 7px;border:1px solid #ccc;border-radius:4px;font-family:inherit;font-size:12.5px;box-sizing:border-box;">
-                        <option value="">-- Tanpa Hotel --</option>
-                        <?php foreach ($rooms as $r): ?>
-                            <option value="<?php echo $r['id']; ?>"><?php echo htmlspecialchars($r['partner_name'] . ' - ' . $r['room_type']); ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div>
-                    <label style="display:block;margin-bottom:3px;font-weight:500;font-size:12px;">Jml Malam</label>
-                    <input type="number" name="cepat_nights" id="cepatNights" value="1" min="1" onchange="calculateTotal()" style="width:100%;padding:6px 7px;border:1px solid #ccc;border-radius:4px;font-family:inherit;font-size:12.5px;box-sizing:border-box;">
+                <div style="grid-column:1 / -1;">
+                    <label style="display:block;margin-bottom:3px;font-weight:500;font-size:12px;">Nama Hotel (opsional, catatan saja)</label>
+                    <input type="text" name="cepat_hotel_name" id="cepatHotelName" placeholder="mis. Hotel Wisata Karimunjawa" style="width:100%;padding:6px 7px;border:1px solid #ccc;border-radius:4px;font-family:inherit;font-size:12.5px;box-sizing:border-box;">
                 </div>
             </div>
-            <div style="font-size:10.5px;color:#888;margin-top:4px;">Modal hotel: <strong id="cepatRoomPrice">-</strong>/malam (untuk pelacakan pembayaran mitra, tidak tampil di invoice pelanggan)</div>
             <div style="text-align:right;margin-top:6px;font-size:11px;">Subtotal Harga Jual: <strong id="cepatSubtotal" style="color:#7C2D12;">Rp 0</strong></div>
         </div>
 
@@ -996,16 +976,11 @@ include 'layout-header.php';
         }
         setSubtotal('guideLautSubtotal', guideLautSubtotal);
 
-        // Booking Cepat (manual)
+        // Booking Manual
         let cepatSubtotal = 0;
         if (mode === 'cepat') {
             cepatSubtotal = parseRupiah(document.getElementById('cepatHarga').value);
             sellTotal += cepatSubtotal;
-            if (document.getElementById('cepatRoomSelect').value) {
-                const cost = parseFloat(document.getElementById('cepatRoomPrice').dataset.cost) || 0;
-                const nights = parseFloat(document.getElementById('cepatNights').value) || 1;
-                costTotal += cost * nights;
-            }
         }
         setSubtotal('cepatSubtotal', cepatSubtotal);
 
