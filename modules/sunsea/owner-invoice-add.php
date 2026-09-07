@@ -11,7 +11,10 @@ require_once '../../includes/functions.php';
 require_once 'db-helper.php';
 
 $auth = new Auth();
-if (!$auth->isLoggedIn()) { header('Location: owner-login.php'); exit; }
+if (!$auth->isLoggedIn()) {
+    header('Location: owner-login.php');
+    exit;
+}
 $auth->requireLogin();
 
 $currentUser = $auth->getCurrentUser();
@@ -49,7 +52,8 @@ function ownerEnsureInvoiceFromBooking(PDO $pdo, string $username, array $bookin
         return $invoiceId;
     }
 
-    $itemsStmt = $pdo->prepare("SELECT component_name, qty, unit, price_sell, total_sell FROM booking_order_items WHERE booking_id=? ORDER BY sort_order");
+    // component_code 'pkg_detail' = rincian modal internal paket, tidak ditampilkan di invoice pelanggan
+    $itemsStmt = $pdo->prepare("SELECT component_name, qty, unit, price_sell, total_sell FROM booking_order_items WHERE booking_id=? AND component_code != 'pkg_detail' ORDER BY sort_order");
     $itemsStmt->execute([(int)$booking['id']]);
     $bookingItems = $itemsStmt->fetchAll();
     if (empty($bookingItems)) {
@@ -207,34 +211,124 @@ include 'owner-mobile-header.php';
 ?>
 
 <style>
-    .ob-form-group { margin-bottom:12px; }
-    .ob-form-label { display:block; font-size:11.5px; font-weight:700; color:var(--text); margin-bottom:5px; }
+    .ob-form-group {
+        margin-bottom: 12px;
+    }
+
+    .ob-form-label {
+        display: block;
+        font-size: 11.5px;
+        font-weight: 700;
+        color: var(--text);
+        margin-bottom: 5px;
+    }
+
     .ob-form-input {
-        width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:9px;
-        font-size:13px; background:#fff; color:var(--text); font-family:inherit;
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid var(--border);
+        border-radius: 9px;
+        font-size: 13px;
+        background: #fff;
+        color: var(--text);
+        font-family: inherit;
     }
-    textarea.ob-form-input { resize:vertical; min-height:60px; }
-    .ob-mode-switch { display:flex; gap:8px; margin-bottom:14px; }
+
+    textarea.ob-form-input {
+        resize: vertical;
+        min-height: 60px;
+    }
+
+    .ob-mode-switch {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 14px;
+    }
+
     .ob-mode-btn {
-        flex:1; text-align:center; padding:10px; border-radius:10px; border:1.5px solid var(--border);
-        background:#fff; color:var(--muted); font-size:12.5px; font-weight:700; cursor:pointer;
+        flex: 1;
+        text-align: center;
+        padding: 10px;
+        border-radius: 10px;
+        border: 1.5px solid var(--border);
+        background: #fff;
+        color: var(--muted);
+        font-size: 12.5px;
+        font-weight: 700;
+        cursor: pointer;
     }
-    .ob-mode-btn.active { background:var(--ocean); border-color:var(--ocean); color:#fff; }
-    .ob-toggle-link { font-size:11.5px; color:var(--ocean); font-weight:700; text-decoration:none; }
-    .ob-item-block { border:1px solid var(--border); border-radius:10px; padding:10px; margin-bottom:8px; position:relative; }
+
+    .ob-mode-btn.active {
+        background: var(--ocean);
+        border-color: var(--ocean);
+        color: #fff;
+    }
+
+    .ob-toggle-link {
+        font-size: 11.5px;
+        color: var(--ocean);
+        font-weight: 700;
+        text-decoration: none;
+    }
+
+    .ob-item-block {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 10px;
+        margin-bottom: 8px;
+        position: relative;
+    }
+
     .ob-item-remove {
-        position:absolute; top:8px; right:8px; background:none; border:none; color:var(--danger); cursor:pointer;
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        background: none;
+        border: none;
+        color: var(--danger);
+        cursor: pointer;
     }
-    .ob-item-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px; }
+
+    .ob-item-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-top: 8px;
+    }
+
     .ob-add-item-btn {
-        width:100%; padding:10px; border:1.5px dashed var(--ocean); border-radius:9px; background:none;
-        color:var(--ocean); font-size:12.5px; font-weight:700; cursor:pointer;
+        width: 100%;
+        padding: 10px;
+        border: 1.5px dashed var(--ocean);
+        border-radius: 9px;
+        background: none;
+        color: var(--ocean);
+        font-size: 12.5px;
+        font-weight: 700;
+        cursor: pointer;
     }
+
     .ob-submit-btn {
-        width:100%; padding:13px; border:none; border-radius:10px; background:var(--ocean); color:#fff;
-        font-size:14px; font-weight:800; cursor:pointer; margin-top:8px;
+        width: 100%;
+        padding: 13px;
+        border: none;
+        border-radius: 10px;
+        background: var(--ocean);
+        color: #fff;
+        font-size: 14px;
+        font-weight: 800;
+        cursor: pointer;
+        margin-top: 8px;
     }
-    .ob-alert-error { background:#FEE2E2; color:var(--danger); padding:10px 12px; border-radius:9px; font-size:12.5px; margin-bottom:12px; }
+
+    .ob-alert-error {
+        background: #FEE2E2;
+        color: var(--danger);
+        padding: 10px 12px;
+        border-radius: 9px;
+        font-size: 12.5px;
+        margin-bottom: 12px;
+    }
 </style>
 
 <?php if ($errorMsg): ?>
@@ -337,34 +431,36 @@ include 'owner-mobile-header.php';
 </form>
 
 <script>
-function setMode(mode) {
-    document.getElementById('modeInput').value = mode;
-    document.getElementById('bookingSection').style.display = mode === 'from_booking' ? '' : 'none';
-    document.getElementById('manualSection').style.display = mode === 'from_booking' ? 'none' : '';
-    document.getElementById('btnModeManual').classList.toggle('active', mode !== 'from_booking');
-    document.getElementById('btnModeBooking').classList.toggle('active', mode === 'from_booking');
-}
-function toggleNewCustomer() {
-    var block = document.getElementById('newCustomerBlock');
-    var showing = block.style.display !== 'none';
-    block.style.display = showing ? 'none' : '';
-    document.getElementById('customerSelect').required = showing;
-}
-function addItemRow() {
-    var wrap = document.getElementById('itemsWrap');
-    var div = document.createElement('div');
-    div.className = 'ob-item-block';
-    div.innerHTML = '<button type="button" class="ob-item-remove" onclick="this.parentElement.remove()"><i data-feather="x"></i></button>' +
-        '<input type="text" name="item_description[]" class="ob-form-input" placeholder="Keterangan item...">' +
-        '<div class="ob-item-grid">' +
-        '<input type="number" name="item_qty[]" class="ob-form-input" placeholder="Qty" value="1" min="0" step="0.5">' +
-        '<input type="text" name="item_unit[]" class="ob-form-input" placeholder="Satuan" value="pax">' +
-        '<input type="text" name="item_price[]" class="ob-form-input" placeholder="Harga satuan" style="grid-column:1/3;">' +
-        '</div>';
-    wrap.appendChild(div);
-    if (window.feather) feather.replace();
-}
-addItemRow();
+    function setMode(mode) {
+        document.getElementById('modeInput').value = mode;
+        document.getElementById('bookingSection').style.display = mode === 'from_booking' ? '' : 'none';
+        document.getElementById('manualSection').style.display = mode === 'from_booking' ? 'none' : '';
+        document.getElementById('btnModeManual').classList.toggle('active', mode !== 'from_booking');
+        document.getElementById('btnModeBooking').classList.toggle('active', mode === 'from_booking');
+    }
+
+    function toggleNewCustomer() {
+        var block = document.getElementById('newCustomerBlock');
+        var showing = block.style.display !== 'none';
+        block.style.display = showing ? 'none' : '';
+        document.getElementById('customerSelect').required = showing;
+    }
+
+    function addItemRow() {
+        var wrap = document.getElementById('itemsWrap');
+        var div = document.createElement('div');
+        div.className = 'ob-item-block';
+        div.innerHTML = '<button type="button" class="ob-item-remove" onclick="this.parentElement.remove()"><i data-feather="x"></i></button>' +
+            '<input type="text" name="item_description[]" class="ob-form-input" placeholder="Keterangan item...">' +
+            '<div class="ob-item-grid">' +
+            '<input type="number" name="item_qty[]" class="ob-form-input" placeholder="Qty" value="1" min="0" step="0.5">' +
+            '<input type="text" name="item_unit[]" class="ob-form-input" placeholder="Satuan" value="pax">' +
+            '<input type="text" name="item_price[]" class="ob-form-input" placeholder="Harga satuan" style="grid-column:1/3;">' +
+            '</div>';
+        wrap.appendChild(div);
+        if (window.feather) feather.replace();
+    }
+    addItemRow();
 </script>
 
 <?php include 'owner-mobile-footer.php'; ?>

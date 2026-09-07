@@ -159,7 +159,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
             $pkgItemsStmt->execute([$packageId]);
             foreach ($pkgItemsStmt->fetchAll(PDO::FETCH_ASSOC) as $pi) {
                 $qty = $pi['cost_basis'] === 'flat' ? 1 : $pax;
-                $addComponent($pi['item_type'], $pi['item_name'], $qty, $pi['cost_basis'] === 'flat' ? 'paket' : 'pax', (float)$pi['estimated_cost'], 0);
+                // component_code 'pkg_detail' = rincian modal internal paket, disembunyikan dari invoice pelanggan
+                $addComponent('pkg_detail', $pi['item_name'], $qty, $pi['cost_basis'] === 'flat' ? 'paket' : 'pax', (float)$pi['estimated_cost'], 0);
             }
         }
     }

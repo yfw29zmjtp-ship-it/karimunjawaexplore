@@ -86,7 +86,8 @@ function ensureInvoiceFromBooking(PDO $pdo, Auth $auth, array $booking): int
         return $invoiceId;
     }
 
-    $itemsStmt = $pdo->prepare("SELECT component_name, qty, unit, price_sell, total_sell FROM booking_order_items WHERE booking_id=? ORDER BY sort_order");
+    // component_code 'pkg_detail' = rincian modal internal paket, tidak ditampilkan di invoice pelanggan
+    $itemsStmt = $pdo->prepare("SELECT component_name, qty, unit, price_sell, total_sell FROM booking_order_items WHERE booking_id=? AND component_code != 'pkg_detail' ORDER BY sort_order");
     $itemsStmt->execute([(int)$booking['id']]);
     $bookingItems = $itemsStmt->fetchAll(PDO::FETCH_ASSOC);
 
