@@ -48,9 +48,9 @@ $upcomingBookings = $upcomingBookings->fetchAll();
 $pendingCount = (int)$pdo->query("SELECT COUNT(*) FROM booking_orders WHERE status='draft'")->fetchColumn();
 $confirmedCount = (int)$pdo->query("SELECT COUNT(*) FROM booking_orders WHERE status='confirmed'")->fetchColumn();
 
-// Invoice outstanding
+// Invoice outstanding (dihitung dari total - terbayar, bukan kolom remaining_amount yang bisa basi)
 $invoiceStats = $pdo->query("
-    SELECT COUNT(*) AS cnt, COALESCE(SUM(remaining_amount),0) AS total_outstanding
+    SELECT COUNT(*) AS cnt, COALESCE(SUM(GREATEST(total_amount - paid_amount, 0)),0) AS total_outstanding
     FROM invoices WHERE status IN ('issued','partial')
 ")->fetch();
 $recentInvoices = $pdo->query("
@@ -60,6 +60,11 @@ $recentInvoices = $pdo->query("
     ORDER BY i.due_date ASC
     LIMIT 5
 ")->fetchAll();
+foreach ($recentInvoices as &$_inv) {
+    // Hitung ulang sisa tagihan dari total - terbayar, jangan percaya kolom remaining_amount yang bisa basi.
+    $_inv['remaining_amount'] = max(0, (float)$_inv['total_amount'] - (float)$_inv['paid_amount']);
+}
+unset($_inv);
 
 // Finance bulan berjalan
 $financeRow = $pdo->prepare("

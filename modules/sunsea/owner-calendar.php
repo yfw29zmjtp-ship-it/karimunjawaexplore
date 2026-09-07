@@ -83,6 +83,10 @@ if (($_GET['ajax'] ?? '') === 'detail' && (int)($_GET['id'] ?? 0) > 0) {
     $invStmt = $pdo->prepare("SELECT invoice_no, status, total_amount, paid_amount, remaining_amount FROM invoices WHERE internal_notes=? OR internal_notes=? ORDER BY id DESC LIMIT 1");
     $invStmt->execute(['booking_id:' . $bId, 'Generated from Reservasi: ' . $booking['booking_no']]);
     $linkedInvoice = $invStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    if ($linkedInvoice) {
+        // Hitung ulang sisa tagihan dari total - terbayar, jangan percaya kolom remaining_amount yang bisa basi.
+        $linkedInvoice['remaining_amount'] = max(0, (float)$linkedInvoice['total_amount'] - (float)$linkedInvoice['paid_amount']);
+    }
 
     echo json_encode([
         'booking'      => $booking,
