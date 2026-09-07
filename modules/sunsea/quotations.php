@@ -1148,23 +1148,26 @@ include 'layout-header.php';
                         <textarea name="itinerary" id="itineraryInput" class="ss-textarea" rows="6" placeholder="Hari 1: ...&#10;Hari 2: ..."><?php echo htmlspecialchars($quotation['itinerary'] ?? ''); ?></textarea>
                         <div style="font-size:11px;color:var(--ss-muted);margin-top:4px;">* Otomatis terisi dari itinerary paket yang dipilih (bisa diedit manual, atau ketik sendiri jika custom).</div>
                     </div>
-
-                    <div class="ss-card" style="margin-bottom:16px;">
-                        <div class="ss-form-group">
-                            <label class="ss-label">Catatan (tampil di dokumen)</label>
-                            <textarea name="notes" class="ss-textarea" rows="4"><?php echo htmlspecialchars($quotation['notes'] ?? ''); ?></textarea>
-                        </div>
-                        <div class="ss-form-group">
-                            <label class="ss-label">Catatan Internal</label>
-                            <textarea name="internal_notes" class="ss-textarea" rows="3"><?php echo htmlspecialchars($quotation['internal_notes'] ?? ''); ?></textarea>
-                        </div>
-                    </div>
-
-                    <button type="submit" class="ss-btn ss-btn-primary" style="width:100%;">
-                        <i data-feather="save"></i> Simpan Penawaran
-                    </button>
                 </div>
             </div>
+
+            <div class="ss-card" style="margin-bottom:16px;">
+                <div class="ss-card-title" style="margin-bottom:14px;">Catatan</div>
+                <div class="ss-form-grid cols-2">
+                    <div class="ss-form-group">
+                        <label class="ss-label">Catatan (tampil di dokumen)</label>
+                        <textarea name="notes" class="ss-textarea" rows="4"><?php echo htmlspecialchars($quotation['notes'] ?? ''); ?></textarea>
+                    </div>
+                    <div class="ss-form-group">
+                        <label class="ss-label">Catatan Internal</label>
+                        <textarea name="internal_notes" class="ss-textarea" rows="4"><?php echo htmlspecialchars($quotation['internal_notes'] ?? ''); ?></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="ss-btn ss-btn-primary" style="width:100%;">
+                <i data-feather="save"></i> Simpan Penawaran
+            </button>
         </form>
     </div>
 
