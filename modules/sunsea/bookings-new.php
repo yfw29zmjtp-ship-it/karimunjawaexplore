@@ -46,7 +46,7 @@ function safeQueryPrice(PDO $pdo, string $sql, array $params): ?array
 
 // Load data dari database
 $customers = safeQueryAll($pdo, "SELECT id, name, phone FROM customers WHERE is_active=1 ORDER BY name", 'customer', $pageWarnings);
-$packages = safeQueryAll($pdo, "SELECT id, name, base_price FROM trip_packages WHERE is_active=1 ORDER BY name", 'paket', $pageWarnings);
+$packages = safeQueryAll($pdo, "SELECT id, name, base_price, duration_days, duration_nights FROM trip_packages WHERE is_active=1 ORDER BY name", 'paket', $pageWarnings);
 $tickets = safeQueryAll($pdo, "SELECT id, ticket_name, ticket_type, price_cost, price_sell FROM tickets WHERE is_active=1 ORDER BY ticket_name", 'tiket', $pageWarnings);
 $rooms = safeQueryAll($pdo, "SELECT r.id, r.room_type, r.price_cost, r.price_sell, p.name as partner_name FROM accommodation_rooms r JOIN accommodation_partners p ON p.id=r.partner_id WHERE r.is_active=1 AND p.is_active=1 ORDER BY p.name, r.room_type", 'penginapan', $pageWarnings);
 $caterings = safeQueryAll($pdo, "SELECT id, menu_name, vendor_name, price_cost, price_sell, portion_unit FROM caterings WHERE is_active=1 ORDER BY vendor_name, menu_name", 'catering', $pageWarnings);
@@ -420,7 +420,7 @@ include 'layout-header.php';
                 </div>
                 <div>
                     <label style="display:block;margin-bottom:3px;font-weight:500;font-size:12px;">Tanggal Mulai *</label>
-                    <input type="date" name="start_date" id="startDate" required onchange="syncStayNights(); calculateTotal();" style="width:100%;padding:5px 7px;border:1px solid #ccc;border-radius:4px;font-family:inherit;font-size:12.5px;box-sizing:border-box;">
+                    <input type="date" name="start_date" id="startDate" required onchange="autoSetEndDate(); syncStayNights(); calculateTotal();" style="width:100%;padding:5px 7px;border:1px solid #ccc;border-radius:4px;font-family:inherit;font-size:12.5px;box-sizing:border-box;">
                 </div>
                 <div>
                     <label style="display:block;margin-bottom:3px;font-weight:500;font-size:12px;">Tanggal Selesai *</label>
@@ -455,13 +455,13 @@ include 'layout-header.php';
 
         <div id="pkgSection" style="display:none;padding:8px 10px;background:#ffffff;border:1px solid #ddd;border-radius:6px;">
             <div style="margin-bottom:6px;font-size:13px;font-weight:600;color:#7C2D12;">📦 3. Pilih Paket</div>
-            <select name="package_id" onchange="calculateTotal()" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:4px;font-family:inherit;font-size:inherit;box-sizing:border-box;">
+            <select name="package_id" id="packageSelect" onchange="autoSetEndDate(); calculateTotal();" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:4px;font-family:inherit;font-size:inherit;box-sizing:border-box;">
                 <option value="">-- Pilih Paket --</option>
                 <?php foreach ($packages as $p): ?>
-                    <option value="<?php echo $p['id']; ?>"><?php echo htmlspecialchars($p['name']) . ' - Rp ' . number_format((float)($p['base_price'] ?? 0), 0, ',', '.'); ?></option>
+                    <option value="<?php echo $p['id']; ?>" data-nights="<?php echo (int)($p['duration_nights'] ?? 0); ?>"><?php echo htmlspecialchars($p['name']) . ' - Rp ' . number_format((float)($p['base_price'] ?? 0), 0, ',', '.') . ' (' . (int)($p['duration_days'] ?? 1) . 'H' . (int)($p['duration_nights'] ?? 0) . 'M)'; ?></option>
                 <?php endforeach; ?>
             </select>
-            <div style="font-size:11px;color:#888;margin-top:4px;">* Harga paket dikalikan jumlah pax. Detail komponen paket bisa diatur di menu Paket Trip.</div>
+            <div style="font-size:11px;color:#888;margin-top:4px;">* Tanggal selesai otomatis mengikuti durasi paket setelah tanggal mulai diisi. Harga paket dikalikan jumlah pax. Detail komponen paket bisa diatur di menu Paket Trip.</div>
             <div style="text-align:right;margin-top:6px;font-size:11px;">Subtotal: <strong id="pkgSubtotal" style="color:#7C2D12;">Rp 0</strong></div>
         </div>
 
@@ -735,7 +735,22 @@ include 'layout-header.php';
         });
         document.getElementById('pkgSection').style.display = mode === 'paket' ? 'block' : 'none';
         document.getElementById('ecerSection').style.display = mode === 'ecer' ? 'block' : 'none';
+        autoSetEndDate();
         calculateTotal();
+    }
+
+    // Paket punya durasi tetap (mis. 3H2M) - tanggal selesai mengikuti tanggal mulai + jumlah malam.
+    function autoSetEndDate() {
+        const mode = document.getElementById('bookingModeSelect').value;
+        if (mode !== 'paket') return;
+        const pkgSelect = document.getElementById('packageSelect');
+        const startInput = document.getElementById('startDate');
+        if (!pkgSelect || !pkgSelect.value || !startInput.value) return;
+        const nights = parseInt(pkgSelect.options[pkgSelect.selectedIndex].dataset.nights || '0', 10);
+        const start = new Date(startInput.value);
+        start.setDate(start.getDate() + nights);
+        document.getElementById('endDate').value = start.toISOString().slice(0, 10);
+        syncStayNights();
     }
 
     function syncTicketQty() {
