@@ -56,6 +56,7 @@ $flashType = '';
 
 $sidebarMenuOptions = [
     'dashboard'    => 'Dashboard',
+    'owner_dashboard' => 'Owner Dashboard',
     'database'     => 'Database',
     'bookings'     => 'Booking',
     'calendar'     => 'Kalender Booking',
