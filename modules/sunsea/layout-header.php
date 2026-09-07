@@ -87,11 +87,6 @@ if (!isset($sunseaNavItemsVisible[$activePage]) && isset($sunseaNavItems[$active
     $sunseaNavItemsVisible[$activePage] = $sunseaNavItems[$activePage];
 }
 
-// Owner Dashboard always shown to Developer/Owner, regardless of saved sidebar menu selection
-if (isset($sunseaNavItems['owner_dashboard']) && !isset($sunseaNavItemsVisible['owner_dashboard'])) {
-    $sunseaNavItemsVisible = ['owner_dashboard' => $sunseaNavItems['owner_dashboard']] + $sunseaNavItemsVisible;
-}
-
 if (empty($sunseaNavItemsVisible)) {
     $sunseaNavItemsVisible = ['bookings' => $sunseaNavItems['bookings']];
 }
@@ -1011,10 +1006,10 @@ if (empty($sunseaNavItemsVisible)) {
                             <i data-feather="<?php echo $item['icon']; ?>"></i>
                             <?php echo $item['label']; ?>
                         </a>
-            <?php
+                    <?php
                     } else {
                         $__isOpen = ($activePage === $key) || in_array($activePage, $__childKeys);
-            ?>
+                    ?>
                         <div class="ss-nav-group <?php echo $__isOpen ? 'open' : ''; ?>">
                             <div class="ss-nav-group-row">
                                 <a href="<?php echo $item['url']; ?>"
@@ -1036,10 +1031,10 @@ if (empty($sunseaNavItemsVisible)) {
                                 <?php endforeach; ?>
                             </div>
                         </div>
-            <?php
+                    <?php
                     }
                 } else {
-            ?>
+                    ?>
                     <a href="<?php echo $item['url']; ?>"
                         class="ss-nav-item <?php echo ($activePage === $key) ? 'active' : ''; ?>">
                         <i data-feather="<?php echo $item['icon']; ?>"></i>
