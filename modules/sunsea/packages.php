@@ -159,13 +159,14 @@ include 'layout-header.php';
 
 <?php if (in_array($action, ['add', 'edit'])): ?>
     <!-- ============ FORM ============ -->
-    <div style="max-width:750px;">
-        <div style="margin-bottom:20px;">
-            <a href="packages.php" class="ss-btn ss-btn-outline ss-btn-sm">
-                <i data-feather="arrow-left"></i> Kembali
-            </a>
-        </div>
+    <div style="margin-bottom:20px;">
+        <a href="packages.php" class="ss-btn ss-btn-outline ss-btn-sm">
+            <i data-feather="arrow-left"></i> Kembali
+        </a>
+    </div>
 
+    <div style="display:grid;grid-template-columns:<?php echo $editPkg ? '1fr 1fr' : '1fr'; ?>;gap:20px;align-items:start;">
+        <div>
         <div class="ss-card">
             <div class="ss-card-header">
                 <div>
@@ -263,8 +264,11 @@ include 'layout-header.php';
             </form>
         </div>
 
+        </div>
+
+        <div>
         <?php if ($editPkg): ?>
-            <div class="ss-card" style="margin-top:16px;">
+            <div class="ss-card">
                 <div class="ss-card-header">
                     <div>
                         <div class="ss-card-title">Detail Layanan dalam Paket</div>
@@ -345,6 +349,7 @@ include 'layout-header.php';
                 </form>
             </div>
         <?php endif; ?>
+        </div>
     </div>
 
 <?php else: ?>
