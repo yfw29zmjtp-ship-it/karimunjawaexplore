@@ -50,7 +50,7 @@ $pageTitle = 'Invoice';
 include 'owner-mobile-header.php';
 ?>
 
-<a href="invoices.php?action=add" class="ob-qbtn" style="width:100%;margin-bottom:12px;">
+<a href="owner-invoice-add.php" class="ob-qbtn" style="width:100%;margin-bottom:12px;">
     <i data-feather="plus-circle"></i> Tambah Invoice Baru
 </a>
 
