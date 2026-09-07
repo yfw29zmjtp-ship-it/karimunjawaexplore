@@ -250,29 +250,54 @@ include 'layout-header.php';
 <style>
     #bookingDetailBody .bd-grid {
         display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 6px 14px;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0;
         font-size: 12px;
-        margin-bottom: 12px;
-        background: var(--ss-gray-1);
-        border-radius: 8px;
-        padding: 10px 12px;
+        margin-bottom: 14px;
+        background: #fff;
+        border: 1px solid var(--ss-gray-1);
+        border-radius: 10px;
+        overflow: hidden;
+    }
+
+    #bookingDetailBody .bd-grid > div {
+        padding: 12px 16px;
+        border-right: 1px solid var(--ss-gray-1);
+        border-bottom: 1px solid var(--ss-gray-1);
+    }
+
+    #bookingDetailBody .bd-grid > div:nth-child(3n) {
+        border-right: none;
+    }
+
+    #bookingDetailBody .bd-grid > div:nth-last-child(-n+3) {
+        border-bottom: none;
     }
 
     #bookingDetailBody .bd-grid strong {
         display: block;
         color: var(--ss-muted);
         font-weight: 600;
-        font-size: 10.5px;
+        font-size: 10px;
         text-transform: uppercase;
-        letter-spacing: .3px;
+        letter-spacing: .4px;
+        margin-bottom: 3px;
+    }
+
+    #bookingDetailBody .bd-grid .bd-val {
+        display: block;
+        font-size: 14.5px;
+        font-weight: 700;
+        color: #0f172a;
     }
 
     #bookingDetailBody .bd-section-title {
-        font-size: 12.5px;
+        font-size: 13px;
         font-weight: 700;
-        margin: 14px 0 6px;
+        margin: 16px 0 8px;
         color: #0f172a;
+        padding-top: 4px;
+        border-top: 1px solid var(--ss-gray-1);
     }
 
     #bookingDetailBody .bd-cols {
@@ -284,6 +309,8 @@ include 'layout-header.php';
 
     #bookingDetailBody .bd-col .bd-section-title {
         margin-top: 0;
+        padding-top: 0;
+        border-top: none;
     }
 
     #bookingDetailBody table.ss-table {
@@ -320,9 +347,9 @@ include 'layout-header.php';
     }
 
     #bookingDetailBody .bd-summary-box .bd-value {
-        font-size: 15px;
+        font-size: 17px;
         font-weight: 700;
-        margin-top: 2px;
+        margin-top: 3px;
     }
 
     #bookingDetailBody .bd-chart-row {
@@ -414,6 +441,26 @@ include 'layout-header.php';
             grid-template-columns: repeat(2, 1fr);
         }
 
+        #bookingDetailBody .bd-grid > div {
+            border-right: 1px solid var(--ss-gray-1);
+        }
+
+        #bookingDetailBody .bd-grid > div:nth-child(3n) {
+            border-right: 1px solid var(--ss-gray-1);
+        }
+
+        #bookingDetailBody .bd-grid > div:nth-child(2n) {
+            border-right: none;
+        }
+
+        #bookingDetailBody .bd-grid > div:nth-last-child(-n+3) {
+            border-bottom: 1px solid var(--ss-gray-1);
+        }
+
+        #bookingDetailBody .bd-grid > div:nth-last-child(-n+2) {
+            border-bottom: none;
+        }
+
         #bookingDetailBody .bd-summary {
             grid-template-columns: 1fr;
         }
@@ -460,18 +507,20 @@ include 'layout-header.php';
 
                 var html = '';
                 html += '<div style="margin-bottom:12px;display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">';
-                html += '<div><div style="font-size:15px;font-weight:700;">' + b.customer_name + '</div>';
+                html += '<div><div style="font-size:17px;font-weight:700;">' + b.customer_name + '</div>';
                 html += '<div style="font-size:11.5px;color:var(--ss-muted);">' + b.booking_no + (b.customer_phone ? ' \u00b7 ' + b.customer_phone : '') + '</div></div>';
                 html += '<span class="ss-badge" style="align-self:center;">' + (statusLabels[b.status] || b.status) + '</span>';
                 html += '</div>';
+                html += '<div style="height:1px;background:var(--ss-gray-1);margin:0 0 14px;"></div>';
+
 
                 html += '<div class="bd-grid">';
-                html += '<div><strong>Tanggal Check-in</strong>' + b.start_date + ' s/d ' + b.end_date + '</div>';
-                html += '<div><strong>Durasi</strong>' + data.durationLabel + '</div>';
-                html += '<div><strong>Total Pax</strong>' + b.pax_count + ' orang</div>';
-                html += '<div><strong>Paket</strong>' + (b.package_name || '-') + '</div>';
-                html += '<div><strong>Penginapan</strong>' + data.accommodationInfo + '</div>';
-                html += '<div><strong>Total RAB/Penawaran</strong>' + fmt(data.totalRab) + '</div>';
+                html += '<div><strong>Tanggal Check-in</strong><span class="bd-val">' + b.start_date + ' s/d ' + b.end_date + '</span></div>';
+                html += '<div><strong>Durasi</strong><span class="bd-val">' + data.durationLabel + '</span></div>';
+                html += '<div><strong>Total Pax</strong><span class="bd-val">' + b.pax_count + ' orang</span></div>';
+                html += '<div><strong>Paket</strong><span class="bd-val">' + (b.package_name || '-') + '</span></div>';
+                html += '<div><strong>Penginapan</strong><span class="bd-val">' + data.accommodationInfo + '</span></div>';
+                html += '<div><strong>Total RAB/Penawaran</strong><span class="bd-val" style="color:var(--ss-ocean);">' + fmt(data.totalRab) + '</span></div>';
                 html += '</div>';
 
                 html += '<div class="bd-cols">';
