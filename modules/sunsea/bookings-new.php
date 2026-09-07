@@ -358,7 +358,7 @@ $activePage = 'bookings';
 include 'layout-header.php';
 ?>
 
-<div style="max-width:880px;padding:12px;">
+<div style="padding:12px;">
     <?php if (!empty($pageWarnings)): ?>
         <div style="margin-bottom:10px;padding:8px 10px;border:1px solid #f59e0b;background:#fffbeb;color:#92400e;border-radius:6px;">
             <div style="font-weight:600;margin-bottom:3px;font-size:12.5px;">Sebagian data layanan belum tersedia</div>
@@ -653,10 +653,13 @@ include 'layout-header.php';
                 </div>
                 <div style="text-align:right;margin-top:4px;font-size:11px;">Subtotal: <strong id="guideLautSubtotal" style="color:#7C2D12;">Rp 0</strong></div>
             </div>
+        </div>
 
-            <!-- Fasilitas -->
+        <div style="padding:8px 10px;background:#ffffff;border:1px solid #ddd;border-radius:6px;">
+            <div style="margin-bottom:6px;font-size:13px;font-weight:600;color:#7C2D12;">🎒 4. Fasilitas &amp; Item Tambahan (Di Luar Paket)</div>
+            <div style="font-size:11px;color:#888;margin-bottom:6px;">* Berlaku untuk mode Paket maupun Ecer. Gunakan ini untuk menambah biaya di luar isi paket, misalnya tiket destinasi tambahan, sewa alat, atau retribusi.</div>
             <div style="margin-bottom:6px;padding:7px 9px;background:#f8fbff;border:1px solid #d0e8ff;border-radius:6px;">
-                <label style="display:block;margin-bottom:4px;font-weight:600;color:#7C2D12;font-size:12.5px;">🎒 Fasilitas Tambahan</label>
+                <label style="display:block;margin-bottom:4px;font-weight:600;color:#7C2D12;font-size:12.5px;">🎒 Fasilitas Tambahan (dari Database)</label>
                 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:6px;">
                     <?php foreach ($facilities as $f): ?>
                         <label style="display:flex;align-items:center;gap:6px;padding:6px 8px;background:#ffffff;border:1px solid #e0e0e0;border-radius:4px;cursor:pointer;">
@@ -683,7 +686,7 @@ include 'layout-header.php';
         </div>
 
         <div style="padding:8px 10px;background:#ffffff;border:1px solid #ddd;border-radius:6px;">
-            <div style="margin-bottom:6px;font-size:13px;font-weight:600;color:#7C2D12;">💰 4. Estimasi Harga</div>
+            <div style="margin-bottom:6px;font-size:13px;font-weight:600;color:#7C2D12;">💰 5. Estimasi Harga</div>
             <div style="max-width:260px;margin-left:auto;">
                 <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #eee;font-size:12.5px;">
                     <span style="color:#666;">Total Modal</span>
