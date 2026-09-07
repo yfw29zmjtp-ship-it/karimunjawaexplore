@@ -31,7 +31,7 @@ if (in_array($statusFilter, ['issued', 'partial', 'paid'], true)) {
 }
 
 $invoices = $pdo->prepare("
-    SELECT i.invoice_no, i.status, i.total_amount, i.remaining_amount, i.due_date, c.name AS customer_name
+    SELECT i.id, i.invoice_no, i.status, i.total_amount, i.remaining_amount, i.due_date, c.name AS customer_name
     FROM invoices i JOIN customers c ON c.id = i.customer_id
     $where
     ORDER BY i.created_at DESC
@@ -50,6 +50,10 @@ $pageTitle = 'Invoice';
 include 'owner-mobile-header.php';
 ?>
 
+<a href="invoices.php?action=add" class="ob-qbtn" style="width:100%;margin-bottom:12px;">
+    <i data-feather="plus-circle"></i> Tambah Invoice Baru
+</a>
+
 <div class="ob-tabs">
     <a href="owner-invoices.php" class="ob-tab <?php echo $statusFilter === '' ? 'active' : ''; ?>">Semua</a>
     <a href="owner-invoices.php?status=issued" class="ob-tab <?php echo $statusFilter === 'issued' ? 'active' : ''; ?>">Belum Bayar</a>
@@ -57,22 +61,26 @@ include 'owner-mobile-header.php';
     <a href="owner-invoices.php?status=paid" class="ob-tab <?php echo $statusFilter === 'paid' ? 'active' : ''; ?>">Lunas</a>
 </div>
 
-<div class="ob-section">
-    <?php if (empty($invoices)): ?>
-        <div class="ob-empty">Belum ada data invoice.</div>
-    <?php else: ?>
-        <?php foreach ($invoices as $inv): ?>
-            <?php $badge = $statusBadge[$inv['status']] ?? ['ob-badge-draft', $inv['status']]; ?>
-            <div class="ob-row">
-                <div>
-                    <div class="ob-row-title"><?php echo htmlspecialchars($inv['invoice_no']); ?></div>
-                    <div class="ob-row-sub"><?php echo htmlspecialchars($inv['customer_name']); ?> · JT <?php echo $inv['due_date'] ? date('d M Y', strtotime($inv['due_date'])) : '-'; ?></div>
-                    <div class="ob-row-sub">Sisa: <?php echo sunseaRupiah((float)$inv['remaining_amount']); ?></div>
+<?php if (empty($invoices)): ?>
+    <div class="ob-section"><div class="ob-empty">Belum ada data invoice.</div></div>
+<?php else: ?>
+    <?php foreach ($invoices as $inv): ?>
+        <?php $badge = $statusBadge[$inv['status']] ?? ['ob-badge-draft', $inv['status']]; ?>
+        <a href="owner-invoice-detail.php?id=<?php echo (int)$inv['id']; ?>" class="ob-bcard" style="display:block;text-decoration:none;color:inherit;">
+            <div class="ob-bcard-top">
+                <div class="ob-bcard-avatar" style="background:linear-gradient(135deg,#0EA5E9,#0369A1);"><i data-feather="file-text" style="width:16px;height:16px;"></i></div>
+                <div class="ob-bcard-info">
+                    <div class="ob-bcard-name"><?php echo htmlspecialchars($inv['invoice_no']); ?></div>
+                    <div class="ob-bcard-no"><?php echo htmlspecialchars($inv['customer_name']); ?></div>
                 </div>
                 <span class="ob-badge <?php echo $badge[0]; ?>"><?php echo htmlspecialchars($badge[1]); ?></span>
             </div>
-        <?php endforeach; ?>
-    <?php endif; ?>
-</div>
+            <div class="ob-bcard-meta">
+                <i data-feather="calendar"></i> JT <?php echo $inv['due_date'] ? date('d M Y', strtotime($inv['due_date'])) : '-'; ?>
+                &nbsp;·&nbsp; Sisa: <strong><?php echo sunseaRupiah((float)$inv['remaining_amount']); ?></strong>
+            </div>
+        </a>
+    <?php endforeach; ?>
+<?php endif; ?>
 
 <?php include 'owner-mobile-footer.php'; ?>
