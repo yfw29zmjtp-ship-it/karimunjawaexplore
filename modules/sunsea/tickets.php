@@ -141,6 +141,8 @@ include 'layout-header.php';
                     <option value="express_bahari">Express Bahari</option>
                     <option value="ferry">Ferry Siginjal</option>
                     <option value="pesawat_susi">Pesawat Susi Air</option>
+                    <option value="btn_destinasi">BTN Tiket Destinasi</option>
+                    <option value="retribusi">Tiket Retribusi</option>
                 </select>
             </div>
 
