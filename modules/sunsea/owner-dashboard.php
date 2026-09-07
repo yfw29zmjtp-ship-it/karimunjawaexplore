@@ -72,6 +72,17 @@ $monthExpense = (float)$financeRow['total_expense'];
 $monthBalance = $monthIncome - $monthExpense;
 
 $userName = $currentUser['full_name'] ?? $currentUser['username'] ?? 'Owner';
+
+$companyLogoPath = sunseaSetting($pdo, 'company_logo', '');
+$companyLogoSrc  = $companyLogoPath ? sunseaAssetUrl($companyLogoPath) : '';
+
+// Pie 1: status booking (confirmed vs pending)
+$bookingPieTotal = $pendingCount + $confirmedCount;
+$confirmedPct = $bookingPieTotal > 0 ? round($confirmedCount / $bookingPieTotal * 100) : 0;
+
+// Pie 2: keuangan bulan ini (masuk vs keluar)
+$financePieTotal = $monthIncome + $monthExpense;
+$monthIncomePct = $financePieTotal > 0 ? round($monthIncome / $financePieTotal * 100) : 0;
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -136,13 +147,57 @@ $userName = $currentUser['full_name'] ?? $currentUser['username'] ?? 'Owner';
         border-radius:10px; padding:12px 8px; text-decoration:none; font-size:12.5px; font-weight:700;
     }
     .ob-qbtn svg { width:16px; height:16px; }
+    .ob-brand-logo {
+        width:30px; height:30px; border-radius:9px; background:#fff; padding:3px;
+        display:flex; align-items:center; justify-content:center; box-shadow:0 2px 6px rgba(0,0,0,.15);
+    }
+    .ob-brand-logo img { width:100%; height:100%; object-fit:contain; }
+    .ob-pies-panel {
+        background:linear-gradient(135deg,#e0f2fe 0%,#ede9fe 50%,#fce7f3 100%);
+        border-radius:20px; padding:12px; margin-bottom:14px;
+    }
+    .ob-pies-row { display:flex; gap:10px; }
+    .ob-pie-card {
+        flex:1; background:rgba(255,255,255,.55); backdrop-filter:blur(12px) saturate(160%);
+        -webkit-backdrop-filter:blur(12px) saturate(160%);
+        border:1px solid rgba(255,255,255,.7); border-radius:16px;
+        padding:12px 10px; box-shadow:0 8px 20px rgba(31,41,55,.08), inset 0 1px 0 rgba(255,255,255,.6);
+        text-align:center;
+    }
+    .ob-pie-title { font-size:9.5px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.03em; margin-bottom:8px; }
+    .ob-donut {
+        width:78px; height:78px; border-radius:50%; margin:0 auto 8px; position:relative;
+    }
+    .ob-donut::before {
+        content:''; position:absolute; inset:-4px; border-radius:50%; background:inherit; filter:blur(6px); opacity:.35; z-index:-1;
+    }
+    .ob-donut::after {
+        content:''; position:absolute; inset:13px; background:rgba(255,255,255,.85);
+        backdrop-filter:blur(4px); border-radius:50%; box-shadow:inset 0 1px 3px rgba(0,0,0,.06);
+    }
+    .ob-donut-label {
+        position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+        font-size:12.5px; font-weight:700; color:var(--text); z-index:1;
+    }
+    .ob-pie-legend { display:flex; justify-content:center; gap:10px; font-size:9px; color:var(--muted); font-weight:500; }
+    .ob-pie-legend span { display:inline-flex; align-items:center; gap:3px; }
+    .ob-pie-dot { width:7px; height:7px; border-radius:50%; display:inline-block; box-shadow:0 0 0 3px rgba(255,255,255,.5); }
 </style>
 </head>
 <body>
 
 <div class="ob-header">
     <div class="ob-header-top">
-        <div class="ob-brand">🌊 Explore Karimunjawa</div>
+        <div class="ob-brand">
+            <div class="ob-brand-logo">
+                <?php if ($companyLogoSrc): ?>
+                    <img src="<?php echo htmlspecialchars($companyLogoSrc); ?>" alt="Logo">
+                <?php else: ?>
+                    🌊
+                <?php endif; ?>
+            </div>
+            Explore Karimunjawa
+        </div>
         <div class="ob-user">
             <div class="ob-avatar"><?php echo strtoupper(substr($userName, 0, 1)); ?></div>
             <?php echo htmlspecialchars($userName); ?>
@@ -153,6 +208,31 @@ $userName = $currentUser['full_name'] ?? $currentUser['username'] ?? 'Owner';
 </div>
 
 <div class="ob-container">
+
+<div class="ob-pies-panel">
+    <div class="ob-pies-row">
+        <div class="ob-pie-card">
+            <div class="ob-pie-title">Status Booking</div>
+            <div class="ob-donut" style="background:conic-gradient(var(--success) 0% <?php echo $confirmedPct; ?>%, var(--ocean) <?php echo $confirmedPct; ?>% 100%);">
+                <div class="ob-donut-label"><?php echo $confirmedPct; ?>%</div>
+            </div>
+            <div class="ob-pie-legend">
+                <span><span class="ob-pie-dot" style="background:var(--success);"></span> Confirmed</span>
+                <span><span class="ob-pie-dot" style="background:var(--ocean);"></span> Pending</span>
+            </div>
+        </div>
+        <div class="ob-pie-card">
+            <div class="ob-pie-title">Keuangan Bulan Ini</div>
+            <div class="ob-donut" style="background:conic-gradient(var(--success) 0% <?php echo $monthIncomePct; ?>%, var(--danger) <?php echo $monthIncomePct; ?>% 100%);">
+                <div class="ob-donut-label"><?php echo $monthIncomePct; ?>%</div>
+            </div>
+            <div class="ob-pie-legend">
+                <span><span class="ob-pie-dot" style="background:var(--success);"></span> Masuk</span>
+                <span><span class="ob-pie-dot" style="background:var(--danger);"></span> Keluar</span>
+            </div>
+        </div>
+    </div>
+</div>
 
 <div class="ob-quicklinks" style="margin-bottom:14px;">
     <a href="owner-bookings.php" class="ob-qbtn"><i data-feather="briefcase"></i> Reservasi Tamu</a>
