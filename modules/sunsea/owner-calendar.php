@@ -78,9 +78,10 @@ if (($_GET['ajax'] ?? '') === 'detail' && (int)($_GET['id'] ?? 0) > 0) {
 
     $mitraItems = array_values(array_filter($items, fn($it) => $it['component_code'] !== 'paket'));
 
-    // Info DP/pembayaran: ambil dari invoice yang dibuat otomatis dari reservasi ini.
-    $invStmt = $pdo->prepare("SELECT invoice_no, status, total_amount, paid_amount, remaining_amount FROM invoices WHERE internal_notes=? ORDER BY id DESC LIMIT 1");
-    $invStmt->execute(['Generated from Reservasi: ' . $booking['booking_no']]);
+    // Info DP/pembayaran: invoice dibuat otomatis dari booking dan ditautkan lewat internal_notes
+    // 'booking_id:<id>' (jalur normal) atau pola 'Generated from Reservasi: <no>' (jalur konversi invoice manual).
+    $invStmt = $pdo->prepare("SELECT invoice_no, status, total_amount, paid_amount, remaining_amount FROM invoices WHERE internal_notes=? OR internal_notes=? ORDER BY id DESC LIMIT 1");
+    $invStmt->execute(['booking_id:' . $bId, 'Generated from Reservasi: ' . $booking['booking_no']]);
     $linkedInvoice = $invStmt->fetch(PDO::FETCH_ASSOC) ?: null;
 
     echo json_encode([
