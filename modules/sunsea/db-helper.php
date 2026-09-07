@@ -178,12 +178,19 @@ function sunseaEnsurePackageItemsSchema(PDO $pdo): void
             item_name VARCHAR(200) NOT NULL,
             cost_basis ENUM('per_pax','flat') DEFAULT 'per_pax',
             estimated_cost DECIMAL(15,2) DEFAULT 0.00,
+            estimated_sell DECIMAL(15,2) DEFAULT 0.00,
             notes VARCHAR(255) NULL,
             sort_order INT DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             INDEX idx_pkgitems_package (package_id),
             CONSTRAINT fk_pkgitems_package FOREIGN KEY (package_id) REFERENCES trip_packages(id) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $check = $pdo->prepare("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'trip_package_items' AND COLUMN_NAME = 'estimated_sell'");
+        $check->execute();
+        if ((int)$check->fetchColumn() === 0) {
+            $pdo->exec("ALTER TABLE trip_package_items ADD COLUMN estimated_sell DECIMAL(15,2) DEFAULT 0.00 AFTER estimated_cost");
+        }
     } catch (Exception $e) {
         error_log('sunseaEnsurePackageItemsSchema error: ' . $e->getMessage());
     }

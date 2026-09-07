@@ -90,14 +90,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $sortStmt->execute([$packageId]);
             $nextSort = (int)$sortStmt->fetchColumn();
             $pdo->prepare("INSERT INTO trip_package_items
-                (package_id, item_type, item_name, cost_basis, estimated_cost, notes, sort_order)
-                VALUES (?,?,?,?,?,?,?)")
+                (package_id, item_type, item_name, cost_basis, estimated_cost, estimated_sell, notes, sort_order)
+                VALUES (?,?,?,?,?,?,?,?)")
                 ->execute([
                     $packageId,
                     $_POST['item_type'] ?? 'lainnya',
                     $itemName,
                     ($_POST['cost_basis'] ?? 'per_pax') === 'flat' ? 'flat' : 'per_pax',
                     (float)str_replace(['.', ','], ['', '.'], $_POST['estimated_cost'] ?? '0'),
+                    (float)str_replace(['.', ','], ['', '.'], $_POST['estimated_sell'] ?? '0'),
                     trim($_POST['notes'] ?? ''),
                     $nextSort,
                 ]);
@@ -279,6 +280,15 @@ include 'layout-header.php';
                 <?php if (empty($packageItems)): ?>
                     <div style="font-size:12.5px;color:var(--ss-muted);margin-bottom:10px;">Belum ada detail layanan. Tambahkan minimal tiket kapal, penginapan, dan transport supaya checklist pembayaran mitra bisa dihitung otomatis.</div>
                 <?php else: ?>
+                    <?php
+                        $pkgItemsCostTotal = 0.0;
+                        $pkgItemsSellTotal = 0.0;
+                        foreach ($packageItems as $pi) {
+                            $pkgItemsCostTotal += (float)$pi['estimated_cost'];
+                            $pkgItemsSellTotal += (float)$pi['estimated_sell'];
+                        }
+                        $pkgItemsMargin = $pkgItemsSellTotal - $pkgItemsCostTotal;
+                    ?>
                     <div class="ss-table-wrap" style="margin-bottom:12px;">
                         <table class="ss-table">
                             <thead>
@@ -287,16 +297,21 @@ include 'layout-header.php';
                                     <th>Nama Layanan</th>
                                     <th>Basis Biaya</th>
                                     <th>Estimasi Modal</th>
+                                    <th>Harga Jual</th>
+                                    <th>Margin</th>
                                     <th></th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php foreach ($packageItems as $pi): ?>
+                                    <?php $piMargin = (float)$pi['estimated_sell'] - (float)$pi['estimated_cost']; ?>
                                     <tr>
                                         <td><?php echo htmlspecialchars($packageItemTypes[$pi['item_type']] ?? $pi['item_type']); ?></td>
                                         <td><?php echo htmlspecialchars($pi['item_name']); ?><?php if (!empty($pi['notes'])): ?><br><small style="color:var(--ss-muted);"><?php echo htmlspecialchars($pi['notes']); ?></small><?php endif; ?></td>
                                         <td><?php echo $pi['cost_basis'] === 'flat' ? 'Flat (sekali)' : 'Per Pax'; ?></td>
                                         <td><?php echo sunseaRupiah((float)$pi['estimated_cost']); ?></td>
+                                        <td><?php echo sunseaRupiah((float)$pi['estimated_sell']); ?></td>
+                                        <td style="color:<?php echo $piMargin < 0 ? '#dc2626' : '#16a34a'; ?>;font-weight:700;"><?php echo sunseaRupiah($piMargin); ?></td>
                                         <td>
                                             <form method="POST" onsubmit="return confirm('Hapus layanan ini dari paket?');">
                                                 <input type="hidden" name="action" value="delete_package_item">
@@ -308,8 +323,18 @@ include 'layout-header.php';
                                     </tr>
                                 <?php endforeach; ?>
                             </tbody>
+                            <tfoot>
+                                <tr style="font-weight:700;">
+                                    <td colspan="3" style="text-align:right;">Total Rincian Layanan</td>
+                                    <td><?php echo sunseaRupiah($pkgItemsCostTotal); ?></td>
+                                    <td><?php echo sunseaRupiah($pkgItemsSellTotal); ?></td>
+                                    <td style="color:<?php echo $pkgItemsMargin < 0 ? '#dc2626' : '#16a34a'; ?>;"><?php echo sunseaRupiah($pkgItemsMargin); ?></td>
+                                    <td></td>
+                                </tr>
+                            </tfoot>
                         </table>
                     </div>
+                    <div style="font-size:11.5px;color:var(--ss-muted);margin:-6px 0 12px;">* Total Harga Jual rincian layanan sebaiknya mendekati/menyamai Harga Dasar paket per pax, agar margin paket akurat.</div>
                 <?php endif; ?>
 
                 <div class="ss-card-title" style="margin:10px 0 8px;font-size:13px;">+ Tambah Layanan</div>
@@ -339,6 +364,10 @@ include 'layout-header.php';
                         <div class="ss-form-group">
                             <label class="ss-label">Estimasi Modal (Rp)</label>
                             <input type="text" name="estimated_cost" class="ss-input" placeholder="0">
+                        </div>
+                        <div class="ss-form-group">
+                            <label class="ss-label">Harga Jual (Rp)</label>
+                            <input type="text" name="estimated_sell" class="ss-input" placeholder="0">
                         </div>
                         <div class="ss-form-group" style="grid-column:1/-1;">
                             <label class="ss-label">Catatan</label>
