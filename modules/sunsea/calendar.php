@@ -22,7 +22,8 @@ if (($_GET['ajax'] ?? '') === 'detail' && (int)($_GET['id'] ?? 0) > 0) {
     $bId = (int)$_GET['id'];
 
     $b = $pdo->prepare("
-        SELECT b.*, c.name AS customer_name, c.phone AS customer_phone, p.name AS package_name
+        SELECT b.*, c.name AS customer_name, c.phone AS customer_phone,
+            p.name AS package_name, p.duration_days AS package_duration_days, p.duration_nights AS package_duration_nights
         FROM booking_orders b
         JOIN customers c ON c.id = b.customer_id
         LEFT JOIN trip_packages p ON p.id = b.package_id
@@ -38,6 +39,26 @@ if (($_GET['ajax'] ?? '') === 'detail' && (int)($_GET['id'] ?? 0) > 0) {
     $items = $pdo->prepare("SELECT component_code, component_name, qty, unit, price_sell, price_cost, total_sell, total_cost, is_done, is_paid_mitra FROM booking_order_items WHERE booking_id=? ORDER BY sort_order, id");
     $items->execute([$bId]);
     $items = $items->fetchAll();
+
+    // Info penginapan: cari item Penginapan dari komponen, atau catatan hotel manual di notes booking.
+    $accommodationInfo = '-';
+    foreach ($items as $it) {
+        if (stripos($it['component_name'], 'penginapan') !== false) {
+            $accommodationInfo = preg_replace('/^Penginapan:\s*/i', '', $it['component_name']);
+            break;
+        }
+    }
+    if ($accommodationInfo === '-' && preg_match('/Hotel:\s*([^-]+)/i', (string)($booking['notes'] ?? ''), $mHotel)) {
+        $accommodationInfo = trim($mHotel[1]);
+    }
+
+    // Durasi: pakai durasi paket jika ada, kalau tidak dihitung dari selisih tanggal.
+    if (!empty($booking['package_duration_nights']) || !empty($booking['package_duration_days'])) {
+        $durationLabel = (int)$booking['package_duration_days'] . 'H' . (int)$booking['package_duration_nights'] . 'M';
+    } else {
+        $nights = max(0, (strtotime($booking['end_date']) - strtotime($booking['start_date'])) / 86400);
+        $durationLabel = ($nights + 1) . 'H' . $nights . 'M';
+    }
 
     $expenses = $pdo->prepare("SELECT transaction_date, category, description, amount, reference, created_by FROM cash_book WHERE booking_id=? AND type='expense' ORDER BY transaction_date, id");
     $expenses->execute([$bId]);
@@ -59,6 +80,8 @@ if (($_GET['ajax'] ?? '') === 'detail' && (int)($_GET['id'] ?? 0) > 0) {
         'totalExpense' => $totalExpense,
         'totalRab'     => $totalRab,
         'margin'       => $totalRab - $totalExpense,
+        'accommodationInfo' => $accommodationInfo,
+        'durationLabel'     => $durationLabel,
     ]);
     exit;
 }
@@ -225,35 +248,183 @@ include 'layout-header.php';
 </div>
 
 <style>
-    #bookingDetailBody .bd-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px 14px; font-size: 12px; margin-bottom: 12px; background: var(--ss-gray-1); border-radius: 8px; padding: 10px 12px; }
-    #bookingDetailBody .bd-grid strong { display: block; color: var(--ss-muted); font-weight: 600; font-size: 10.5px; text-transform: uppercase; letter-spacing: .3px; }
-    #bookingDetailBody .bd-section-title { font-size: 12.5px; font-weight: 700; margin: 14px 0 6px; color: #0f172a; }
-    #bookingDetailBody .bd-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0 22px; align-items: start; }
-    #bookingDetailBody .bd-col .bd-section-title { margin-top: 0; }
-    #bookingDetailBody table.ss-table { font-size: 12px; margin-bottom: 0; }
-    #bookingDetailBody table.ss-table th { font-size: 10.5px; padding: 5px 8px; }
-    #bookingDetailBody table.ss-table td { padding: 5px 8px; }
-    #bookingDetailBody .bd-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 14px; }
-    #bookingDetailBody .bd-summary-box { border-radius: 8px; padding: 10px 12px; }
-    #bookingDetailBody .bd-summary-box .bd-label { font-size: 10.5px; text-transform: uppercase; letter-spacing: .3px; opacity: .8; }
-    #bookingDetailBody .bd-summary-box .bd-value { font-size: 15px; font-weight: 700; margin-top: 2px; }
-    #bookingDetailBody .bd-chart-row { display: grid; grid-template-columns: 160px 1fr; gap: 18px; align-items: center; margin-top: 14px; padding: 12px; background: var(--ss-gray-1); border-radius: 8px; }
-    #bookingDetailBody .bd-donut { width: 140px; height: 140px; border-radius: 50%; position: relative; margin: 0 auto; }
-    #bookingDetailBody .bd-donut-center { position: absolute; inset: 16px; background: #fff; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-    #bookingDetailBody .bd-donut-center .pct { font-size: 17px; font-weight: 700; }
-    #bookingDetailBody .bd-donut-center .lbl { font-size: 9.5px; color: var(--ss-muted); text-transform: uppercase; letter-spacing: .3px; }
-    #bookingDetailBody .bd-legend { font-size: 12px; }
-    #bookingDetailBody .bd-legend-item { display: flex; align-items: center; gap: 7px; padding: 4px 0; }
-    #bookingDetailBody .bd-legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-    #bookingDetailBody .bd-mitra-list { margin-top: 6px; }
-    #bookingDetailBody .bd-mitra-item { display: flex; justify-content: space-between; align-items: center; padding: 7px 10px; border-radius: 6px; font-size: 12px; margin-bottom: 5px; }
-    #bookingDetailBody .bd-mitra-item.paid { background: #F0FDF4; color: #15803d; }
-    #bookingDetailBody .bd-mitra-item.unpaid { background: #FFF7ED; color: #C2410C; }
+    #bookingDetailBody .bd-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 6px 14px;
+        font-size: 12px;
+        margin-bottom: 12px;
+        background: var(--ss-gray-1);
+        border-radius: 8px;
+        padding: 10px 12px;
+    }
+
+    #bookingDetailBody .bd-grid strong {
+        display: block;
+        color: var(--ss-muted);
+        font-weight: 600;
+        font-size: 10.5px;
+        text-transform: uppercase;
+        letter-spacing: .3px;
+    }
+
+    #bookingDetailBody .bd-section-title {
+        font-size: 12.5px;
+        font-weight: 700;
+        margin: 14px 0 6px;
+        color: #0f172a;
+    }
+
+    #bookingDetailBody .bd-cols {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0 22px;
+        align-items: start;
+    }
+
+    #bookingDetailBody .bd-col .bd-section-title {
+        margin-top: 0;
+    }
+
+    #bookingDetailBody table.ss-table {
+        font-size: 12px;
+        margin-bottom: 0;
+    }
+
+    #bookingDetailBody table.ss-table th {
+        font-size: 10.5px;
+        padding: 5px 8px;
+    }
+
+    #bookingDetailBody table.ss-table td {
+        padding: 5px 8px;
+    }
+
+    #bookingDetailBody .bd-summary {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        margin-top: 14px;
+    }
+
+    #bookingDetailBody .bd-summary-box {
+        border-radius: 8px;
+        padding: 10px 12px;
+    }
+
+    #bookingDetailBody .bd-summary-box .bd-label {
+        font-size: 10.5px;
+        text-transform: uppercase;
+        letter-spacing: .3px;
+        opacity: .8;
+    }
+
+    #bookingDetailBody .bd-summary-box .bd-value {
+        font-size: 15px;
+        font-weight: 700;
+        margin-top: 2px;
+    }
+
+    #bookingDetailBody .bd-chart-row {
+        display: grid;
+        grid-template-columns: 160px 1fr;
+        gap: 18px;
+        align-items: center;
+        margin-top: 14px;
+        padding: 12px;
+        background: var(--ss-gray-1);
+        border-radius: 8px;
+    }
+
+    #bookingDetailBody .bd-donut {
+        width: 140px;
+        height: 140px;
+        border-radius: 50%;
+        position: relative;
+        margin: 0 auto;
+    }
+
+    #bookingDetailBody .bd-donut-center {
+        position: absolute;
+        inset: 16px;
+        background: #fff;
+        border-radius: 50%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    }
+
+    #bookingDetailBody .bd-donut-center .pct {
+        font-size: 17px;
+        font-weight: 700;
+    }
+
+    #bookingDetailBody .bd-donut-center .lbl {
+        font-size: 9.5px;
+        color: var(--ss-muted);
+        text-transform: uppercase;
+        letter-spacing: .3px;
+    }
+
+    #bookingDetailBody .bd-legend {
+        font-size: 12px;
+    }
+
+    #bookingDetailBody .bd-legend-item {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        padding: 4px 0;
+    }
+
+    #bookingDetailBody .bd-legend-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        flex-shrink: 0;
+    }
+
+    #bookingDetailBody .bd-mitra-list {
+        margin-top: 6px;
+    }
+
+    #bookingDetailBody .bd-mitra-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 7px 10px;
+        border-radius: 6px;
+        font-size: 12px;
+        margin-bottom: 5px;
+    }
+
+    #bookingDetailBody .bd-mitra-item.paid {
+        background: #F0FDF4;
+        color: #15803d;
+    }
+
+    #bookingDetailBody .bd-mitra-item.unpaid {
+        background: #FFF7ED;
+        color: #C2410C;
+    }
+
     @media (max-width: 640px) {
-        #bookingDetailBody .bd-grid { grid-template-columns: repeat(2, 1fr); }
-        #bookingDetailBody .bd-summary { grid-template-columns: 1fr; }
-        #bookingDetailBody .bd-cols { grid-template-columns: 1fr; }
-        #bookingDetailBody .bd-chart-row { grid-template-columns: 1fr; }
+        #bookingDetailBody .bd-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        #bookingDetailBody .bd-summary {
+            grid-template-columns: 1fr;
+        }
+
+        #bookingDetailBody .bd-cols {
+            grid-template-columns: 1fr;
+        }
+
+        #bookingDetailBody .bd-chart-row {
+            grid-template-columns: 1fr;
+        }
     }
 </style>
 
@@ -279,7 +450,11 @@ include 'layout-header.php';
                     return 'Rp ' + Math.round(parseFloat(n) || 0).toLocaleString('id-ID');
                 };
                 var statusLabels = {
-                    draft: 'Draft', confirmed: 'Confirmed', ongoing: 'Ongoing', completed: 'Completed', cancelled: 'Cancelled'
+                    draft: 'Draft',
+                    confirmed: 'Confirmed',
+                    ongoing: 'Ongoing',
+                    completed: 'Completed',
+                    cancelled: 'Cancelled'
                 };
                 var marginColor = data.margin >= 0 ? 'var(--ss-success)' : 'var(--ss-danger)';
 
@@ -291,9 +466,11 @@ include 'layout-header.php';
                 html += '</div>';
 
                 html += '<div class="bd-grid">';
-                html += '<div><strong>Tanggal</strong>' + b.start_date + ' s/d ' + b.end_date + '</div>';
-                html += '<div><strong>Pax</strong>' + b.pax_count + ' orang</div>';
+                html += '<div><strong>Tanggal Check-in</strong>' + b.start_date + ' s/d ' + b.end_date + '</div>';
+                html += '<div><strong>Durasi</strong>' + data.durationLabel + '</div>';
+                html += '<div><strong>Total Pax</strong>' + b.pax_count + ' orang</div>';
                 html += '<div><strong>Paket</strong>' + (b.package_name || '-') + '</div>';
+                html += '<div><strong>Penginapan</strong>' + data.accommodationInfo + '</div>';
                 html += '<div><strong>Total RAB/Penawaran</strong>' + fmt(data.totalRab) + '</div>';
                 html += '</div>';
 
