@@ -31,6 +31,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $id = (int)($_POST['id'] ?? 0);
 
         $customerId = (int)($_POST['customer_id'] ?? 0);
+        $newCustomerName = trim($_POST['new_customer_name'] ?? '');
+        if ($customerId <= 0 && $newCustomerName !== '') {
+            $lastCode = $pdo->query("SELECT code FROM customers ORDER BY id DESC LIMIT 1")->fetchColumn();
+            $nextNum = 1;
+            if ($lastCode && preg_match('/(\d+)$/', $lastCode, $m)) $nextNum = (int)$m[1] + 1;
+            $newCode = 'SS-CUST-' . str_pad($nextNum, 3, '0', STR_PAD_LEFT);
+            $pdo->prepare("INSERT INTO customers (code, name, type, email, phone, whatsapp, country) VALUES (?,?,?,?,?,?,?)")
+                ->execute([
+                    $newCode,
+                    $newCustomerName,
+                    'individual',
+                    trim($_POST['new_customer_email'] ?? ''),
+                    trim($_POST['new_customer_phone'] ?? ''),
+                    trim($_POST['new_customer_phone'] ?? ''),
+                    'Indonesia'
+                ]);
+            $customerId = (int)$pdo->lastInsertId();
+        }
         $packageId  = (int)($_POST['package_id'] ?? 0) ?: null;
         $taxPct     = (float)($_POST['tax_pct'] ?? 11);
         $discount   = (float)str_replace(['.', ','], ['', '.'], $_POST['discount_amount'] ?? '0');
@@ -920,7 +938,7 @@ include 'layout-header.php';
 
 <?php elseif (in_array($action, ['add', 'edit'])): ?>
     <!-- ============ ADD/EDIT FORM ============ -->
-    <div style="max-width:900px;">
+    <div>
         <div style="margin-bottom:20px;">
             <a href="quotations.php" class="ss-btn ss-btn-outline ss-btn-sm"><i data-feather="arrow-left"></i> Kembali</a>
         </div>
@@ -929,15 +947,18 @@ include 'layout-header.php';
             <input type="hidden" name="action" value="save">
             <input type="hidden" name="id" value="<?php echo $quotation['id'] ?? 0; ?>">
 
-            <div style="display:grid;grid-template-columns:1fr 300px;gap:20px;">
+            <div style="display:grid;grid-template-columns:1fr 360px;gap:20px;">
                 <div>
                     <!-- Header -->
                     <div class="ss-card" style="margin-bottom:16px;">
                         <div class="ss-card-title" style="margin-bottom:16px;">Informasi Penawaran</div>
                         <div class="ss-form-grid cols-2">
                             <div class="ss-form-group" style="grid-column:1/-1;">
-                                <label class="ss-label">Customer *</label>
-                                <select name="customer_id" class="ss-select" required>
+                                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                                    <label class="ss-label" style="margin:0;">Customer *</label>
+                                    <a href="javascript:void(0)" onclick="toggleNewCustomer()" id="newCustomerToggleLink" style="font-size:11.5px;color:var(--ss-ocean);font-weight:600;text-decoration:none;">+ Tambah Customer Baru</a>
+                                </div>
+                                <select name="customer_id" id="customerSelect" class="ss-select" required>
                                     <option value="">-- Pilih Customer --</option>
                                     <?php foreach ($customers as $c): ?>
                                         <option value="<?php echo $c['id']; ?>" <?php echo ($quotation['customer_id'] ?? 0) == $c['id'] ? 'selected' : ''; ?>>
@@ -945,6 +966,23 @@ include 'layout-header.php';
                                         </option>
                                     <?php endforeach; ?>
                                 </select>
+                                <div id="newCustomerBox" style="display:none;margin-top:8px;padding:10px 12px;background:var(--ss-sky);border:1px solid var(--ss-gray-2);border-radius:8px;">
+                                    <div class="ss-form-grid cols-2">
+                                        <div class="ss-form-group" style="grid-column:1/-1;margin:0;">
+                                            <label class="ss-label">Nama Customer *</label>
+                                            <input type="text" name="new_customer_name" id="newCustomerName" class="ss-input" placeholder="Nama lengkap customer">
+                                        </div>
+                                        <div class="ss-form-group" style="margin:0;">
+                                            <label class="ss-label">No. HP / WA</label>
+                                            <input type="text" name="new_customer_phone" class="ss-input" placeholder="08xxxxxxxxxx">
+                                        </div>
+                                        <div class="ss-form-group" style="margin:0;">
+                                            <label class="ss-label">Email (opsional)</label>
+                                            <input type="email" name="new_customer_email" class="ss-input" placeholder="email@contoh.com">
+                                        </div>
+                                    </div>
+                                    <div style="font-size:10.5px;color:var(--ss-muted);margin-top:6px;">* Otomatis tersimpan ke database Pelanggan saat penawaran disimpan.</div>
+                                </div>
                             </div>
                             <div class="ss-form-group">
                                 <label class="ss-label">Paket (opsional)</label>
@@ -1227,6 +1265,25 @@ HTML;
 ?>
 
 <script>
+    function toggleNewCustomer() {
+        var box = document.getElementById('newCustomerBox');
+        var select = document.getElementById('customerSelect');
+        var link = document.getElementById('newCustomerToggleLink');
+        var showing = box.style.display !== 'none';
+        if (showing) {
+            box.style.display = 'none';
+            select.required = true;
+            select.disabled = false;
+            link.textContent = '+ Tambah Customer Baru';
+        } else {
+            box.style.display = 'block';
+            select.value = '';
+            select.required = false;
+            select.disabled = true;
+            link.textContent = '← Pilih dari Daftar Customer';
+        }
+    }
+
     function fillItineraryFromPackage(forceOverwrite) {
         var sel = document.getElementById('pkgSelect');
         var box = document.getElementById('itineraryInput');
