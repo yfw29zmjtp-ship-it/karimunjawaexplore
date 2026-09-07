@@ -170,7 +170,53 @@ if (isset($dbError)): ?>
 <!-- ============================
      STAT CARDS
 ============================= -->
-<div class="ss-stats-grid">
+<style>
+    .ss-stats-grid.compact {
+        grid-template-columns: repeat(7, 1fr);
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+
+    .ss-stats-grid.compact .ss-stat-card {
+        padding: 12px 10px;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .ss-stats-grid.compact .ss-stat-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+    }
+
+    .ss-stats-grid.compact .ss-stat-icon svg {
+        width: 15px;
+        height: 15px;
+    }
+
+    .ss-stats-grid.compact .ss-stat-value {
+        font-size: 15px !important;
+    }
+
+    .ss-stats-grid.compact .ss-stat-label {
+        font-size: 10.5px;
+        margin-top: 2px;
+        white-space: nowrap;
+    }
+
+    @media (max-width: 1200px) {
+        .ss-stats-grid.compact {
+            grid-template-columns: repeat(4, 1fr);
+        }
+    }
+
+    @media (max-width: 700px) {
+        .ss-stats-grid.compact {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+</style>
+<div class="ss-stats-grid compact">
     <div class="ss-stat-card">
         <div class="ss-stat-icon ocean"><i data-feather="users"></i></div>
         <div>
