@@ -177,6 +177,44 @@ function recalcBookingTotals(PDO $pdo, int $bookingId): void
         ->execute([$costTotal, $sellTotal, $sellTotal - $costTotal, $bookingId]);
 }
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'update_dates') {
+    $bookingId = (int)($_POST['booking_id'] ?? 0);
+    $newStart = trim($_POST['start_date'] ?? '');
+    $newEnd = trim($_POST['end_date'] ?? '');
+
+    if ($bookingId > 0 && $newStart !== '' && $newEnd !== '' && strtotime($newEnd) >= strtotime($newStart)) {
+        try {
+            $pdo->prepare("UPDATE booking_orders SET start_date=?, end_date=?, updated_at=NOW() WHERE id=?")
+                ->execute([$newStart, $newEnd, $bookingId]);
+
+            // Regenerate jadwal operasional sesuai rentang tanggal baru.
+            $pdo->prepare("DELETE FROM booking_schedule WHERE booking_id=?")->execute([$bookingId]);
+            $noStmt = $pdo->prepare("SELECT booking_no FROM booking_orders WHERE id=?");
+            $noStmt->execute([$bookingId]);
+            $bookingNo = (string)$noStmt->fetchColumn();
+            $sched = $pdo->prepare("INSERT INTO booking_schedule (booking_id, activity_date, activity_type, title) VALUES (?,?,?,?)");
+            $cur = strtotime($newStart);
+            $end = strtotime($newEnd);
+            while ($cur <= $end) {
+                $sched->execute([$bookingId, date('Y-m-d', $cur), 'other', 'Operasional ' . $bookingNo]);
+                $cur = strtotime('+1 day', $cur);
+            }
+
+            $_SESSION['flash_message'] = 'Tanggal trip berhasil diperbarui.';
+            $_SESSION['flash_type'] = 'success';
+        } catch (Exception $e) {
+            $_SESSION['flash_message'] = 'Gagal update tanggal: ' . $e->getMessage();
+            $_SESSION['flash_type'] = 'error';
+        }
+    } else {
+        $_SESSION['flash_message'] = 'Tanggal tidak valid. Pastikan tanggal selesai tidak sebelum tanggal mulai.';
+        $_SESSION['flash_type'] = 'error';
+    }
+
+    header('Location: bookings.php?view=' . $bookingId);
+    exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'update_item_prices') {
     $bookingId = (int)($_POST['booking_id'] ?? 0);
     $itemIds = $_POST['item_id'] ?? [];
@@ -784,67 +822,84 @@ include 'layout-header.php';
                 </table>
             </div>
 
-            <div id="editItemsPanel" style="display:none;margin-top:14px;padding-top:12px;border-top:1px solid var(--ss-gray-2);">
-                <div class="ss-card-title" style="margin-bottom:8px;font-size:13px;">Edit Harga Jual / Markup</div>
-                <form method="POST">
-                    <input type="hidden" name="action" value="update_item_prices">
-                    <input type="hidden" name="booking_id" value="<?php echo (int)$detail['id']; ?>">
-                    <div class="ss-table-wrap">
-                        <table class="ss-table">
-                            <thead>
-                                <tr>
-                                    <th>Komponen</th>
-                                    <th>Qty</th>
-                                    <th>Modal</th>
-                                    <th>Harga Jual (per unit)</th>
-                                    <th></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($detailItems as $it): ?>
-                                    <tr>
-                                        <input type="hidden" name="item_id[]" value="<?php echo (int)$it['id']; ?>">
-                                        <td><?php echo htmlspecialchars($it['component_name']); ?></td>
-                                        <td><?php echo rtrim(rtrim(number_format((float)$it['qty'], 2, '.', ''), '0'), '.'); ?> <?php echo htmlspecialchars($it['unit']); ?></td>
-                                        <td><?php echo sunseaRupiah((float)$it['price_cost']); ?></td>
-                                        <td><input class="ss-input" name="price_sell[]" value="<?php echo (float)$it['price_sell']; ?>" style="max-width:150px;"></td>
-                                        <td>
-                                            <button type="button" class="ss-btn ss-btn-outline ss-btn-sm" style="color:#dc2626;border-color:#dc2626;" onclick="if(confirm('Hapus layanan ini dari pesanan?')){document.getElementById('deleteItemForm_<?php echo (int)$it['id']; ?>').submit();}"><i data-feather="trash-2"></i></button>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                                <?php if (empty($detailItems)): ?>
-                                    <tr>
-                                        <td colspan="5" style="color:var(--ss-muted);">Belum ada layanan pada pesanan ini.</td>
-                                    </tr>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                    <button class="ss-btn ss-btn-primary ss-btn-sm" type="submit" style="margin-top:10px;"><i data-feather="save"></i> Simpan Perubahan Harga</button>
-                </form>
-
-                <?php foreach ($detailItems as $it): ?>
-                    <form method="POST" id="deleteItemForm_<?php echo (int)$it['id']; ?>" style="display:none;">
-                        <input type="hidden" name="action" value="delete_item">
+            <div id="editItemsPanel" style="display:none;margin-top:14px;padding-top:4px;">
+                <div style="background:#F8FAFC;border:1px solid var(--ss-gray-2);border-radius:10px;padding:14px 16px;margin-bottom:14px;">
+                    <div class="ss-card-title" style="margin:0 0 10px;font-size:13px;display:flex;align-items:center;gap:6px;"><i data-feather="calendar" style="width:15px;height:15px;"></i> Edit Tanggal Trip</div>
+                    <form method="POST">
+                        <input type="hidden" name="action" value="update_dates">
                         <input type="hidden" name="booking_id" value="<?php echo (int)$detail['id']; ?>">
-                        <input type="hidden" name="item_id" value="<?php echo (int)$it['id']; ?>">
+                        <div class="ss-form-grid cols-2">
+                            <div class="ss-form-group"><label class="ss-label">Tanggal Mulai</label><input type="date" class="ss-input" name="start_date" value="<?php echo htmlspecialchars($detail['start_date']); ?>" required></div>
+                            <div class="ss-form-group"><label class="ss-label">Tanggal Selesai</label><input type="date" class="ss-input" name="end_date" value="<?php echo htmlspecialchars($detail['end_date']); ?>" required></div>
+                        </div>
+                        <button class="ss-btn ss-btn-primary ss-btn-sm" type="submit" style="margin-top:6px;"><i data-feather="save"></i> Simpan Tanggal</button>
                     </form>
-                <?php endforeach; ?>
+                </div>
 
-                <div class="ss-card-title" style="margin:16px 0 8px;font-size:13px;">+ Tambah Layanan Lain</div>
-                <form method="POST">
-                    <input type="hidden" name="action" value="add_item">
-                    <input type="hidden" name="booking_id" value="<?php echo (int)$detail['id']; ?>">
-                    <div class="ss-form-grid cols-2">
-                        <div class="ss-form-group" style="grid-column:1/-1;"><label class="ss-label">Nama Layanan</label><input class="ss-input" name="component_name" placeholder="Contoh: Sewa Mobil" required></div>
-                        <div class="ss-form-group"><label class="ss-label">Qty</label><input class="ss-input" name="qty" value="1"></div>
-                        <div class="ss-form-group"><label class="ss-label">Satuan</label><input class="ss-input" name="unit" value="unit"></div>
-                        <div class="ss-form-group"><label class="ss-label">Harga Modal (per unit)</label><input class="ss-input" name="price_cost" placeholder="0"></div>
-                        <div class="ss-form-group"><label class="ss-label">Harga Jual (per unit)</label><input class="ss-input" name="price_sell" placeholder="0"></div>
-                    </div>
-                    <button class="ss-btn ss-btn-primary ss-btn-sm" type="submit" style="margin-top:6px;"><i data-feather="plus"></i> Tambah Layanan</button>
-                </form>
+                <div style="background:#F8FAFC;border:1px solid var(--ss-gray-2);border-radius:10px;padding:14px 16px;margin-bottom:14px;">
+                    <div class="ss-card-title" style="margin:0 0 10px;font-size:13px;display:flex;align-items:center;gap:6px;"><i data-feather="dollar-sign" style="width:15px;height:15px;"></i> Edit Harga Jual / Markup</div>
+                    <form method="POST">
+                        <input type="hidden" name="action" value="update_item_prices">
+                        <input type="hidden" name="booking_id" value="<?php echo (int)$detail['id']; ?>">
+                        <div class="ss-table-wrap">
+                            <table class="ss-table">
+                                <thead>
+                                    <tr>
+                                        <th>Komponen</th>
+                                        <th>Qty</th>
+                                        <th>Modal</th>
+                                        <th>Harga Jual (per unit)</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($detailItems as $it): ?>
+                                        <tr>
+                                            <input type="hidden" name="item_id[]" value="<?php echo (int)$it['id']; ?>">
+                                            <td><?php echo htmlspecialchars($it['component_name']); ?></td>
+                                            <td><?php echo rtrim(rtrim(number_format((float)$it['qty'], 2, '.', ''), '0'), '.'); ?> <?php echo htmlspecialchars($it['unit']); ?></td>
+                                            <td><?php echo sunseaRupiah((float)$it['price_cost']); ?></td>
+                                            <td><input class="ss-input" name="price_sell[]" value="<?php echo (float)$it['price_sell']; ?>" style="max-width:150px;"></td>
+                                            <td>
+                                                <button type="button" class="ss-btn ss-btn-outline ss-btn-sm" style="color:#dc2626;border-color:#dc2626;" onclick="if(confirm('Hapus layanan ini dari pesanan?')){document.getElementById('deleteItemForm_<?php echo (int)$it['id']; ?>').submit();}"><i data-feather="trash-2"></i></button>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                    <?php if (empty($detailItems)): ?>
+                                        <tr>
+                                            <td colspan="5" style="color:var(--ss-muted);">Belum ada layanan pada pesanan ini.</td>
+                                        </tr>
+                                    <?php endif; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                        <button class="ss-btn ss-btn-primary ss-btn-sm" type="submit" style="margin-top:10px;"><i data-feather="save"></i> Simpan Perubahan Harga</button>
+                    </form>
+
+                    <?php foreach ($detailItems as $it): ?>
+                        <form method="POST" id="deleteItemForm_<?php echo (int)$it['id']; ?>" style="display:none;">
+                            <input type="hidden" name="action" value="delete_item">
+                            <input type="hidden" name="booking_id" value="<?php echo (int)$detail['id']; ?>">
+                            <input type="hidden" name="item_id" value="<?php echo (int)$it['id']; ?>">
+                        </form>
+                    <?php endforeach; ?>
+                </div>
+
+                <div style="background:#F8FAFC;border:1px solid var(--ss-gray-2);border-radius:10px;padding:14px 16px;">
+                    <div class="ss-card-title" style="margin:0 0 10px;font-size:13px;display:flex;align-items:center;gap:6px;"><i data-feather="plus-circle" style="width:15px;height:15px;"></i> Tambah Layanan Lain</div>
+                    <form method="POST">
+                        <input type="hidden" name="action" value="add_item">
+                        <input type="hidden" name="booking_id" value="<?php echo (int)$detail['id']; ?>">
+                        <div class="ss-form-grid cols-2">
+                            <div class="ss-form-group" style="grid-column:1/-1;"><label class="ss-label">Nama Layanan</label><input class="ss-input" name="component_name" placeholder="Contoh: Sewa Mobil" required></div>
+                            <div class="ss-form-group"><label class="ss-label">Qty</label><input class="ss-input" name="qty" value="1"></div>
+                            <div class="ss-form-group"><label class="ss-label">Satuan</label><input class="ss-input" name="unit" value="unit"></div>
+                            <div class="ss-form-group"><label class="ss-label">Harga Modal (per unit)</label><input class="ss-input" name="price_cost" placeholder="0"></div>
+                            <div class="ss-form-group"><label class="ss-label">Harga Jual (per unit)</label><input class="ss-input" name="price_sell" placeholder="0"></div>
+                        </div>
+                        <button class="ss-btn ss-btn-primary ss-btn-sm" type="submit" style="margin-top:6px;"><i data-feather="plus"></i> Tambah Layanan</button>
+                    </form>
+                </div>
             </div>
         </div>
         <div>
@@ -1096,7 +1151,7 @@ include 'layout-header.php';
                         <tr>
                             <td><strong><?php echo htmlspecialchars($r['booking_no']); ?></strong></td>
                             <td><?php echo htmlspecialchars($r['customer_name']); ?></td>
-                            <td><?php echo strtoupper($r['booking_mode']); ?></td>
+                            <td><?php echo strpos((string)$r['notes'], '✍️ Booking Manual') === 0 ? 'MANUAL' : strtoupper($r['booking_mode']); ?></td>
                             <td><?php echo date('d M Y', strtotime($r['start_date'])); ?> - <?php echo date('d M Y', strtotime($r['end_date'])); ?></td>
                             <td>
                                 <form method="POST" style="display:flex;gap:6px;align-items:center;">
