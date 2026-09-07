@@ -497,6 +497,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updat
                 ->execute([$newStatus, $bookingId]);
             $_SESSION['flash_message'] = 'Status reservasi berhasil diperbarui.';
             $_SESSION['flash_type'] = 'success';
+
+            // Saat dikonfirmasi, otomatis siapkan invoice-nya juga (booking sudah otomatis tampil di kalender karena status confirmed).
+            if ($newStatus === 'confirmed') {
+                $bStmt = $pdo->prepare("SELECT id, booking_no, customer_id, start_date, end_date, pax_count FROM booking_orders WHERE id=?");
+                $bStmt->execute([$bookingId]);
+                $bRow = $bStmt->fetch(PDO::FETCH_ASSOC);
+                if ($bRow) {
+                    try {
+                        ensureInvoiceFromBooking($pdo, $auth, $bRow);
+                        $_SESSION['flash_message'] = 'Status dikonfirmasi, masuk kalender booking, dan invoice otomatis dibuat.';
+                    } catch (Exception $e) {
+                        $_SESSION['flash_message'] = 'Status dikonfirmasi, tapi invoice gagal dibuat otomatis: ' . $e->getMessage();
+                        $_SESSION['flash_type'] = 'error';
+                    }
+                }
+            }
         } catch (Exception $e) {
             $_SESSION['flash_message'] = 'Gagal update status: ' . $e->getMessage();
             $_SESSION['flash_type'] = 'error';
