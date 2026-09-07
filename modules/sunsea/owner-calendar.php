@@ -78,6 +78,11 @@ if (($_GET['ajax'] ?? '') === 'detail' && (int)($_GET['id'] ?? 0) > 0) {
 
     $mitraItems = array_values(array_filter($items, fn($it) => $it['component_code'] !== 'paket'));
 
+    // Info DP/pembayaran: ambil dari invoice yang dibuat otomatis dari reservasi ini.
+    $invStmt = $pdo->prepare("SELECT invoice_no, status, total_amount, paid_amount, remaining_amount FROM invoices WHERE internal_notes=? ORDER BY id DESC LIMIT 1");
+    $invStmt->execute(['Generated from Reservasi: ' . $booking['booking_no']]);
+    $linkedInvoice = $invStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+
     echo json_encode([
         'booking'      => $booking,
         'items'        => $items,
@@ -88,6 +93,7 @@ if (($_GET['ajax'] ?? '') === 'detail' && (int)($_GET['id'] ?? 0) > 0) {
         'margin'       => $totalRab - $totalExpense,
         'accommodationInfo' => $accommodationInfo,
         'durationLabel'     => $durationLabel,
+        'invoice'           => $linkedInvoice,
     ]);
     exit;
 }
@@ -114,6 +120,19 @@ $bookings = $bookings->fetchAll();
 $prevMonth = date('Y-m', strtotime($startMonth . ' -1 month'));
 $nextMonth = date('Y-m', strtotime($startMonth . ' +1 month'));
 $colWidth = 22;
+
+// Tamu yang akan check-in dalam 7 hari ke depan (untuk widget di bawah kalender)
+$todayDate = date('Y-m-d');
+$weekAhead = date('Y-m-d', strtotime('+7 days'));
+$checkinsThisWeek = $pdo->prepare("
+    SELECT b.id, b.booking_no, b.start_date, b.end_date, b.pax_count, c.name AS customer_name
+    FROM booking_orders b
+    JOIN customers c ON c.id = b.customer_id
+    WHERE b.status = 'confirmed' AND b.start_date BETWEEN ? AND ?
+    ORDER BY b.start_date, b.id
+");
+$checkinsThisWeek->execute([$todayDate, $weekAhead]);
+$checkinsThisWeek = $checkinsThisWeek->fetchAll();
 
 $pageTitle = 'Kalender Booking';
 include 'owner-mobile-header.php';
@@ -272,6 +291,27 @@ include 'owner-mobile-header.php';
             </div>
         </div>
         <div class="ob-cal-legend"><span class="dot"></span> Reservasi confirmed · geser ke samping untuk lihat tanggal lain</div>
+    <?php endif; ?>
+</div>
+
+<div class="ob-section">
+    <div class="ob-section-head">
+        <div class="ob-section-title">Tamu Check-in Minggu Ini</div>
+    </div>
+    <?php if (empty($checkinsThisWeek)): ?>
+        <div class="ob-empty">Tidak ada tamu check-in dalam 7 hari ke depan.</div>
+    <?php else: ?>
+        <?php foreach ($checkinsThisWeek as $ci): ?>
+            <a href="javascript:void(0)" onclick="openBookingDetail(<?php echo (int)$ci['id']; ?>)" class="ob-row">
+                <div>
+                    <div class="ob-row-title"><?php echo htmlspecialchars($ci['customer_name']); ?></div>
+                    <div class="ob-row-sub"><?php echo htmlspecialchars($ci['booking_no']); ?> · <?php echo (int)$ci['pax_count']; ?> pax</div>
+                </div>
+                <div class="ob-row-meta">
+                    <?php echo date('d M', strtotime($ci['start_date'])); ?> - <?php echo date('d M Y', strtotime($ci['end_date'])); ?>
+                </div>
+            </a>
+        <?php endforeach; ?>
     <?php endif; ?>
 </div>
 
@@ -474,6 +514,26 @@ include 'owner-mobile-header.php';
                 html += '<div><strong>Penginapan</strong><span class="bd-val">' + data.accommodationInfo + '</span></div>';
                 html += '<div><strong>Total RAB/Penawaran</strong><span class="bd-val" style="color:var(--ocean);">' + fmt(data.totalRab) + '</span></div>';
                 html += '</div>';
+
+                html += '<div class="bd-section-title">Info Pembayaran (DP)</div>';
+                if (!data.invoice) {
+                    html += '<div style="font-size:11.5px;color:var(--muted);">Belum ada invoice/DP tercatat untuk reservasi ini.</div>';
+                } else {
+                    var inv = data.invoice;
+                    var invStatusLabels = {
+                        issued: 'Belum Dibayar',
+                        partial: 'DP Diterima',
+                        paid: 'Lunas',
+                        cancelled: 'Batal'
+                    };
+                    var dpBadgeClass = inv.status === 'paid' ? 'ob-badge-paid' : (inv.status === 'partial' ? 'ob-badge-partial' : 'ob-badge-issued');
+                    html += '<div class="bd-grid" style="grid-template-columns:repeat(3,1fr);">';
+                    html += '<div><strong>No. Invoice</strong><span class="bd-val" style="font-size:11.5px;">' + inv.invoice_no + '</span></div>';
+                    html += '<div><strong>Sudah Dibayar (DP)</strong><span class="bd-val" style="color:var(--success);">' + fmt(inv.paid_amount) + '</span></div>';
+                    html += '<div><strong>Sisa Tagihan</strong><span class="bd-val" style="color:' + (parseFloat(inv.remaining_amount) > 0 ? 'var(--danger)' : 'var(--success)') + ';">' + fmt(inv.remaining_amount) + '</span></div>';
+                    html += '</div>';
+                    html += '<div style="margin:-6px 0 12px;"><span class="ob-badge ' + dpBadgeClass + '">' + (invStatusLabels[inv.status] || inv.status) + '</span></div>';
+                }
 
                 html += '<div class="bd-section-title">Item Booking (RAB)</div>';
                 if (data.items.length === 0) {
