@@ -7,6 +7,9 @@ $featuredPackages = $pdo->query(
      FROM trip_packages WHERE is_active = 1 ORDER BY id DESC LIMIT 3"
 )->fetchAll();
 
+$weHeroTitle = sunseaSetting($pdo, 'website_hero_title', 'Jelajahi Keindahan Karimunjawa Bersama Kami');
+$weHeroSubtitle = sunseaSetting($pdo, 'website_hero_subtitle', 'Paket wisata open trip & private trip, island hopping, penginapan, hingga transport laut/darat — kami urus, Anda tinggal menikmati liburan.');
+
 $pageTitle = 'Beranda';
 $activeNav = 'home';
 require __DIR__ . '/includes/website-header.php';
@@ -14,9 +17,8 @@ require __DIR__ . '/includes/website-header.php';
 
 <section class="we-hero">
     <div class="we-container">
-        <h1>Jelajahi Keindahan Karimunjawa Bersama Kami</h1>
-        <p>Paket wisata open trip &amp; private trip, island hopping, penginapan, hingga transport laut/darat —
-            kami urus, Anda tinggal menikmati liburan.</p>
+        <h1><?php echo htmlspecialchars($weHeroTitle); ?></h1>
+        <p><?php echo nl2br(htmlspecialchars($weHeroSubtitle)); ?></p>
         <div class="we-hero-actions">
             <a href="paket-wisata.php" class="we-btn we-btn-primary">Lihat Paket Wisata</a>
             <a href="kontak.php" class="we-btn we-btn-outline">Booking Sekarang</a>

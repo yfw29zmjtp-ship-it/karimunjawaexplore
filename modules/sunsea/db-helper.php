@@ -557,6 +557,37 @@ function sunseaRupiah(float $amount, bool $short = false): string
 }
 
 /**
+ * Ensure tables used by the public website CMS (gallery + blog) exist.
+ */
+function sunseaEnsureWebsiteContentSchema(PDO $pdo): void
+{
+    try {
+        $pdo->exec("CREATE TABLE IF NOT EXISTS `website_gallery` (
+            `id`          INT AUTO_INCREMENT PRIMARY KEY,
+            `image_path`  VARCHAR(255) NOT NULL,
+            `caption`     VARCHAR(150) NULL,
+            `sort_order`  INT DEFAULT 0,
+            `is_active`   TINYINT(1) DEFAULT 1,
+            `created_at`  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS `website_blog` (
+            `id`             INT AUTO_INCREMENT PRIMARY KEY,
+            `title`          VARCHAR(200) NOT NULL,
+            `slug`           VARCHAR(220) NOT NULL UNIQUE,
+            `excerpt`        VARCHAR(300) NULL,
+            `content`        TEXT NULL,
+            `cover_image`    VARCHAR(255) NULL,
+            `is_published`   TINYINT(1) DEFAULT 1,
+            `created_at`     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            `updated_at`     TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    } catch (Exception $e) {
+        @error_log('sunseaEnsureWebsiteContentSchema: ' . $e->getMessage());
+    }
+}
+
+/**
  * Get Sunsea setting value from settings table.
  */
 function sunseaSetting(PDO $pdo, string $key, string $default = ''): string
@@ -569,6 +600,16 @@ function sunseaSetting(PDO $pdo, string $key, string $default = ''): string
     } catch (Exception $e) {
         return $default;
     }
+}
+
+/**
+ * Save a Sunsea setting value into the settings table (insert or update).
+ */
+function sunseaSetSetting(PDO $pdo, string $key, string $value): void
+{
+    $pdo->prepare("INSERT INTO settings (setting_key, setting_value) VALUES (?, ?)
+        ON DUPLICATE KEY UPDATE setting_value = ?, updated_at = NOW()")
+        ->execute([$key, $value, $value]);
 }
 
 /**
@@ -602,4 +643,3 @@ function sunseaWaLink(string $phone, string $message = ''): string
     }
     return $url;
 }
-

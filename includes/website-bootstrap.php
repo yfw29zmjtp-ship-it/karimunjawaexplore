@@ -13,6 +13,7 @@ require_once __DIR__ . '/functions.php';
 require_once __DIR__ . '/../modules/sunsea/db-helper.php';
 
 $pdo = getSunseaConnection();
+sunseaEnsureWebsiteContentSchema($pdo);
 
 $weCompanyName  = sunseaSetting($pdo, 'company_name', 'Karimunjawa Explore');
 $weCompanyPhone = sunseaSetting($pdo, 'company_phone', '');

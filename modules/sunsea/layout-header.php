@@ -23,12 +23,13 @@ $sunseaNavItems = [
     'invoices'      => ['icon' => 'credit-card', 'label' => 'Invoice',          'url' => 'invoices.php'],
     'finance'       => ['icon' => 'dollar-sign', 'label' => 'Finance',          'url' => 'finance.php'],
     'settings'      => ['icon' => 'settings',   'label' => 'Pengaturan',        'url' => 'settings.php'],
+    'website_settings' => ['icon' => 'globe',   'label' => 'Setting Website',   'url' => 'website-settings.php'],
 ];
 
 // Sub-menu grouping: parent key => list of child keys shown in a collapsible dropdown
 $sunseaNavGroups = [
     'bookings' => ['calendar', 'packages'],
-    'settings' => ['database', 'coordinators'],
+    'settings' => ['database', 'coordinators', 'website_settings'],
 ];
 
 $activePage = $activePage ?? '';
