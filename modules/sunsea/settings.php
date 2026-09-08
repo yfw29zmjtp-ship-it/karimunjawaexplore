@@ -168,6 +168,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $logoErr = $uploadImageSetting('invoice_logo', 'invoice_logo');
         $stampErr = $uploadImageSetting('invoice_stamp', 'invoice_stamp');
+
+        // Hapus stempel yang ada tanpa upload file pengganti.
+        if (($_POST['remove_invoice_stamp'] ?? '') === '1' && empty($_FILES['invoice_stamp']['tmp_name'])) {
+            $uploadDir = __DIR__ . '/../../uploads/sunsea/';
+            foreach (['png', 'jpg', 'jpeg', 'webp', 'gif'] as $ext) {
+                $oldFile = $uploadDir . 'invoice_stamp.' . $ext;
+                if (file_exists($oldFile)) unlink($oldFile);
+            }
+            setSetting($pdo, 'invoice_stamp', '');
+        }
+
         if ($logoErr || $stampErr) {
             $flashMsg = trim($logoErr . ' ' . $stampErr);
             $flashType = 'error';
@@ -633,6 +644,9 @@ $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : '
                                 <img src="<?php echo htmlspecialchars($baseUrl . '/' . trim($cfg['invoice_stamp'], '/')) . '?v=' . (file_exists($invoiceStampPath) ? filemtime($invoiceStampPath) : time()); ?>"
                                     alt="Stempel" style="max-height:70px;max-width:100%;object-fit:contain;">
                                 <div style="font-size:11px;color:#888;margin-top:4px;">Stempel saat ini</div>
+                                <label style="display:flex;align-items:center;gap:6px;justify-content:center;margin-top:6px;font-size:12px;color:#B91C1C;cursor:pointer;">
+                                    <input type="checkbox" name="remove_invoice_stamp" value="1"> Hapus stempel saat ini
+                                </label>
                             </div>
                         <?php endif; ?>
                         <small style="color:#888;">Muncul di area tanda tangan invoice. Gunakan PNG background transparan.</small>
