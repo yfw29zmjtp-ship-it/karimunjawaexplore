@@ -15,6 +15,54 @@ $weHeroStyle = $weHeroBg
     ? 'background-image:linear-gradient(135deg,rgba(6,54,84,.72),rgba(6,54,84,.72)),url(\'' . htmlspecialchars(sunseaAssetUrl($weHeroBg)) . '\');background-size:cover;background-position:center;'
     : '';
 
+// ── Form "Minta Penawaran" cepat (gaya search bar Traveloka) ─────────────────
+// Disimpan sebagai quotation baru (created_by='website') supaya langsung
+// muncul di menu Penawaran admin dengan notifikasi dot merah.
+$weQuoteSuccessMsg = '';
+$weQuoteErrorMsg = '';
+$weQuoteOld = ['name' => '', 'phone' => '', 'trip_date' => '', 'pax' => 2, 'service_type' => ''];
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['we_action'] ?? '') === 'quick_quote') {
+    $qName = trim($_POST['q_name'] ?? '');
+    $qPhone = trim($_POST['q_phone'] ?? '');
+    $qDate = trim($_POST['q_trip_date'] ?? '');
+    $qPax = max(1, (int)($_POST['q_pax'] ?? 1));
+    $qService = trim($_POST['q_service_type'] ?? '');
+    $weQuoteOld = ['name' => $qName, 'phone' => $qPhone, 'trip_date' => $qDate, 'pax' => $qPax, 'service_type' => $qService];
+
+    if ($qName === '' || $qPhone === '' || $qDate === '' || $qService === '') {
+        $weQuoteErrorMsg = 'Nama, No. WhatsApp, Tanggal Trip, dan Tipe Layanan wajib diisi.';
+    } else {
+        try {
+            $custStmt = $pdo->prepare("SELECT id FROM customers WHERE phone = ? OR whatsapp = ? LIMIT 1");
+            $custStmt->execute([$qPhone, $qPhone]);
+            $qCustomerId = (int)$custStmt->fetchColumn();
+
+            if ($qCustomerId <= 0) {
+                $lastCode = $pdo->query("SELECT code FROM customers ORDER BY id DESC LIMIT 1")->fetchColumn();
+                $nextNum = 1;
+                if ($lastCode && preg_match('/(\d+)$/', $lastCode, $mCode)) {
+                    $nextNum = (int)$mCode[1] + 1;
+                }
+                $newCode = 'SS-CUST-' . str_pad($nextNum, 3, '0', STR_PAD_LEFT);
+                $pdo->prepare("INSERT INTO customers (code, name, type, email, phone, whatsapp, country) VALUES (?,?,?,?,?,?,?)")
+                    ->execute([$newCode, $qName, 'individual', '', $qPhone, $qPhone, 'Indonesia']);
+                $qCustomerId = (int)$pdo->lastInsertId();
+            }
+
+            $qNo = sunseaNextNumber($pdo, 'quotation');
+            $qNotes = "[Website] Permintaan penawaran cepat.\nTipe Layanan: " . $qService;
+            $pdo->prepare("INSERT INTO quotations (quotation_no, customer_id, trip_date, pax_count, notes, valid_until, created_by) VALUES (?,?,?,?,?,?,?)")
+                ->execute([$qNo, $qCustomerId, $qDate, $qPax, $qNotes, date('Y-m-d', strtotime('+7 days')), 'website']);
+
+            $weQuoteSuccessMsg = "Terima kasih, {$qName}! Permintaan penawaran Anda (No. {$qNo}) sudah kami terima. Tim kami akan segera menghubungi Anda via WhatsApp.";
+            $weQuoteOld = ['name' => '', 'phone' => '', 'trip_date' => '', 'pax' => 2, 'service_type' => ''];
+        } catch (Throwable $e) {
+            error_log('home.php quick_quote error: ' . $e->getMessage());
+            $weQuoteErrorMsg = 'Maaf, terjadi kendala saat mengirim permintaan. Silakan coba lagi atau hubungi kami langsung.';
+        }
+    }
+}
+
 $pageTitle = 'Beranda';
 $activeNav = 'home';
 require __DIR__ . '/includes/website-header.php';
@@ -30,6 +78,71 @@ require __DIR__ . '/includes/website-header.php';
         </div>
     </div>
 </section>
+
+<div class="we-quotebar-wrap">
+    <div class="we-container">
+        <?php if ($weQuoteSuccessMsg): ?>
+            <div class="we-quote-alert success"><?php echo htmlspecialchars($weQuoteSuccessMsg); ?></div>
+        <?php elseif ($weQuoteErrorMsg): ?>
+            <div class="we-quote-alert error"><?php echo htmlspecialchars($weQuoteErrorMsg); ?></div>
+        <?php endif; ?>
+
+        <form method="POST" action="home.php#weQuoteForm" class="we-quotebar" id="weQuoteForm">
+            <input type="hidden" name="we_action" value="quick_quote">
+            <div class="we-quotebar-field">
+                <label>Tanggal Trip</label>
+                <input type="date" name="q_trip_date" required min="<?php echo date('Y-m-d'); ?>" value="<?php echo htmlspecialchars($weQuoteOld['trip_date']); ?>">
+            </div>
+            <div class="we-quotebar-field">
+                <label>Total Pax</label>
+                <input type="number" name="q_pax" min="1" required value="<?php echo (int)$weQuoteOld['pax']; ?>">
+            </div>
+            <div class="we-quotebar-field">
+                <label>Tipe Layanan</label>
+                <select name="q_service_type" required>
+                    <option value="">Pilih Tipe</option>
+                    <?php foreach (['Open Trip', 'Private Trip', 'Island Hopping', 'Custom / Belum Tentu'] as $svc): ?>
+                        <option value="<?php echo htmlspecialchars($svc); ?>" <?php echo $weQuoteOld['service_type'] === $svc ? 'selected' : ''; ?>><?php echo htmlspecialchars($svc); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="we-quotebar-field we-quotebar-submit">
+                <button type="button" class="we-btn we-btn-primary we-quotebar-btn" onclick="weOpenQuoteModal()">Minta Penawaran</button>
+            </div>
+
+            <div class="we-quote-modal-overlay" id="weQuoteModalOverlay">
+                <div class="we-quote-modal">
+                    <button type="button" class="we-quote-modal-close" onclick="weCloseQuoteModal()">&times;</button>
+                    <h3>Lengkapi Kontak Anda</h3>
+                    <p>Tim kami akan menghubungi Anda via WhatsApp dengan penawaran terbaik.</p>
+                    <div class="we-form-row">
+                        <label>Nama Lengkap *</label>
+                        <input type="text" name="q_name" required value="<?php echo htmlspecialchars($weQuoteOld['name']); ?>">
+                    </div>
+                    <div class="we-form-row">
+                        <label>No. WhatsApp *</label>
+                        <input type="text" name="q_phone" required placeholder="08xxxxxxxxxx" value="<?php echo htmlspecialchars($weQuoteOld['phone']); ?>">
+                    </div>
+                    <button type="submit" class="we-btn we-btn-primary" style="width:100%;">Kirim Permintaan Penawaran</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function weOpenQuoteModal() {
+        var form = document.getElementById('weQuoteForm');
+        if (!form.reportValidity()) return;
+        document.getElementById('weQuoteModalOverlay').classList.add('open');
+    }
+    function weCloseQuoteModal() {
+        document.getElementById('weQuoteModalOverlay').classList.remove('open');
+    }
+    <?php if ($weQuoteErrorMsg): ?>
+        document.addEventListener('DOMContentLoaded', weOpenQuoteModal);
+    <?php endif; ?>
+</script>
 
 <section class="we-section">
     <div class="we-container">

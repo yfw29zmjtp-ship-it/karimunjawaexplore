@@ -150,6 +150,118 @@ a {
   border: 1px solid rgba(255, 255, 255, 0.5);
 }
 
+/* Quick quote bar (Traveloka-style), overlaps bottom edge of hero */
+.we-quotebar-wrap {
+  max-width: 1140px;
+  margin: -38px auto 40px;
+  padding: 0 20px;
+  position: relative;
+  z-index: 5;
+}
+.we-quotebar {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.18);
+  padding: 22px 26px;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.4fr auto;
+  gap: 18px;
+  align-items: end;
+}
+.we-quotebar-field label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--we-muted);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.we-quotebar-field input,
+.we-quotebar-field select {
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid var(--we-border);
+  border-radius: 8px;
+  font-size: 14px;
+  color: var(--we-text);
+  background: #fff;
+}
+.we-quotebar-btn {
+  width: 100%;
+  padding: 13px 20px;
+  border: none;
+  cursor: pointer;
+  font-size: 14.5px;
+}
+.we-quote-alert {
+  margin-bottom: 16px;
+  padding: 12px 18px;
+  border-radius: 10px;
+  font-size: 13.5px;
+}
+.we-quote-alert.success {
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+.we-quote-alert.error {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+.we-quote-modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  z-index: 9999;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.we-quote-modal-overlay.open {
+  display: flex;
+}
+.we-quote-modal {
+  background: #fff;
+  border-radius: 14px;
+  padding: 26px;
+  max-width: 380px;
+  width: 100%;
+  position: relative;
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.3);
+  text-align: left;
+}
+.we-quote-modal h3 {
+  margin: 0 0 8px;
+  font-size: 18px;
+  color: var(--we-brand-dark);
+}
+.we-quote-modal p {
+  margin: 0 0 16px;
+  font-size: 13px;
+  color: var(--we-muted);
+}
+.we-quote-modal-close {
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  border: none;
+  background: none;
+  font-size: 22px;
+  cursor: pointer;
+  color: var(--we-muted);
+}
+@media (max-width: 860px) {
+  .we-quotebar {
+    grid-template-columns: 1fr;
+  }
+  .we-quotebar-wrap {
+    margin-top: 16px;
+  }
+}
+
 /* Sections */
 .we-section {
   padding: 60px 0;

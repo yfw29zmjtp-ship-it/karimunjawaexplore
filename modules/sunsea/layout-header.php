@@ -36,6 +36,19 @@ $activePage = $activePage ?? '';
 $currentUser = isset($auth) ? $auth->getCurrentUser() : [];
 $userName    = $currentUser['full_name'] ?? $currentUser['username'] ?? 'User';
 
+// Notifikasi dot merah untuk permintaan penawaran baru dari website (form quick-quote
+// di beranda) yang belum ditindaklanjuti admin (masih status 'draft').
+$sunseaNewQuotationCount = 0;
+if (isset($pdo)) {
+    try {
+        $sunseaNewQuotationCount = (int)$pdo->query(
+            "SELECT COUNT(*) FROM quotations WHERE created_by = 'website' AND status = 'draft'"
+        )->fetchColumn();
+    } catch (Exception $e) {
+        $sunseaNewQuotationCount = 0;
+    }
+}
+
 // Owner Dashboard menu hanya untuk role Developer/Owner
 if (!in_array($currentUser['role'] ?? '', ['developer', 'owner'], true)) {
     unset($sunseaNavItems['owner_dashboard']);
@@ -283,6 +296,16 @@ if (empty($sunseaNavItemsVisible)) {
         .ss-nav-item svg {
             width: 16px;
             height: 16px;
+            flex-shrink: 0;
+        }
+
+        .ss-nav-dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: var(--ss-danger);
+            margin-left: auto;
+            box-shadow: 0 0 0 2px rgba(239, 68, 68, .25);
             flex-shrink: 0;
         }
 
@@ -1051,6 +1074,9 @@ if (empty($sunseaNavItemsVisible)) {
                         class="ss-nav-item <?php echo ($activePage === $key) ? 'active' : ''; ?>">
                         <i data-feather="<?php echo $item['icon']; ?>"></i>
                         <?php echo $item['label']; ?>
+                        <?php if ($key === 'quotations' && $sunseaNewQuotationCount > 0): ?>
+                            <span class="ss-nav-dot" title="<?php echo (int)$sunseaNewQuotationCount; ?> penawaran baru dari website"></span>
+                        <?php endif; ?>
                     </a>
             <?php
                 }
