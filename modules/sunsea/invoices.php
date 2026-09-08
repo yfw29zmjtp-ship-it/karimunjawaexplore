@@ -792,8 +792,15 @@ if ($action === 'print' && $invoice):
                 border-top: 1px dashed #E2E8F0;
                 font-size: 10.5px;
                 color: #94a3b8;
-                text-align: center;
+                text-align: left;
                 font-style: italic;
+            }
+
+            .footer-contact {
+                margin-top: 4px;
+                font-style: normal;
+                font-weight: 700;
+                color: #475569;
             }
 
             .thanks-note {
@@ -931,19 +938,15 @@ if ($action === 'print' && $invoice):
                 </div>
             <?php endif; ?>
 
-            <div class="signature-area">
-                <div class="notes-col"></div>
-                <div class="sign-col">
-                    <div class="sign-place"><?php echo date('d M Y'); ?></div>
-                    <div>Hormat kami,</div>
-                    <?php if ($stampSrc): ?><img class="stamp-img" src="<?php echo htmlspecialchars($stampSrc); ?>" alt="Stempel"><?php endif; ?>
-                    <div class="sign-line"><?php echo htmlspecialchars($companyName); ?></div>
-                </div>
-            </div>
-
             <div class="thanks-note">Terima kasih atas kepercayaan Anda memilih <?php echo htmlspecialchars($companyName); ?></div>
 
-            <?php if ($footer): ?><div class="footer-note"><?php echo nl2br(htmlspecialchars($footer)); ?></div><?php endif; ?>
+            <div class="footer-note">
+                <div>Dokumen ini merupakan bukti pembayaran yang sah dan dicetak melalui sistem Karimunjawa Explore. Jika Anda mengalami kendala atau membutuhkan bantuan, silakan hubungi:</div>
+                <div class="footer-contact">
+                    Karimunjawa Explore<?php echo $companyPhone ? ' &middot; ' . htmlspecialchars($companyPhone) : ''; ?><?php echo $companyEmail ? ' &middot; ' . htmlspecialchars($companyEmail) : ''; ?>
+                </div>
+                <?php if ($footer): ?><div style="margin-top:6px;"><?php echo nl2br(htmlspecialchars($footer)); ?></div><?php endif; ?>
+            </div>
         </div>
     </body>
 
