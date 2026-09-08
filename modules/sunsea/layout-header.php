@@ -422,6 +422,31 @@ if (empty($sunseaNavItemsVisible)) {
             height: 14px;
         }
 
+        .ss-website-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 9px 10px;
+            border-radius: 8px;
+            text-decoration: none;
+            color: var(--ss-white);
+            font-size: 12.5px;
+            font-weight: 600;
+            background: linear-gradient(135deg, var(--ss-ocean), var(--ss-cyan));
+            margin-bottom: 10px;
+            transition: .2s;
+        }
+
+        .ss-website-btn:hover {
+            opacity: .9;
+        }
+
+        .ss-website-btn svg {
+            width: 14px;
+            height: 14px;
+        }
+
         /* ---- MAIN CONTENT ---- */
         .ss-main {
             margin-left: var(--sidebar-w);
@@ -1085,6 +1110,9 @@ if (empty($sunseaNavItemsVisible)) {
         </nav>
 
         <div class="ss-sidebar-footer">
+            <a href="<?php echo BASE_URL; ?>/home.php" target="_blank" rel="noopener" class="ss-website-btn">
+                <i data-feather="external-link"></i> Buka Website
+            </a>
             <div class="ss-user-block">
                 <div class="ss-user-avatar"><?php echo strtoupper(substr($userName, 0, 1)); ?></div>
                 <div>
