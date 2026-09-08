@@ -44,7 +44,7 @@ $visibleMenuKeys = array_keys($sunseaNavItems);
 
 // Load company settings for sidebar
 $_sidebarLogoSrc = '';
-$_sidebarCompanyName = 'Explore Karimunjawa';
+$_sidebarCompanyName = 'Karimunjawa Explore';
 if (isset($pdo)) {
     try {
         $__s = $pdo->query("SELECT setting_key, setting_value FROM settings WHERE setting_key IN ('company_logo','company_name')");
@@ -96,7 +96,7 @@ if (empty($sunseaNavItemsVisible)) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo htmlspecialchars($pageTitle ?? 'Explore Karimunjawa'); ?> — Explore Karimunjawa</title>
+    <title><?php echo htmlspecialchars($pageTitle ?? 'Karimunjawa Explore'); ?> — Karimunjawa Explore</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -979,7 +979,7 @@ if (empty($sunseaNavItemsVisible)) {
                     <div class="ss-brand-icon">🌊</div>
                     <div>
                         <div class="ss-brand-name"><?php echo htmlspecialchars($_sidebarCompanyName); ?></div>
-                        <div class="ss-brand-sub">Explore Karimunjawa</div>
+                        <div class="ss-brand-sub">Karimunjawa Explore</div>
                     </div>
                 </a>
             <?php endif; ?>
@@ -1050,7 +1050,7 @@ if (empty($sunseaNavItemsVisible)) {
                 <div class="ss-user-avatar"><?php echo strtoupper(substr($userName, 0, 1)); ?></div>
                 <div>
                     <div class="ss-user-name"><?php echo htmlspecialchars($userName); ?></div>
-                    <div class="ss-user-role">Explore Karimunjawa</div>
+                    <div class="ss-user-role">Karimunjawa Explore</div>
                 </div>
             </div>
             <a href="<?php echo BASE_URL; ?>/logout.php" class="ss-logout-btn">
@@ -1068,10 +1068,10 @@ if (empty($sunseaNavItemsVisible)) {
                     id="sidebarToggle">
                     <i data-feather="menu" style="width:20px;height:20px;"></i>
                 </button>
-                <span class="ss-page-title"><?php echo htmlspecialchars($pageTitle ?? 'Explore Karimunjawa'); ?></span>
+                <span class="ss-page-title"><?php echo htmlspecialchars($pageTitle ?? 'Karimunjawa Explore'); ?></span>
             </div>
             <div class="ss-topbar-actions">
-                <span class="ss-badge ss-badge-ocean">🌊 Explore Karimunjawa</span>
+                <span class="ss-badge ss-badge-ocean">🌊 Karimunjawa Explore</span>
                 <a href="<?php echo BASE_URL; ?>/logout.php" style="color:var(--ss-muted);text-decoration:none;font-size:12px;">
                     <i data-feather="log-out" style="width:15px;height:15px;vertical-align:middle;"></i>
                 </a>
