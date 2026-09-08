@@ -5,6 +5,7 @@
  * and $pageTitle / $activeNav to be set by the calling page.
  */
 $activeNav = $activeNav ?? '';
+$weFaviconPath = sunseaSetting($pdo, 'website_favicon', '');
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -14,6 +15,9 @@ $activeNav = $activeNav ?? '';
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo htmlspecialchars($pageTitle ?? $weCompanyName); ?> — <?php echo htmlspecialchars($weCompanyName); ?></title>
     <meta name="description" content="<?php echo htmlspecialchars($pageDescription ?? 'Jasa tour & travel Karimunjawa: paket wisata, penginapan, transport, dan island hopping.'); ?>">
+    <?php if ($weFaviconPath): ?>
+        <link rel="icon" href="<?php echo htmlspecialchars(sunseaAssetUrl($weFaviconPath)); ?>">
+    <?php endif; ?>
     <link rel="stylesheet" href="<?php echo sunseaAssetUrl('assets/website/style.css'); ?>">
 </head>
 

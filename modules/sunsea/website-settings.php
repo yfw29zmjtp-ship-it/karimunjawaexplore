@@ -28,8 +28,8 @@ function wsUploadImage(string $fileField, string $destDir, string $prefix): arra
     }
     if (!is_dir($destDir)) mkdir($destDir, 0755, true);
     $ext = strtolower(pathinfo($_FILES[$fileField]['name'], PATHINFO_EXTENSION));
-    if (!in_array($ext, ['png', 'jpg', 'jpeg', 'webp', 'gif'])) {
-        return ['', 'Format gambar harus PNG, JPG, JPEG, WEBP, atau GIF.'];
+    if (!in_array($ext, ['png', 'jpg', 'jpeg', 'webp', 'gif', 'ico'])) {
+        return ['', 'Format gambar harus PNG, JPG, JPEG, WEBP, GIF, atau ICO.'];
     }
     $fname = $prefix . '_' . date('YmdHis') . '_' . mt_rand(1000, 9999) . '.' . $ext;
     if (!move_uploaded_file($_FILES[$fileField]['tmp_name'], $destDir . $fname)) {
@@ -46,8 +46,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($postTab === 'hero') {
         sunseaSetSetting($pdo, 'website_hero_title', trim($_POST['hero_title'] ?? ''));
         sunseaSetSetting($pdo, 'website_hero_subtitle', trim($_POST['hero_subtitle'] ?? ''));
-        $flashMsg = 'Konten beranda berhasil disimpan.';
-        $flashType = 'success';
+
+        [$bgPath, $bgErr] = wsUploadImage('hero_bg', $uploadDir, 'hero_bg');
+        if ($bgErr) {
+            $flashMsg = 'Konten beranda disimpan, tetapi background gagal diupload: ' . $bgErr;
+            $flashType = 'error';
+        } else {
+            if ($bgPath !== '') {
+                sunseaSetSetting($pdo, 'website_hero_bg', $bgPath);
+            }
+            if (($_POST['remove_hero_bg'] ?? '') === '1' && $bgPath === '') {
+                sunseaSetSetting($pdo, 'website_hero_bg', '');
+            }
+            $flashMsg = 'Konten beranda berhasil disimpan.';
+            $flashType = 'success';
+        }
         $tab = 'hero';
     }
 
@@ -146,15 +159,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $flashType = 'success';
         $tab = 'blog';
     }
+
+    if ($postTab === 'branding') {
+        [$sysFaviconPath, $sysFaviconErr] = wsUploadImage('system_favicon', $uploadDir, 'favicon_system');
+        [$webFaviconPath, $webFaviconErr] = wsUploadImage('website_favicon', $uploadDir, 'favicon_website');
+        $brandingErr = trim($sysFaviconErr . ' ' . $webFaviconErr);
+        if ($sysFaviconPath !== '') sunseaSetSetting($pdo, 'system_favicon', $sysFaviconPath);
+        if ($webFaviconPath !== '') sunseaSetSetting($pdo, 'website_favicon', $webFaviconPath);
+        if ($brandingErr) {
+            $flashMsg = $brandingErr;
+            $flashType = 'error';
+        } else {
+            $flashMsg = 'Pengaturan favicon berhasil disimpan.';
+            $flashType = 'success';
+        }
+        $tab = 'branding';
+    }
 }
 
 $heroTitle = sunseaSetting($pdo, 'website_hero_title', 'Jelajahi Keindahan Karimunjawa Bersama Kami');
 $heroSubtitle = sunseaSetting($pdo, 'website_hero_subtitle', 'Paket wisata open trip & private trip, island hopping, penginapan, hingga transport laut/darat — kami urus, Anda tinggal menikmati liburan.');
+$heroBg = sunseaSetting($pdo, 'website_hero_bg', '');
 $aboutP1 = sunseaSetting($pdo, 'website_about_p1', '');
 $aboutP2 = sunseaSetting($pdo, 'website_about_p2', '');
 $aboutVisi = sunseaSetting($pdo, 'website_about_visi', 'Menjadi mitra wisata terpercaya bagi setiap tamu yang berkunjung ke Karimunjawa.');
 $aboutMisi = sunseaSetting($pdo, 'website_about_misi', 'Memberikan pelayanan aman, nyaman, dan harga yang transparan untuk semua tamu.');
 $aboutNilai = sunseaSetting($pdo, 'website_about_nilai', 'Kejujuran, keramahan, dan tanggung jawab dalam setiap perjalanan.');
+$systemFavicon = sunseaSetting($pdo, 'system_favicon', '');
+$websiteFavicon = sunseaSetting($pdo, 'website_favicon', '');
 
 $galleryItems = $pdo->query("SELECT * FROM website_gallery ORDER BY sort_order ASC, id DESC")->fetchAll();
 $blogItems = $pdo->query("SELECT * FROM website_blog ORDER BY created_at DESC")->fetchAll();
@@ -196,6 +228,10 @@ include 'layout-header.php';
         <?php echo $tab === 'blog' ? 'border-bottom-color:#0C4A6E;color:#0C4A6E;' : 'color:#666;'; ?>">
         📝 Blog
     </a>
+    <a href="?tab=branding" style="padding:10px 24px;font-weight:600;text-decoration:none;border-bottom:2px solid transparent;margin-bottom:-2px;
+        <?php echo $tab === 'branding' ? 'border-bottom-color:#0C4A6E;color:#0C4A6E;' : 'color:#666;'; ?>">
+        🎨 Branding &amp; Favicon
+    </a>
     <a href="settings.php" style="padding:10px 24px;font-weight:600;text-decoration:none;color:#666;">
         ⚙️ Pengaturan Sistem &rarr;
     </a>
@@ -208,7 +244,7 @@ include 'layout-header.php';
 <?php if ($tab === 'hero'): ?>
     <div style="background:#fff;border:1px solid #dde5ef;border-radius:8px;padding:20px;max-width:720px;">
         <div style="font-size:16px;font-weight:700;color:#0C4A6E;margin-bottom:16px;">🏠 Hero Beranda</div>
-        <form method="POST" style="display:flex;flex-direction:column;gap:14px;">
+        <form method="POST" enctype="multipart/form-data" style="display:flex;flex-direction:column;gap:14px;">
             <input type="hidden" name="tab" value="hero">
             <div>
                 <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;">Judul Utama</label>
@@ -219,6 +255,45 @@ include 'layout-header.php';
                 <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;">Sub Judul / Deskripsi</label>
                 <textarea name="hero_subtitle" rows="3"
                     style="width:100%;padding:9px 12px;border:1px solid #ccc;border-radius:5px;font-family:inherit;font-size:14px;box-sizing:border-box;resize:vertical;"><?php echo htmlspecialchars($heroSubtitle); ?></textarea>
+            </div>
+            <div>
+                <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;">Background Header (gambar)</label>
+                <?php if ($heroBg): ?>
+                    <img src="<?php echo htmlspecialchars(sunseaAssetUrl($heroBg)); ?>" alt="" style="width:100%;max-height:140px;object-fit:cover;border-radius:6px;margin-bottom:8px;display:block;">
+                    <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#b91c1c;margin-bottom:8px;">
+                        <input type="checkbox" name="remove_hero_bg" value="1"> Hapus background (kembali ke warna default)
+                    </label>
+                <?php endif; ?>
+                <input type="file" name="hero_bg" accept="image/*" style="width:100%;font-size:13px;">
+                <div style="font-size:11px;color:#888;margin-top:4px;">Kosongkan kalau tidak ingin ganti. Ukuran disarankan lebar &ge; 1600px.</div>
+            </div>
+            <div>
+                <button type="submit" style="padding:10px 24px;background:#0C4A6E;color:white;border:none;border-radius:5px;font-weight:700;cursor:pointer;font-size:14px;">💾 Simpan</button>
+            </div>
+        </form>
+    </div>
+<?php endif; ?>
+
+<?php if ($tab === 'branding'): ?>
+    <div style="background:#fff;border:1px solid #dde5ef;border-radius:8px;padding:20px;max-width:720px;">
+        <div style="font-size:16px;font-weight:700;color:#0C4A6E;margin-bottom:16px;">🎨 Favicon</div>
+        <form method="POST" enctype="multipart/form-data" style="display:flex;flex-direction:column;gap:18px;">
+            <input type="hidden" name="tab" value="branding">
+            <div>
+                <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;">Favicon Sistem / Admin</label>
+                <?php if ($systemFavicon): ?>
+                    <img src="<?php echo htmlspecialchars(sunseaAssetUrl($systemFavicon)); ?>" alt="" style="width:32px;height:32px;object-fit:contain;margin-bottom:8px;display:block;">
+                <?php endif; ?>
+                <input type="file" name="system_favicon" accept="image/*,.ico" style="width:100%;font-size:13px;">
+                <div style="font-size:11px;color:#888;margin-top:4px;">Tampil di tab browser saat mengakses sistem/admin (dashboard, booking, invoice, dll).</div>
+            </div>
+            <div>
+                <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;">Favicon Website Publik</label>
+                <?php if ($websiteFavicon): ?>
+                    <img src="<?php echo htmlspecialchars(sunseaAssetUrl($websiteFavicon)); ?>" alt="" style="width:32px;height:32px;object-fit:contain;margin-bottom:8px;display:block;">
+                <?php endif; ?>
+                <input type="file" name="website_favicon" accept="image/*,.ico" style="width:100%;font-size:13px;">
+                <div style="font-size:11px;color:#888;margin-top:4px;">Tampil di tab browser saat mengakses karimunjawaexplore.com (Beranda, Paket Wisata, Blog, dll).</div>
             </div>
             <div>
                 <button type="submit" style="padding:10px 24px;background:#0C4A6E;color:white;border:none;border-radius:5px;font-weight:700;cursor:pointer;font-size:14px;">💾 Simpan</button>

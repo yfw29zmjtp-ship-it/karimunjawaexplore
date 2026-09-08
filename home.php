@@ -9,13 +9,17 @@ $featuredPackages = $pdo->query(
 
 $weHeroTitle = sunseaSetting($pdo, 'website_hero_title', 'Jelajahi Keindahan Karimunjawa Bersama Kami');
 $weHeroSubtitle = sunseaSetting($pdo, 'website_hero_subtitle', 'Paket wisata open trip & private trip, island hopping, penginapan, hingga transport laut/darat — kami urus, Anda tinggal menikmati liburan.');
+$weHeroBg = sunseaSetting($pdo, 'website_hero_bg', '');
+$weHeroStyle = $weHeroBg
+    ? 'background-image:linear-gradient(135deg,rgba(6,54,84,.72),rgba(6,54,84,.72)),url(\'' . htmlspecialchars(sunseaAssetUrl($weHeroBg)) . '\');background-size:cover;background-position:center;'
+    : '';
 
 $pageTitle = 'Beranda';
 $activeNav = 'home';
 require __DIR__ . '/includes/website-header.php';
 ?>
 
-<section class="we-hero">
+<section class="we-hero" style="<?php echo $weHeroStyle; ?>">
     <div class="we-container">
         <h1><?php echo htmlspecialchars($weHeroTitle); ?></h1>
         <p><?php echo nl2br(htmlspecialchars($weHeroSubtitle)); ?></p>

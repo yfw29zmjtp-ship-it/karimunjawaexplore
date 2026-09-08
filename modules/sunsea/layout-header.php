@@ -104,6 +104,12 @@ if (empty($sunseaNavItemsVisible)) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo htmlspecialchars($pageTitle ?? 'Karimunjawa Explore'); ?> — Karimunjawa Explore</title>
+    <?php if (isset($pdo)):
+        $__systemFavicon = sunseaSetting($pdo, 'system_favicon', '');
+        if ($__systemFavicon): ?>
+            <link rel="icon" href="<?php echo htmlspecialchars(sunseaAssetUrl($__systemFavicon)); ?>">
+    <?php endif;
+    endif; ?>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
