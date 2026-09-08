@@ -334,6 +334,9 @@ if (in_array($action, ['view', 'print']) && $invId > 0) {
     $sp = $pdo->prepare("SELECT * FROM payments WHERE invoice_id=? ORDER BY payment_date");
     $sp->execute([$invId]);
     $payments = $sp->fetchAll();
+
+    // Hitung ulang sisa tagihan dari total-terbayar, jangan percaya kolom remaining_amount yang bisa basi.
+    $invoice['remaining_amount'] = max(0, (float)$invoice['total_amount'] - (float)$invoice['paid_amount']);
 }
 
 $editInvoice = null;
@@ -360,6 +363,11 @@ $invoiceList = $pdo->prepare("
 ");
 $invoiceList->execute($lp);
 $invoiceList = $invoiceList->fetchAll();
+foreach ($invoiceList as &$_invRow) {
+    // Hitung ulang sisa tagihan dari total-terbayar, jangan percaya kolom remaining_amount yang bisa basi.
+    $_invRow['remaining_amount'] = max(0, (float)$_invRow['total_amount'] - (float)$_invRow['paid_amount']);
+}
+unset($_invRow);
 
 $invoiceLogoPath = sunseaSetting($pdo, 'invoice_logo', '') ?: sunseaSetting($pdo, 'company_logo', '');
 $invoiceLogoSrc = sunseaAssetUrl($invoiceLogoPath);
@@ -392,17 +400,26 @@ if ($action === 'print' && $invoice):
     $invoiceNotes   = sunseaSetting($pdo, 'invoice_notes', '');
     $footer         = sunseaSetting($pdo, 'invoice_footer', '');
 
+    // Sisa tagihan sudah dihitung ulang dari total-terbayar di LOAD DATA (lihat $invoice['remaining_amount']).
+    $computedRemaining = (float)$invoice['remaining_amount'];
+
     $statusLabel = 'BELUM LUNAS';
     $statusBg    = '#FEE2E2';
     $statusColor = '#B91C1C';
-    if ((float)$invoice['remaining_amount'] <= 0 || $invoice['status'] === 'paid') {
+    $watermarkLabel = 'BELUM LUNAS';
+    $watermarkColor = '#DC2626';
+    if ($computedRemaining <= 0 || $invoice['status'] === 'paid') {
         $statusLabel = 'LUNAS';
         $statusBg    = '#DCFCE7';
         $statusColor = '#15803D';
+        $watermarkLabel = 'LUNAS';
+        $watermarkColor = '#16A34A';
     } elseif ((float)$invoice['paid_amount'] > 0 || $invoice['status'] === 'partial') {
         $statusLabel = 'DP / PARTIAL';
         $statusBg    = '#FEF3C7';
         $statusColor = '#B45309';
+        $watermarkLabel = 'BELUM LUNAS';
+        $watermarkColor = '#DC2626';
     }
 ?>
     <!DOCTYPE html>
@@ -421,7 +438,8 @@ if ($action === 'print' && $invoice):
                 margin: 14mm 12mm;
             }
 
-            html, body {
+            html,
+            body {
                 background: #E2E8F0;
             }
 
@@ -437,7 +455,29 @@ if ($action === 'print' && $invoice):
                 margin: 12px auto;
                 background: #fff;
                 padding: 16mm 14mm;
-                box-shadow: 0 4px 18px rgba(15,23,42,.12);
+                box-shadow: 0 4px 18px rgba(15, 23, 42, .12);
+                position: relative;
+                overflow: hidden;
+            }
+
+            .watermark {
+                position: absolute;
+                top: 45%;
+                left: 50%;
+                transform: translate(-50%, -50%) rotate(-28deg);
+                font-size: 88px;
+                font-weight: 800;
+                letter-spacing: 6px;
+                text-transform: uppercase;
+                opacity: .13;
+                white-space: nowrap;
+                pointer-events: none;
+                z-index: 0;
+            }
+
+            .page>*:not(.watermark) {
+                position: relative;
+                z-index: 1;
             }
 
             .accent-bar {
@@ -765,7 +805,9 @@ if ($action === 'print' && $invoice):
             }
 
             @media print {
-                html, body {
+
+                html,
+                body {
                     background: #fff;
                 }
 
@@ -782,125 +824,126 @@ if ($action === 'print' && $invoice):
 
     <body onload="window.print()">
         <div class="page">
-        <div class="accent-bar"></div>
-        <div class="head">
-            <div class="brand-row">
-                <?php if ($printLogoSrc): ?><div class="brand-logo-box"><img src="<?php echo htmlspecialchars($printLogoSrc); ?>" alt="Logo"></div><?php endif; ?>
-                <div>
-                    <p class="brand-name"><?php echo htmlspecialchars($companyName); ?></p>
-                    <div class="brand-meta">
-                        <?php if ($companyAddress): ?><div><?php echo htmlspecialchars($companyAddress); ?></div><?php endif; ?>
-                        <div>
-                            <?php echo htmlspecialchars($companyPhone); ?><?php echo ($companyPhone && $companyEmail) ? ' &middot; ' : ''; ?><?php echo htmlspecialchars($companyEmail); ?>
+            <div class="watermark" style="color:<?php echo $watermarkColor; ?>;"><?php echo htmlspecialchars($watermarkLabel); ?></div>
+            <div class="accent-bar"></div>
+            <div class="head">
+                <div class="brand-row">
+                    <?php if ($printLogoSrc): ?><div class="brand-logo-box"><img src="<?php echo htmlspecialchars($printLogoSrc); ?>" alt="Logo"></div><?php endif; ?>
+                    <div>
+                        <p class="brand-name"><?php echo htmlspecialchars($companyName); ?></p>
+                        <div class="brand-meta">
+                            <?php if ($companyAddress): ?><div><?php echo htmlspecialchars($companyAddress); ?></div><?php endif; ?>
+                            <div>
+                                <?php echo htmlspecialchars($companyPhone); ?><?php echo ($companyPhone && $companyEmail) ? ' &middot; ' : ''; ?><?php echo htmlspecialchars($companyEmail); ?>
+                            </div>
                         </div>
                     </div>
                 </div>
+                <div style="text-align:right;">
+                    <p class="invoice-tag">INVOICE</p>
+                    <div class="invoice-no">No. <?php echo htmlspecialchars($invoice['invoice_no']); ?></div>
+                    <div><span class="status-badge" style="background:<?php echo $statusBg; ?>;color:<?php echo $statusColor; ?>;"><?php echo $statusLabel; ?></span></div>
+                </div>
             </div>
-            <div style="text-align:right;">
-                <p class="invoice-tag">INVOICE</p>
-                <div class="invoice-no">No. <?php echo htmlspecialchars($invoice['invoice_no']); ?></div>
-                <div><span class="status-badge" style="background:<?php echo $statusBg; ?>;color:<?php echo $statusColor; ?>;"><?php echo $statusLabel; ?></span></div>
-            </div>
-        </div>
 
-        <div class="info-cols">
-            <div class="info-box">
-                <div class="info-title">Ditagihkan Kepada</div>
-                <div class="cust-name"><?php echo htmlspecialchars($invoice['customer_name']); ?></div>
-                <div class="cust-detail">
-                    <?php if (!empty($invoice['customer_phone'])): ?><?php echo htmlspecialchars($invoice['customer_phone']); ?><br><?php endif; ?>
+            <div class="info-cols">
+                <div class="info-box">
+                    <div class="info-title">Ditagihkan Kepada</div>
+                    <div class="cust-name"><?php echo htmlspecialchars($invoice['customer_name']); ?></div>
+                    <div class="cust-detail">
+                        <?php if (!empty($invoice['customer_phone'])): ?><?php echo htmlspecialchars($invoice['customer_phone']); ?><br><?php endif; ?>
                     <?php if (!empty($invoice['customer_email'])): ?><?php echo htmlspecialchars($invoice['customer_email']); ?><br><?php endif; ?>
-                    <?php if (!empty($invoice['customer_address']) || !empty($invoice['customer_city'])): ?>
-                        <?php echo htmlspecialchars(trim($invoice['customer_address'] . ' ' . $invoice['customer_city'])); ?>
+                <?php if (!empty($invoice['customer_address']) || !empty($invoice['customer_city'])): ?>
+                    <?php echo htmlspecialchars(trim($invoice['customer_address'] . ' ' . $invoice['customer_city'])); ?>
+                <?php endif; ?>
+                    </div>
+                </div>
+                <div class="info-box meta-list">
+                    <div class="info-title">Detail Invoice</div>
+                    <div class="meta-row"><span>Tanggal Invoice</span><b><?php echo date('d M Y', strtotime($invoice['issued_at'] ?: $invoice['created_at'])); ?></b></div>
+                    <div class="meta-row"><span>Jatuh Tempo</span><b><?php echo $invoice['due_date'] ? date('d M Y', strtotime($invoice['due_date'])) : '-'; ?></b></div>
+                    <div class="meta-row"><span>Jumlah Pax</span><b><?php echo (int)$invoice['pax_count']; ?> orang</b></div>
+                    <?php if ($invoice['trip_date']): ?>
+                        <div class="meta-row"><span>Tanggal Trip</span><b><?php echo date('d M Y', strtotime($invoice['trip_date'])); ?><?php echo $invoice['trip_end_date'] ? ' - ' . date('d M Y', strtotime($invoice['trip_end_date'])) : ''; ?></b></div>
+                    <?php endif; ?>
+                    <?php if ($linkedBooking): ?>
+                        <div class="meta-row"><span>No. Booking</span><b><?php echo htmlspecialchars($linkedBooking['booking_no']); ?></b></div>
                     <?php endif; ?>
                 </div>
             </div>
-            <div class="info-box meta-list">
-                <div class="info-title">Detail Invoice</div>
-                <div class="meta-row"><span>Tanggal Invoice</span><b><?php echo date('d M Y', strtotime($invoice['issued_at'] ?: $invoice['created_at'])); ?></b></div>
-                <div class="meta-row"><span>Jatuh Tempo</span><b><?php echo $invoice['due_date'] ? date('d M Y', strtotime($invoice['due_date'])) : '-'; ?></b></div>
-                <div class="meta-row"><span>Jumlah Pax</span><b><?php echo (int)$invoice['pax_count']; ?> orang</b></div>
-                <?php if ($invoice['trip_date']): ?>
-                    <div class="meta-row"><span>Tanggal Trip</span><b><?php echo date('d M Y', strtotime($invoice['trip_date'])); ?><?php echo $invoice['trip_end_date'] ? ' - ' . date('d M Y', strtotime($invoice['trip_end_date'])) : ''; ?></b></div>
-                <?php endif; ?>
-                <?php if ($linkedBooking): ?>
-                    <div class="meta-row"><span>No. Booking</span><b><?php echo htmlspecialchars($linkedBooking['booking_no']); ?></b></div>
-                <?php endif; ?>
-            </div>
-        </div>
 
-        <table>
-            <thead>
-                <tr>
-                    <th>#</th>
-                    <th>Keterangan</th>
-                    <th>Qty</th>
-                    <th>Harga</th>
-                    <th>Subtotal</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach ($invItems as $idx => $item): ?>
+            <table>
+                <thead>
                     <tr>
-                        <td><?php echo $idx + 1; ?></td>
-                        <td><?php echo htmlspecialchars($item['description']); ?></td>
-                        <td><?php echo $item['qty'] == (int)$item['qty'] ? (int)$item['qty'] : (float)$item['qty']; ?> <?php echo htmlspecialchars($item['unit']); ?></td>
-                        <td><?php echo sunseaRupiah((float)$item['unit_price']); ?></td>
-                        <td><?php echo sunseaRupiah((float)$item['subtotal']); ?></td>
+                        <th>#</th>
+                        <th>Keterangan</th>
+                        <th>Qty</th>
+                        <th>Harga</th>
+                        <th>Subtotal</th>
                     </tr>
-                <?php endforeach; ?>
-                <?php if (empty($invItems)): ?>
-                    <tr>
-                        <td colspan="5" style="text-align:center;color:#94a3b8;">Belum ada item.</td>
-                    </tr>
-                <?php endif; ?>
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    <?php foreach ($invItems as $idx => $item): ?>
+                        <tr>
+                            <td><?php echo $idx + 1; ?></td>
+                            <td><?php echo htmlspecialchars($item['description']); ?></td>
+                            <td><?php echo $item['qty'] == (int)$item['qty'] ? (int)$item['qty'] : (float)$item['qty']; ?> <?php echo htmlspecialchars($item['unit']); ?></td>
+                            <td><?php echo sunseaRupiah((float)$item['unit_price']); ?></td>
+                            <td><?php echo sunseaRupiah((float)$item['subtotal']); ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                    <?php if (empty($invItems)): ?>
+                        <tr>
+                            <td colspan="5" style="text-align:center;color:#94a3b8;">Belum ada item.</td>
+                        </tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
 
-        <div class="bottom-flex">
-            <div class="bank-box">
-                <?php if ($bankName || $bankAccount): ?>
-                    <div class="bank-card"><b>Transfer ke:</b> <?php echo htmlspecialchars($bankName ?: '-'); ?> &mdash; <?php echo htmlspecialchars($bankAccount ?: '-'); ?> a.n. <?php echo htmlspecialchars($bankHolder ?: '-'); ?></div>
-                <?php endif; ?>
-                <?php if ($bankName2 || $bankAccount2): ?>
-                    <div class="bank-card"><b>Transfer ke:</b> <?php echo htmlspecialchars($bankName2 ?: '-'); ?> &mdash; <?php echo htmlspecialchars($bankAccount2 ?: '-'); ?> a.n. <?php echo htmlspecialchars($bankHolder2 ?: '-'); ?></div>
-                <?php endif; ?>
-                <?php if ($invoice['notes']): ?><div style="margin-top:6px;"><strong>Catatan:</strong> <?php echo nl2br(htmlspecialchars($invoice['notes'])); ?></div><?php endif; ?>
+            <div class="bottom-flex">
+                <div class="bank-box">
+                    <?php if ($bankName || $bankAccount): ?>
+                        <div class="bank-card"><b>Transfer ke:</b> <?php echo htmlspecialchars($bankName ?: '-'); ?> &mdash; <?php echo htmlspecialchars($bankAccount ?: '-'); ?> a.n. <?php echo htmlspecialchars($bankHolder ?: '-'); ?></div>
+                    <?php endif; ?>
+                    <?php if ($bankName2 || $bankAccount2): ?>
+                        <div class="bank-card"><b>Transfer ke:</b> <?php echo htmlspecialchars($bankName2 ?: '-'); ?> &mdash; <?php echo htmlspecialchars($bankAccount2 ?: '-'); ?> a.n. <?php echo htmlspecialchars($bankHolder2 ?: '-'); ?></div>
+                    <?php endif; ?>
+                    <?php if ($invoice['notes']): ?><div style="margin-top:6px;"><strong>Catatan:</strong> <?php echo nl2br(htmlspecialchars($invoice['notes'])); ?></div><?php endif; ?>
+                </div>
+                <div class="total">
+                    <div class="row"><span>Subtotal</span><strong><?php echo sunseaRupiah((float)$invoice['subtotal']); ?></strong></div>
+                    <?php if ($invoice['discount_amount'] > 0): ?>
+                        <div class="row"><span>Diskon</span><strong>-<?php echo sunseaRupiah((float)$invoice['discount_amount']); ?></strong></div>
+                    <?php endif; ?>
+                    <div class="row"><span>PPN <?php echo (float)$invoice['tax_pct']; ?>%</span><strong><?php echo sunseaRupiah((float)$invoice['tax_amount']); ?></strong></div>
+                    <div class="row final"><span>TOTAL</span><strong><?php echo sunseaRupiah((float)$invoice['total_amount']); ?></strong></div>
+                    <?php if ($invoice['paid_amount'] > 0): ?>
+                        <div class="row" style="margin-top:8px;"><span>Terbayar</span><strong style="color:#15803D;"><?php echo sunseaRupiah((float)$invoice['paid_amount']); ?></strong></div>
+                        <div class="row"><span><?php echo $computedRemaining > 0 ? 'Sisa Tagihan' : '&check; Lunas'; ?></span><strong style="color:<?php echo $computedRemaining > 0 ? '#B91C1C' : '#15803D'; ?>;"><?php echo sunseaRupiah($computedRemaining); ?></strong></div>
+                    <?php endif; ?>
+                </div>
             </div>
-            <div class="total">
-                <div class="row"><span>Subtotal</span><strong><?php echo sunseaRupiah((float)$invoice['subtotal']); ?></strong></div>
-                <?php if ($invoice['discount_amount'] > 0): ?>
-                    <div class="row"><span>Diskon</span><strong>-<?php echo sunseaRupiah((float)$invoice['discount_amount']); ?></strong></div>
-                <?php endif; ?>
-                <div class="row"><span>PPN <?php echo (float)$invoice['tax_pct']; ?>%</span><strong><?php echo sunseaRupiah((float)$invoice['tax_amount']); ?></strong></div>
-                <div class="row final"><span>TOTAL</span><strong><?php echo sunseaRupiah((float)$invoice['total_amount']); ?></strong></div>
-                <?php if ($invoice['paid_amount'] > 0): ?>
-                    <div class="row" style="margin-top:8px;"><span>Terbayar</span><strong style="color:#15803D;"><?php echo sunseaRupiah((float)$invoice['paid_amount']); ?></strong></div>
-                    <div class="row"><span><?php echo $invoice['remaining_amount'] > 0 ? 'Sisa Tagihan' : '&check; Lunas'; ?></span><strong style="color:<?php echo $invoice['remaining_amount'] > 0 ? '#B91C1C' : '#15803D'; ?>;"><?php echo sunseaRupiah((float)$invoice['remaining_amount']); ?></strong></div>
-                <?php endif; ?>
+
+            <?php if ($invoiceNotes): ?>
+                <div class="terms-box">
+                    <div class="terms-title">Ketentuan &amp; Catatan</div>
+                    <div style="font-size:10.5px;color:#475569;line-height:1.7;"><?php echo nl2br(htmlspecialchars($invoiceNotes)); ?></div>
+                </div>
+            <?php endif; ?>
+
+            <div class="signature-area">
+                <div class="notes-col"></div>
+                <div class="sign-col">
+                    <div class="sign-place"><?php echo date('d M Y'); ?></div>
+                    <div>Hormat kami,</div>
+                    <?php if ($stampSrc): ?><img class="stamp-img" src="<?php echo htmlspecialchars($stampSrc); ?>" alt="Stempel"><?php endif; ?>
+                    <div class="sign-line"><?php echo htmlspecialchars($companyName); ?></div>
+                </div>
             </div>
-        </div>
 
-        <?php if ($invoiceNotes): ?>
-            <div class="terms-box">
-                <div class="terms-title">Ketentuan &amp; Catatan</div>
-                <div style="font-size:10.5px;color:#475569;line-height:1.7;"><?php echo nl2br(htmlspecialchars($invoiceNotes)); ?></div>
-            </div>
-        <?php endif; ?>
+            <div class="thanks-note">Terima kasih atas kepercayaan Anda memilih <?php echo htmlspecialchars($companyName); ?></div>
 
-        <div class="signature-area">
-            <div class="notes-col"></div>
-            <div class="sign-col">
-                <div class="sign-place"><?php echo date('d M Y'); ?></div>
-                <div>Hormat kami,</div>
-                <?php if ($stampSrc): ?><img class="stamp-img" src="<?php echo htmlspecialchars($stampSrc); ?>" alt="Stempel"><?php endif; ?>
-                <div class="sign-line"><?php echo htmlspecialchars($companyName); ?></div>
-            </div>
-        </div>
-
-        <div class="thanks-note">Terima kasih atas kepercayaan Anda memilih <?php echo htmlspecialchars($companyName); ?></div>
-
-        <?php if ($footer): ?><div class="footer-note"><?php echo nl2br(htmlspecialchars($footer)); ?></div><?php endif; ?>
+            <?php if ($footer): ?><div class="footer-note"><?php echo nl2br(htmlspecialchars($footer)); ?></div><?php endif; ?>
         </div>
     </body>
 
