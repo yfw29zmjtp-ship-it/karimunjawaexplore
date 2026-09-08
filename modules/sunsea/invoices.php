@@ -458,6 +458,8 @@ if ($action === 'print' && $invoice):
                 box-shadow: 0 4px 18px rgba(15, 23, 42, .12);
                 position: relative;
                 overflow: hidden;
+                display: flex;
+                flex-direction: column;
             }
 
             .watermark {
@@ -787,7 +789,7 @@ if ($action === 'print' && $invoice):
 
             .footer-note {
                 clear: both;
-                margin-top: 26px;
+                margin-top: auto;
                 padding-top: 12px;
                 border-top: 1px dashed #E2E8F0;
                 font-size: 10.5px;
@@ -797,10 +799,17 @@ if ($action === 'print' && $invoice):
             }
 
             .footer-contact {
-                margin-top: 4px;
+                margin-top: 6px;
                 font-style: normal;
                 font-weight: 700;
                 color: #475569;
+                display: flex;
+                flex-direction: column;
+                gap: 3px;
+            }
+
+            .footer-contact-name {
+                margin-bottom: 2px;
             }
 
             .thanks-note {
@@ -820,7 +829,7 @@ if ($action === 'print' && $invoice):
 
                 .page {
                     width: auto;
-                    min-height: 0;
+                    min-height: 269mm;
                     margin: 0;
                     padding: 0;
                     box-shadow: none;
@@ -943,7 +952,9 @@ if ($action === 'print' && $invoice):
             <div class="footer-note">
                 <div>Dokumen ini merupakan bukti pembayaran yang sah dan dicetak melalui sistem Karimunjawa Explore. Jika Anda mengalami kendala atau membutuhkan bantuan, silakan hubungi:</div>
                 <div class="footer-contact">
-                    Karimunjawa Explore<?php echo $companyPhone ? ' &middot; ' . htmlspecialchars($companyPhone) : ''; ?><?php echo $companyEmail ? ' &middot; ' . htmlspecialchars($companyEmail) : ''; ?>
+                    <div class="footer-contact-name">Karimunjawa Explore</div>
+                    <?php if ($companyPhone): ?><div>&#9742; <?php echo htmlspecialchars($companyPhone); ?></div><?php endif; ?>
+                    <?php if ($companyEmail): ?><div>&#9993; <?php echo htmlspecialchars($companyEmail); ?></div><?php endif; ?>
                 </div>
                 <?php if ($footer): ?><div style="margin-top:6px;"><?php echo nl2br(htmlspecialchars($footer)); ?></div><?php endif; ?>
             </div>
