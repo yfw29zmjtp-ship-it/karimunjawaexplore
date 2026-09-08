@@ -66,6 +66,12 @@ if (isset($pdo)) {
             $__selected = json_decode((string)$__menuJson, true);
             if (is_array($__selected) && !empty($__selected)) {
                 $visibleMenuKeys = array_values(array_intersect(array_keys($sunseaNavItems), $__selected));
+                // Always show newly-added menus even for sidebar configs saved before they existed.
+                foreach (['website_settings'] as $__newKey) {
+                    if (isset($sunseaNavItems[$__newKey]) && !in_array($__newKey, $visibleMenuKeys, true)) {
+                        $visibleMenuKeys[] = $__newKey;
+                    }
+                }
             }
         }
     } catch (Exception $__e) { /* settings table may not exist yet */

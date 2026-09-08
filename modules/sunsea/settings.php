@@ -66,6 +66,7 @@ $sidebarMenuOptions = [
     'invoices'     => 'Invoice',
     'finance'      => 'Finance (Kas Operasional)',
     'settings'     => 'Pengaturan',
+    'website_settings' => 'Setting Website',
 ];
 
 // Handle POST
