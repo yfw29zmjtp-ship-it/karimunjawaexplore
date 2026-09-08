@@ -190,10 +190,12 @@ if (!empty($_COOKIE['adf_saved_user'])) {
 
 // If already logged in, redirect to dashboard
 // But allow POST login_type=owner to re-login as owner
+// ?view=system forces the main staff dashboard even for owner/admin/developer roles (used by the public "Login Admin" link).
 if ($auth->isLoggedIn() && !isPost()) {
-    // If user role is owner/admin/developer, go to owner dashboard
     $currentRole = $_SESSION['role'] ?? '';
-    if (in_array($currentRole, ['owner', 'admin', 'developer'])) {
+    if (($_GET['view'] ?? '') === 'system') {
+        redirect(BASE_URL . '/index.php');
+    } elseif (in_array($currentRole, ['owner', 'admin', 'developer'])) {
         redirect(BASE_URL . '/modules/sunsea/owner-dashboard.php');
     } else {
         redirect(BASE_URL . '/index.php');
