@@ -458,8 +458,6 @@ if ($action === 'print' && $invoice):
                 box-shadow: 0 4px 18px rgba(15, 23, 42, .12);
                 position: relative;
                 overflow: hidden;
-                display: flex;
-                flex-direction: column;
             }
 
             .watermark {
@@ -789,7 +787,7 @@ if ($action === 'print' && $invoice):
 
             .footer-note {
                 clear: both;
-                margin-top: auto;
+                margin-top: 60px;
                 padding-top: 12px;
                 border-top: 1px dashed #E2E8F0;
                 font-size: 10.5px;
@@ -812,6 +810,14 @@ if ($action === 'print' && $invoice):
                 margin-bottom: 2px;
             }
 
+            .footer-adf-system {
+                margin-top: 14px;
+                font-size: 8px;
+                font-style: normal;
+                color: #cbd5e1;
+                text-align: center;
+            }
+
             .thanks-note {
                 text-align: center;
                 margin-top: 10px;
@@ -829,7 +835,7 @@ if ($action === 'print' && $invoice):
 
                 .page {
                     width: auto;
-                    min-height: 269mm;
+                    min-height: 0;
                     margin: 0;
                     padding: 0;
                     box-shadow: none;
@@ -957,6 +963,7 @@ if ($action === 'print' && $invoice):
                     <?php if ($companyEmail): ?><div>&#9993; <?php echo htmlspecialchars($companyEmail); ?></div><?php endif; ?>
                 </div>
                 <?php if ($footer): ?><div style="margin-top:6px;"><?php echo nl2br(htmlspecialchars($footer)); ?></div><?php endif; ?>
+                <div class="footer-adf-system">Sistem Manajemen Sunsea &middot; ADF System</div>
             </div>
         </div>
     </body>
