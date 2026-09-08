@@ -20,60 +20,116 @@ if ($pkgId > 0) {
     $galleryStmt->execute([$pkg['id']]);
     $pkgGallery = $galleryStmt->fetchAll();
 
+    // Pecah teks multi-baris (dari textarea admin) jadi array baris bersih, buang bullet lama & baris kosong.
+    $weSplitLines = function (?string $text): array {
+        $lines = preg_split('/\r\n|\r|\n/', (string)$text);
+        $out = [];
+        foreach ($lines as $line) {
+            $line = trim($line);
+            $line = ltrim($line, "-•*  \t");
+            $line = trim($line);
+            if ($line !== '') $out[] = $line;
+        }
+        return $out;
+    };
+    $pkgIncludes  = $weSplitLines($pkg['includes'] ?? '');
+    $pkgExcludes  = $weSplitLines($pkg['excludes'] ?? '');
+    $pkgItinerary = $weSplitLines($pkg['itinerary'] ?? '');
+
     $pageTitle = $pkg['name'];
     $activeNav = 'paket';
     require __DIR__ . '/includes/website-header.php';
 ?>
     <section class="we-section">
-        <div class="we-container" style="max-width:820px;">
-            <a href="paket-wisata.php" style="color:var(--we-ocean);font-size:13px;font-weight:700;">&larr; Kembali ke Semua Paket</a>
+        <div class="we-container" style="max-width:1080px;">
+            <a href="paket-wisata.php" class="we-pkg-back">&larr; Kembali ke Semua Paket</a>
 
             <?php if (!empty($pkg['cover_image'])): ?>
-                <img src="<?php echo htmlspecialchars(sunseaAssetUrl($pkg['cover_image'])); ?>" alt="<?php echo htmlspecialchars($pkg['name']); ?>" style="width:100%;height:280px;object-fit:cover;border-radius:14px;margin:16px 0 22px;display:block;">
+                <img src="<?php echo htmlspecialchars(sunseaAssetUrl($pkg['cover_image'])); ?>" alt="<?php echo htmlspecialchars($pkg['name']); ?>" class="we-pkg-hero-img">
             <?php else: ?>
-                <div class="we-card-img" style="height:220px;border-radius:14px;margin:16px 0 22px;font-size:60px;">🏝️</div>
+                <div class="we-card-img we-pkg-hero-img" style="font-size:60px;">🏝️</div>
             <?php endif; ?>
 
-            <h1 style="font-size:26px;font-weight:800;color:var(--we-brand-dark);margin:0 0 8px;"><?php echo htmlspecialchars($pkg['name']); ?></h1>
-            <div class="we-card-meta" style="font-size:13.5px;margin-bottom:18px;">
-                <?php echo (int)$pkg['duration_days']; ?>H<?php echo (int)$pkg['duration_nights']; ?>M
-                &middot; <?php echo htmlspecialchars(ucwords(str_replace('_', ' ', $pkg['category']))); ?>
-                &middot; Min. <?php echo (int)$pkg['min_pax']; ?> - Maks. <?php echo (int)$pkg['max_pax']; ?> pax
+            <div class="we-pkg-header">
+                <div>
+                    <h1 class="we-pkg-title"><?php echo htmlspecialchars($pkg['name']); ?></h1>
+                    <div class="we-pkg-badges">
+                        <span class="we-pkg-badge">📅 <?php echo (int)$pkg['duration_days']; ?>H<?php echo (int)$pkg['duration_nights']; ?>M</span>
+                        <span class="we-pkg-badge">🏷️ <?php echo htmlspecialchars(ucwords(str_replace('_', ' ', $pkg['category']))); ?></span>
+                        <span class="we-pkg-badge">👥 Min. <?php echo (int)$pkg['min_pax']; ?> – Maks. <?php echo (int)$pkg['max_pax']; ?> pax</span>
+                    </div>
+                </div>
             </div>
 
-            <div class="we-card-price" style="font-size:22px;margin-bottom:22px;"><?php echo sunseaRupiah((float)$pkg['base_price']); ?> <span style="font-size:12px;color:var(--we-muted);font-weight:400;">/ pax</span></div>
-
-            <?php if ($pkg['description']): ?>
-                <p style="line-height:1.8;color:var(--we-text);"><?php echo nl2br(htmlspecialchars($pkg['description'])); ?></p>
-            <?php endif; ?>
-
-            <?php if ($pkg['includes']): ?>
-                <h3 style="color:var(--we-brand-dark);font-size:15px;margin-top:24px;">Termasuk</h3>
-                <p style="line-height:1.8;color:var(--we-text);white-space:pre-line;"><?php echo htmlspecialchars($pkg['includes']); ?></p>
-            <?php endif; ?>
-
-            <?php if ($pkg['excludes']): ?>
-                <h3 style="color:var(--we-brand-dark);font-size:15px;margin-top:18px;">Tidak Termasuk</h3>
-                <p style="line-height:1.8;color:var(--we-text);white-space:pre-line;"><?php echo htmlspecialchars($pkg['excludes']); ?></p>
-            <?php endif; ?>
-
-            <?php if ($pkg['itinerary']): ?>
-                <h3 style="color:var(--we-brand-dark);font-size:15px;margin-top:18px;">Itinerary</h3>
-                <p style="line-height:1.8;color:var(--we-text);white-space:pre-line;"><?php echo htmlspecialchars($pkg['itinerary']); ?></p>
-            <?php endif; ?>
-
-            <?php if ($pkgGallery): ?>
-                <h3 style="color:var(--we-brand-dark);font-size:15px;margin-top:24px;">Galeri Trip</h3>
-                <div class="we-gallery-grid" style="margin-top:12px;">
-                    <?php foreach ($pkgGallery as $gp): ?>
-                        <div class="we-gallery-item" style="background:none;">
-                            <img src="<?php echo htmlspecialchars(sunseaAssetUrl($gp['image_path'])); ?>" alt="<?php echo htmlspecialchars($gp['caption'] ?? ''); ?>" style="width:100%;height:100%;object-fit:cover;border-radius:10px;">
+            <div class="we-pkg-grid">
+                <div>
+                    <?php if ($pkg['description']): ?>
+                        <div class="we-pkg-section">
+                            <h3 class="we-pkg-section-title">📝 Deskripsi Paket</h3>
+                            <p class="we-pkg-desc"><?php echo nl2br(htmlspecialchars(trim($pkg['description']))); ?></p>
                         </div>
-                    <?php endforeach; ?>
-                </div>
-            <?php endif; ?>
+                    <?php endif; ?>
 
-            <a href="kontak.php?package_id=<?php echo (int)$pkg['id']; ?>" class="we-btn we-btn-primary" style="margin-top:26px;">Booking Paket Ini</a>
+                    <?php if ($pkgIncludes): ?>
+                        <div class="we-pkg-section">
+                            <h3 class="we-pkg-section-title">✅ Harga Sudah Termasuk</h3>
+                            <ul class="we-pkg-list">
+                                <?php foreach ($pkgIncludes as $line): ?>
+                                    <li><?php echo htmlspecialchars($line); ?></li>
+                                <?php endforeach; ?>
+                            </ul>
+                        </div>
+                    <?php endif; ?>
+
+                    <?php if ($pkgExcludes): ?>
+                        <div class="we-pkg-section">
+                            <h3 class="we-pkg-section-title">🚫 Tidak Termasuk</h3>
+                            <ul class="we-pkg-list we-pkg-list-x">
+                                <?php foreach ($pkgExcludes as $line): ?>
+                                    <li><?php echo htmlspecialchars($line); ?></li>
+                                <?php endforeach; ?>
+                            </ul>
+                        </div>
+                    <?php endif; ?>
+
+                    <?php if ($pkgItinerary): ?>
+                        <div class="we-pkg-section">
+                            <h3 class="we-pkg-section-title">🗺️ Itinerary</h3>
+                            <ul class="we-pkg-itinerary">
+                                <?php foreach ($pkgItinerary as $line): ?>
+                                    <li><?php echo htmlspecialchars($line); ?></li>
+                                <?php endforeach; ?>
+                            </ul>
+                        </div>
+                    <?php endif; ?>
+
+                    <?php if ($pkgGallery): ?>
+                        <div class="we-pkg-section">
+                            <h3 class="we-pkg-section-title">📸 Galeri Trip</h3>
+                            <div class="we-gallery-grid">
+                                <?php foreach ($pkgGallery as $gp): ?>
+                                    <div class="we-gallery-item" style="background:none;">
+                                        <img src="<?php echo htmlspecialchars(sunseaAssetUrl($gp['image_path'])); ?>" alt="<?php echo htmlspecialchars($gp['caption'] ?? ''); ?>" style="width:100%;height:100%;object-fit:cover;border-radius:10px;">
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+                </div>
+
+                <div class="we-pkg-sidebar">
+                    <div class="we-pkg-price-label">Harga mulai dari</div>
+                    <div class="we-pkg-price"><?php echo sunseaRupiah((float)$pkg['base_price']); ?> <span>/ pax</span></div>
+
+                    <div class="we-pkg-sidebar-meta">
+                        <div class="we-pkg-sidebar-meta-row"><span>Durasi</span><span><?php echo (int)$pkg['duration_days']; ?> Hari <?php echo (int)$pkg['duration_nights']; ?> Malam</span></div>
+                        <div class="we-pkg-sidebar-meta-row"><span>Tipe Trip</span><span><?php echo htmlspecialchars(ucwords(str_replace('_', ' ', $pkg['category']))); ?></span></div>
+                        <div class="we-pkg-sidebar-meta-row"><span>Kapasitas</span><span><?php echo (int)$pkg['min_pax']; ?>–<?php echo (int)$pkg['max_pax']; ?> pax</span></div>
+                    </div>
+
+                    <a href="kontak.php?package_id=<?php echo (int)$pkg['id']; ?>" class="we-btn we-btn-primary">Booking Paket Ini</a>
+                </div>
+            </div>
         </div>
     </section>
 <?php
