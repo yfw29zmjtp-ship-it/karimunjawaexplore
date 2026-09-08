@@ -811,10 +811,7 @@ if ($action === 'print' && $invoice):
             }
 
             .footer-adf-system {
-                position: absolute;
-                left: 0;
-                right: 0;
-                bottom: 8mm;
+                margin-top: 14px;
                 font-size: 8px;
                 font-style: normal;
                 color: #cbd5e1;
@@ -838,7 +835,7 @@ if ($action === 'print' && $invoice):
 
                 .page {
                     width: auto;
-                    min-height: 297mm;
+                    min-height: 0;
                     margin: 0;
                     padding: 0;
                     box-shadow: none;
