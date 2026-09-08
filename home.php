@@ -7,6 +7,10 @@ $featuredPackages = $pdo->query(
     "SELECT id, code, name, category, duration_days, duration_nights, base_price, cover_image
      FROM trip_packages WHERE is_active = 1 ORDER BY id DESC LIMIT 3"
 )->fetchAll();
+$weAllPackages = $pdo->query(
+    "SELECT id, name, duration_days, duration_nights
+     FROM trip_packages WHERE is_active = 1 ORDER BY name ASC"
+)->fetchAll();
 
 $weHeroTitle = sunseaSetting($pdo, 'website_hero_title', 'Jelajahi Keindahan Karimunjawa Bersama Kami');
 $weHeroSubtitle = sunseaSetting($pdo, 'website_hero_subtitle', 'Paket wisata open trip & private trip, island hopping, penginapan, hingga transport laut/darat — kami urus, Anda tinggal menikmati liburan.');
@@ -20,17 +24,17 @@ $weHeroStyle = $weHeroBg
 // muncul di menu Penawaran admin dengan notifikasi dot merah.
 $weQuoteSuccessMsg = '';
 $weQuoteErrorMsg = '';
-$weQuoteOld = ['name' => '', 'phone' => '', 'trip_date' => '', 'pax' => 2, 'service_type' => ''];
+$weQuoteOld = ['name' => '', 'phone' => '', 'trip_date' => '', 'pax' => 2, 'package_id' => ''];
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['we_action'] ?? '') === 'quick_quote') {
     $qName = trim($_POST['q_name'] ?? '');
     $qPhone = trim($_POST['q_phone'] ?? '');
     $qDate = trim($_POST['q_trip_date'] ?? '');
     $qPax = max(1, (int)($_POST['q_pax'] ?? 1));
-    $qService = trim($_POST['q_service_type'] ?? '');
-    $weQuoteOld = ['name' => $qName, 'phone' => $qPhone, 'trip_date' => $qDate, 'pax' => $qPax, 'service_type' => $qService];
+    $qPackageId = (int)($_POST['q_package_id'] ?? 0);
+    $weQuoteOld = ['name' => $qName, 'phone' => $qPhone, 'trip_date' => $qDate, 'pax' => $qPax, 'package_id' => $qPackageId];
 
-    if ($qName === '' || $qPhone === '' || $qDate === '' || $qService === '') {
-        $weQuoteErrorMsg = 'Nama, No. WhatsApp, Tanggal Trip, dan Tipe Layanan wajib diisi.';
+    if ($qName === '' || $qPhone === '' || $qDate === '' || $qPackageId <= 0) {
+        $weQuoteErrorMsg = 'Nama, No. WhatsApp, Tanggal Trip, dan Pilihan Paket wajib diisi.';
     } else {
         try {
             $custStmt = $pdo->prepare("SELECT id FROM customers WHERE phone = ? OR whatsapp = ? LIMIT 1");
@@ -49,13 +53,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['we_action'] ?? '') === 'qu
                 $qCustomerId = (int)$pdo->lastInsertId();
             }
 
+            $qPackageName = $pdo->prepare("SELECT name FROM trip_packages WHERE id = ?");
+            $qPackageName->execute([$qPackageId]);
+            $qPackageName = $qPackageName->fetchColumn() ?: '-';
+
             $qNo = sunseaNextNumber($pdo, 'quotation');
-            $qNotes = "[Website] Permintaan penawaran cepat.\nTipe Layanan: " . $qService;
-            $pdo->prepare("INSERT INTO quotations (quotation_no, customer_id, trip_date, pax_count, notes, valid_until, created_by) VALUES (?,?,?,?,?,?,?)")
-                ->execute([$qNo, $qCustomerId, $qDate, $qPax, $qNotes, date('Y-m-d', strtotime('+7 days')), 'website']);
+            $qNotes = "[Website] Permintaan penawaran cepat.\nPaket: " . $qPackageName;
+            $pdo->prepare("INSERT INTO quotations (quotation_no, customer_id, package_id, trip_date, pax_count, notes, valid_until, created_by) VALUES (?,?,?,?,?,?,?,?)")
+                ->execute([$qNo, $qCustomerId, $qPackageId, $qDate, $qPax, $qNotes, date('Y-m-d', strtotime('+7 days')), 'website']);
 
             $weQuoteSuccessMsg = "Terima kasih, {$qName}! Permintaan penawaran Anda (No. {$qNo}) sudah kami terima. Tim kami akan segera menghubungi Anda via WhatsApp.";
-            $weQuoteOld = ['name' => '', 'phone' => '', 'trip_date' => '', 'pax' => 2, 'service_type' => ''];
+            $weQuoteOld = ['name' => '', 'phone' => '', 'trip_date' => '', 'pax' => 2, 'package_id' => ''];
         } catch (Throwable $e) {
             error_log('home.php quick_quote error: ' . $e->getMessage());
             $weQuoteErrorMsg = 'Maaf, terjadi kendala saat mengirim permintaan. Silakan coba lagi atau hubungi kami langsung.';
@@ -89,7 +97,7 @@ require __DIR__ . '/includes/website-header.php';
 
         <form method="POST" action="home.php#weQuoteForm" class="we-quotebar" id="weQuoteForm">
             <input type="hidden" name="we_action" value="quick_quote">
-            <div class="we-quotebar-field">
+            <div class="we-quotebar-field we-quotebar-field-date">
                 <label>Tanggal Trip</label>
                 <input type="date" name="q_trip_date" required min="<?php echo date('Y-m-d'); ?>" value="<?php echo htmlspecialchars($weQuoteOld['trip_date']); ?>">
             </div>
@@ -98,11 +106,12 @@ require __DIR__ . '/includes/website-header.php';
                 <input type="number" name="q_pax" min="1" required value="<?php echo (int)$weQuoteOld['pax']; ?>">
             </div>
             <div class="we-quotebar-field">
-                <label>Tipe Layanan</label>
-                <select name="q_service_type" required>
-                    <option value="">Pilih Tipe</option>
-                    <?php foreach (['Open Trip', 'Private Trip', 'Island Hopping', 'Custom / Belum Tentu'] as $svc): ?>
-                        <option value="<?php echo htmlspecialchars($svc); ?>" <?php echo $weQuoteOld['service_type'] === $svc ? 'selected' : ''; ?>><?php echo htmlspecialchars($svc); ?></option>
+                <label>Pilih Paket</label>
+                <select name="q_package_id" required>
+                    <option value="">Pilih Paket</option>
+                    <?php foreach ($weAllPackages as $pkg): ?>
+                        <?php $pkgLabel = $pkg['duration_days'] . 'H' . $pkg['duration_nights'] . 'M - ' . $pkg['name']; ?>
+                        <option value="<?php echo (int)$pkg['id']; ?>" <?php echo (string)$weQuoteOld['package_id'] === (string)$pkg['id'] ? 'selected' : ''; ?>><?php echo htmlspecialchars($pkgLabel); ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>

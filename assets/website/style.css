@@ -164,9 +164,13 @@ a {
   box-shadow: 0 20px 50px rgba(15, 23, 42, 0.18);
   padding: 22px 26px;
   display: grid;
-  grid-template-columns: 1fr 1fr 1.4fr auto;
+  grid-template-columns: 0.7fr 0.6fr 1.6fr auto;
   gap: 18px;
   align-items: end;
+}
+.we-quotebar-field-date input {
+  padding: 8px 10px;
+  font-size: 13px;
 }
 .we-quotebar-field label {
   display: block;
