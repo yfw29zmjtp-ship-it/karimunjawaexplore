@@ -406,20 +406,20 @@ if ($action === 'print' && $invoice):
     $statusLabel = 'BELUM LUNAS';
     $statusBg    = '#FEE2E2';
     $statusColor = '#B91C1C';
-    $watermarkLabel = 'BELUM LUNAS';
+    $watermarkLabel = 'UNPAID';
     $watermarkColor = '#DC2626';
     if ($computedRemaining <= 0 || $invoice['status'] === 'paid') {
         $statusLabel = 'LUNAS';
         $statusBg    = '#DCFCE7';
         $statusColor = '#15803D';
-        $watermarkLabel = 'LUNAS';
+        $watermarkLabel = 'PAID';
         $watermarkColor = '#16A34A';
     } elseif ((float)$invoice['paid_amount'] > 0 || $invoice['status'] === 'partial') {
         $statusLabel = 'DP / PARTIAL';
         $statusBg    = '#FEF3C7';
         $statusColor = '#B45309';
-        $watermarkLabel = 'BELUM LUNAS';
-        $watermarkColor = '#DC2626';
+        $watermarkLabel = 'DOWN PAYMENT';
+        $watermarkColor = '#D97706';
     }
 ?>
     <!DOCTYPE html>
@@ -465,9 +465,9 @@ if ($action === 'print' && $invoice):
                 top: 45%;
                 left: 50%;
                 transform: translate(-50%, -50%) rotate(-28deg);
-                font-size: 88px;
+                font-size: 70px;
                 font-weight: 800;
-                letter-spacing: 6px;
+                letter-spacing: 4px;
                 text-transform: uppercase;
                 opacity: .13;
                 white-space: nowrap;
@@ -824,7 +824,7 @@ if ($action === 'print' && $invoice):
 
     <body onload="window.print()">
         <div class="page">
-            <div class="watermark" style="color:<?php echo $watermarkColor; ?>;"><?php echo htmlspecialchars($watermarkLabel); ?></div>
+            <div class="watermark" style="color:<?php echo $watermarkColor; ?>;<?php echo strlen($watermarkLabel) > 6 ? 'font-size:52px;letter-spacing:2px;' : ''; ?>"><?php echo htmlspecialchars($watermarkLabel); ?></div>
             <div class="accent-bar"></div>
             <div class="head">
                 <div class="brand-row">
