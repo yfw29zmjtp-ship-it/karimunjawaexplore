@@ -963,7 +963,7 @@ if ($action === 'print' && $invoice):
                     <?php if ($companyEmail): ?><div>&#9993; <?php echo htmlspecialchars($companyEmail); ?></div><?php endif; ?>
                 </div>
                 <?php if ($footer): ?><div style="margin-top:6px;"><?php echo nl2br(htmlspecialchars($footer)); ?></div><?php endif; ?>
-                <div class="footer-adf-system">Sistem Manajemen Sunsea &middot; ADF System</div>
+                <div class="footer-adf-system">Powered by &copy; AdFsystem.online 2026</div>
             </div>
         </div>
     </body>
