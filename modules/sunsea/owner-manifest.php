@@ -12,7 +12,7 @@ header('Content-Type: application/manifest+json');
 header('Cache-Control: public, max-age=300');
 
 $pdo = getSunseaConnection();
-$companyName = sunseaSetting($pdo, 'company_name', 'Explore Karimunjawa');
+$companyName = sunseaSetting($pdo, 'company_name', 'Karimunjawa Explore');
 $logoPath = sunseaSetting($pdo, 'company_logo', '');
 $iconUrl = $logoPath ? sunseaAssetUrl($logoPath) : (BASE_URL . '/modules/sunsea/assets/owner-icon.png');
 $moduleUrl = BASE_URL . '/modules/sunsea';

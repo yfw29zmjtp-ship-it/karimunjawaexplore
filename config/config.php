@@ -268,21 +268,34 @@ if (php_sapi_name() !== 'cli') {
                 }
 
                 // ── Auto-redirect root requests to the business landing page ──
-                // Map: business slug → landing file at project root
+                // Map: business slug → login/admin landing file (used when no public homepage is set)
                 $__landingMap = [
                     'pwf-furniture' => '/pwf-login.php',
                     'sunsea'        => '/login.php?biz=sunsea',
                     // add more: 'cqc-construction' => '/cqc.php', etc.
                 ];
-                $__landing = $__landingMap[$__domainBiz['slug']] ?? null;
-                $__reqUri  = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
-                $__isRoot  = ($__reqUri === '/' || $__reqUri === '/index.php');
-                if ($__landing && $__isRoot) {
+                // Map: business slug → public marketing homepage (root "/" shows this instead of login;
+                // the admin/login system stays reachable at /admin)
+                $__publicHomeMap = [
+                    'sunsea' => '/home.php',
+                ];
+                $__landing    = $__landingMap[$__domainBiz['slug']] ?? null;
+                $__publicHome = $__publicHomeMap[$__domainBiz['slug']] ?? null;
+                $__reqUri     = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
+                $__isRoot     = ($__reqUri === '/' || $__reqUri === '/index.php');
+
+                if ($__isRoot) {
                     $__proto = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-                    header('Location: ' . $__proto . '://' . $_SERVER['HTTP_HOST'] . $__landing);
-                    exit;
+                    if ($__publicHome) {
+                        header('Location: ' . $__proto . '://' . $_SERVER['HTTP_HOST'] . $__publicHome);
+                        exit;
+                    }
+                    if ($__landing) {
+                        header('Location: ' . $__proto . '://' . $_SERVER['HTTP_HOST'] . $__landing);
+                        exit;
+                    }
                 }
-                unset($__landingMap, $__landing, $__reqUri, $__isRoot);
+                unset($__landingMap, $__publicHomeMap, $__landing, $__publicHome, $__reqUri, $__isRoot);
             }
             unset($__domainPdo, $__domainStmt, $__domainBiz);
         } catch (Exception $__e) {
