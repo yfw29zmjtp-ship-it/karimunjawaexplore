@@ -251,7 +251,9 @@ if (php_sapi_name() !== 'cli') {
         $__hostLandingMap    = ['karimunjawaexplore.com' => '/login.php?biz=sunsea'];
         if (isset($__hostPublicHomeMap[$incomingHost]) || isset($__hostLandingMap[$incomingHost])) {
             $__reqUriFallback = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
-            if ($__reqUriFallback === '/' || $__reqUriFallback === '/index.php') {
+            // Don't bounce already-logged-in staff away from /index.php back to the public homepage.
+            $__isLoggedInFallback = !empty($_SESSION['user_id']) || !empty($_SESSION['role']);
+            if (($__reqUriFallback === '/' || $__reqUriFallback === '/index.php') && !$__isLoggedInFallback) {
                 $__protoFallback = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
                 $__targetFallback = $__hostPublicHomeMap[$incomingHost] ?? $__hostLandingMap[$incomingHost];
                 header('Location: ' . $__protoFallback . '://' . $_SERVER['HTTP_HOST'] . $__targetFallback);
