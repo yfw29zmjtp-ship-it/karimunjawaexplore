@@ -245,6 +245,21 @@ if (php_sapi_name() !== 'cli') {
         && strpos($incomingHost, '127.0.0.1') === false
     ) {
 
+        // Hardcoded fallback for known domains — works even if the `businesses` table
+        // doesn't have a matching addon_domain row yet (avoids depending on DB config).
+        $__hostPublicHomeMap = ['karimunjawaexplore.com' => '/home.php'];
+        $__hostLandingMap    = ['karimunjawaexplore.com' => '/login.php?biz=sunsea'];
+        if (isset($__hostPublicHomeMap[$incomingHost]) || isset($__hostLandingMap[$incomingHost])) {
+            $__reqUriFallback = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
+            if ($__reqUriFallback === '/' || $__reqUriFallback === '/index.php') {
+                $__protoFallback = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+                $__targetFallback = $__hostPublicHomeMap[$incomingHost] ?? $__hostLandingMap[$incomingHost];
+                header('Location: ' . $__protoFallback . '://' . $_SERVER['HTTP_HOST'] . $__targetFallback);
+                exit;
+            }
+        }
+        unset($__hostPublicHomeMap, $__hostLandingMap);
+
         // Lookup business with this addon_domain in master DB
         try {
             $__domainPdo = new PDO(
