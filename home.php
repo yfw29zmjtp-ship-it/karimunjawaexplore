@@ -2,8 +2,9 @@
 require_once __DIR__ . '/includes/website-bootstrap.php';
 
 sunseaEnsurePackageItemsSchema($pdo);
+sunseaEnsurePackageMediaSchema($pdo);
 $featuredPackages = $pdo->query(
-    "SELECT id, code, name, category, duration_days, duration_nights, base_price
+    "SELECT id, code, name, category, duration_days, duration_nights, base_price, cover_image
      FROM trip_packages WHERE is_active = 1 ORDER BY id DESC LIMIT 3"
 )->fetchAll();
 
@@ -41,7 +42,11 @@ require __DIR__ . '/includes/website-header.php';
             <div class="we-grid">
                 <?php foreach ($featuredPackages as $pkg): ?>
                     <div class="we-card">
-                        <div class="we-card-img">🏝️</div>
+                        <?php if (!empty($pkg['cover_image'])): ?>
+                            <img src="<?php echo htmlspecialchars(sunseaAssetUrl($pkg['cover_image'])); ?>" alt="<?php echo htmlspecialchars($pkg['name']); ?>" class="we-card-img" style="width:100%;object-fit:cover;">
+                        <?php else: ?>
+                            <div class="we-card-img">🏝️</div>
+                        <?php endif; ?>
                         <div class="we-card-body">
                             <div class="we-card-title"><?php echo htmlspecialchars($pkg['name']); ?></div>
                             <div class="we-card-meta">

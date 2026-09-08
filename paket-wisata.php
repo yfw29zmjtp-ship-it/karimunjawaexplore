@@ -2,6 +2,7 @@
 require_once __DIR__ . '/includes/website-bootstrap.php';
 
 sunseaEnsurePackageItemsSchema($pdo);
+sunseaEnsurePackageMediaSchema($pdo);
 $pkgId = (int)($_GET['id'] ?? 0);
 
 if ($pkgId > 0) {
@@ -15,6 +16,10 @@ if ($pkgId > 0) {
         exit;
     }
 
+    $galleryStmt = $pdo->prepare("SELECT * FROM trip_package_gallery WHERE package_id = ? ORDER BY sort_order, id");
+    $galleryStmt->execute([$pkg['id']]);
+    $pkgGallery = $galleryStmt->fetchAll();
+
     $pageTitle = $pkg['name'];
     $activeNav = 'paket';
     require __DIR__ . '/includes/website-header.php';
@@ -23,7 +28,11 @@ if ($pkgId > 0) {
         <div class="we-container" style="max-width:820px;">
             <a href="paket-wisata.php" style="color:var(--we-ocean);font-size:13px;font-weight:700;">&larr; Kembali ke Semua Paket</a>
 
-            <div class="we-card-img" style="height:220px;border-radius:14px;margin:16px 0 22px;font-size:60px;">🏝️</div>
+            <?php if (!empty($pkg['cover_image'])): ?>
+                <img src="<?php echo htmlspecialchars(sunseaAssetUrl($pkg['cover_image'])); ?>" alt="<?php echo htmlspecialchars($pkg['name']); ?>" style="width:100%;height:280px;object-fit:cover;border-radius:14px;margin:16px 0 22px;display:block;">
+            <?php else: ?>
+                <div class="we-card-img" style="height:220px;border-radius:14px;margin:16px 0 22px;font-size:60px;">🏝️</div>
+            <?php endif; ?>
 
             <h1 style="font-size:26px;font-weight:800;color:var(--we-brand-dark);margin:0 0 8px;"><?php echo htmlspecialchars($pkg['name']); ?></h1>
             <div class="we-card-meta" style="font-size:13.5px;margin-bottom:18px;">
@@ -53,6 +62,17 @@ if ($pkgId > 0) {
                 <p style="line-height:1.8;color:var(--we-text);white-space:pre-line;"><?php echo htmlspecialchars($pkg['itinerary']); ?></p>
             <?php endif; ?>
 
+            <?php if ($pkgGallery): ?>
+                <h3 style="color:var(--we-brand-dark);font-size:15px;margin-top:24px;">Galeri Trip</h3>
+                <div class="we-gallery-grid" style="margin-top:12px;">
+                    <?php foreach ($pkgGallery as $gp): ?>
+                        <div class="we-gallery-item" style="background:none;">
+                            <img src="<?php echo htmlspecialchars(sunseaAssetUrl($gp['image_path'])); ?>" alt="<?php echo htmlspecialchars($gp['caption'] ?? ''); ?>" style="width:100%;height:100%;object-fit:cover;border-radius:10px;">
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+
             <a href="kontak.php?package_id=<?php echo (int)$pkg['id']; ?>" class="we-btn we-btn-primary" style="margin-top:26px;">Booking Paket Ini</a>
         </div>
     </section>
@@ -63,7 +83,7 @@ if ($pkgId > 0) {
 
 // ---- Daftar semua paket ----
 $packages = $pdo->query(
-    "SELECT id, name, category, duration_days, duration_nights, base_price
+    "SELECT id, name, category, duration_days, duration_nights, base_price, cover_image
      FROM trip_packages WHERE is_active = 1 ORDER BY name"
 )->fetchAll();
 
@@ -83,7 +103,11 @@ require __DIR__ . '/includes/website-header.php';
             <div class="we-grid">
                 <?php foreach ($packages as $pkg): ?>
                     <div class="we-card">
-                        <div class="we-card-img">🏝️</div>
+                        <?php if (!empty($pkg['cover_image'])): ?>
+                            <img src="<?php echo htmlspecialchars(sunseaAssetUrl($pkg['cover_image'])); ?>" alt="<?php echo htmlspecialchars($pkg['name']); ?>" class="we-card-img" style="width:100%;object-fit:cover;">
+                        <?php else: ?>
+                            <div class="we-card-img">🏝️</div>
+                        <?php endif; ?>
                         <div class="we-card-body">
                             <div class="we-card-title"><?php echo htmlspecialchars($pkg['name']); ?></div>
                             <div class="we-card-meta">

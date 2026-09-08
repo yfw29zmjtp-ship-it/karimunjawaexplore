@@ -17,6 +17,7 @@ $pdo    = getSunseaConnection();
 sunseaEnsurePackageItemsSchema($pdo);
 sunseaEnsureMasterDataSchema($pdo);
 sunseaEnsureAccommodationSchema($pdo);
+sunseaEnsurePackageMediaSchema($pdo);
 $action = $_GET['action'] ?? 'list';
 $pkgId  = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
@@ -61,6 +62,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
 
+        $uploadDir = __DIR__ . '/../../uploads/sunsea/website/';
+        if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
+        $coverUploadErr = '';
+        if (!empty($_FILES['cover_image']['tmp_name'])) {
+            if ((int)($_FILES['cover_image']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+                $coverUploadErr = 'Upload cover gagal (kode error: ' . $_FILES['cover_image']['error'] . ').';
+            } else {
+                $ext = strtolower(pathinfo($_FILES['cover_image']['name'], PATHINFO_EXTENSION));
+                if (!in_array($ext, ['png', 'jpg', 'jpeg', 'webp', 'gif'])) {
+                    $coverUploadErr = 'Format cover harus PNG, JPG, JPEG, WEBP, atau GIF.';
+                } else {
+                    $fname = 'pkgcover_' . date('YmdHis') . '_' . mt_rand(1000, 9999) . '.' . $ext;
+                    if (move_uploaded_file($_FILES['cover_image']['tmp_name'], $uploadDir . $fname)) {
+                        $data['cover_image'] = 'uploads/sunsea/website/' . $fname;
+                    } else {
+                        $coverUploadErr = 'Gagal menyimpan file cover ke server.';
+                    }
+                }
+            }
+        }
+
         if ($id > 0) {
             $set = implode(', ', array_map(fn($k) => "`$k`=?", array_keys($data)));
             $pdo->prepare("UPDATE trip_packages SET $set, updated_at=NOW() WHERE id=?")
@@ -75,10 +97,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $cols = implode(', ', array_map(fn($k) => "`$k`", array_keys($data)));
             $vals = implode(', ', array_fill(0, count($data), '?'));
             $pdo->prepare("INSERT INTO trip_packages ($cols) VALUES ($vals)")->execute(array_values($data));
+            $id = (int)$pdo->lastInsertId();
             $_SESSION['flash_message'] = 'Paket baru berhasil ditambahkan.';
         }
-        $_SESSION['flash_type'] = 'success';
-        header('Location: packages.php');
+        if ($coverUploadErr) {
+            $_SESSION['flash_message'] .= ' Namun: ' . $coverUploadErr;
+            $_SESSION['flash_type'] = 'error';
+        } else {
+            $_SESSION['flash_type'] = 'success';
+        }
+        header('Location: packages.php?action=edit&id=' . $id);
         exit;
     } elseif ($postAction === 'toggle') {
         $id = (int)($_POST['id'] ?? 0);
@@ -160,12 +188,56 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         header('Location: packages.php?action=edit&id=' . $packageId);
         exit;
+    } elseif ($postAction === 'gallery_add') {
+        $packageId = (int)($_POST['package_id'] ?? 0);
+        $uploadDir = __DIR__ . '/../../uploads/sunsea/website/';
+        if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
+        if ($packageId > 0 && !empty($_FILES['gallery_image']['tmp_name'])) {
+            if ((int)($_FILES['gallery_image']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+                $_SESSION['flash_message'] = 'Upload foto galeri gagal (kode error: ' . $_FILES['gallery_image']['error'] . ').';
+                $_SESSION['flash_type'] = 'error';
+            } else {
+                $ext = strtolower(pathinfo($_FILES['gallery_image']['name'], PATHINFO_EXTENSION));
+                if (!in_array($ext, ['png', 'jpg', 'jpeg', 'webp', 'gif'])) {
+                    $_SESSION['flash_message'] = 'Format foto galeri harus PNG, JPG, JPEG, WEBP, atau GIF.';
+                    $_SESSION['flash_type'] = 'error';
+                } else {
+                    $fname = 'pkggallery_' . date('YmdHis') . '_' . mt_rand(1000, 9999) . '.' . $ext;
+                    if (move_uploaded_file($_FILES['gallery_image']['tmp_name'], $uploadDir . $fname)) {
+                        $sortStmt = $pdo->prepare("SELECT COALESCE(MAX(sort_order),-1)+1 FROM trip_package_gallery WHERE package_id=?");
+                        $sortStmt->execute([$packageId]);
+                        $pdo->prepare("INSERT INTO trip_package_gallery (package_id, image_path, caption, sort_order) VALUES (?,?,?,?)")
+                            ->execute([$packageId, 'uploads/sunsea/website/' . $fname, trim($_POST['caption'] ?? ''), (int)$sortStmt->fetchColumn()]);
+                        $_SESSION['flash_message'] = 'Foto galeri paket berhasil ditambahkan.';
+                        $_SESSION['flash_type'] = 'success';
+                    } else {
+                        $_SESSION['flash_message'] = 'Gagal menyimpan foto galeri ke server.';
+                        $_SESSION['flash_type'] = 'error';
+                    }
+                }
+            }
+        }
+        header('Location: packages.php?action=edit&id=' . $packageId);
+        exit;
+    } elseif ($postAction === 'gallery_delete') {
+        $packageId = (int)($_POST['package_id'] ?? 0);
+        $galleryId = (int)($_POST['gallery_id'] ?? 0);
+        $stmt = $pdo->prepare("SELECT image_path FROM trip_package_gallery WHERE id=? AND package_id=?");
+        $stmt->execute([$galleryId, $packageId]);
+        $old = $stmt->fetchColumn();
+        if ($old && file_exists(__DIR__ . '/../../' . $old)) @unlink(__DIR__ . '/../../' . $old);
+        $pdo->prepare("DELETE FROM trip_package_gallery WHERE id=? AND package_id=?")->execute([$galleryId, $packageId]);
+        $_SESSION['flash_message'] = 'Foto galeri paket dihapus.';
+        $_SESSION['flash_type'] = 'success';
+        header('Location: packages.php?action=edit&id=' . $packageId);
+        exit;
     }
 }
 
 // ---- LOAD DATA ----
 $editPkg = null;
 $packageItems = [];
+$packageGallery = [];
 if (in_array($action, ['edit', 'view']) && $pkgId > 0) {
     $stmt = $pdo->prepare("SELECT * FROM trip_packages WHERE id=?");
     $stmt->execute([$pkgId]);
@@ -177,6 +249,10 @@ if (in_array($action, ['edit', 'view']) && $pkgId > 0) {
     $itemsStmt = $pdo->prepare("SELECT * FROM trip_package_items WHERE package_id=? ORDER BY sort_order");
     $itemsStmt->execute([$pkgId]);
     $packageItems = $itemsStmt->fetchAll();
+
+    $galleryStmt = $pdo->prepare("SELECT * FROM trip_package_gallery WHERE package_id=? ORDER BY sort_order, id");
+    $galleryStmt->execute([$pkgId]);
+    $packageGallery = $galleryStmt->fetchAll();
 }
 
 $pkgItemsCostTotal = 0.0;
@@ -268,11 +344,19 @@ include 'layout-header.php';
                     </div>
                 </div>
 
-                <form method="POST">
+                <form method="POST" enctype="multipart/form-data">
                     <input type="hidden" name="action" value="save">
                     <input type="hidden" name="id" value="<?php echo $editPkg['id'] ?? 0; ?>">
 
                     <div class="ss-form-grid cols-2">
+                        <div class="ss-form-group" style="grid-column:1/-1;">
+                            <label class="ss-label">Foto Cover Paket</label>
+                            <?php if (!empty($editPkg['cover_image'])): ?>
+                                <img src="<?php echo htmlspecialchars(sunseaAssetUrl($editPkg['cover_image'])); ?>" alt="" style="width:100%;max-height:160px;object-fit:cover;border-radius:8px;margin-bottom:8px;display:block;">
+                            <?php endif; ?>
+                            <input type="file" name="cover_image" accept="image/*" class="ss-input">
+                            <div style="font-size:11px;margin-top:4px;color:var(--ss-muted);">Foto ini tampil di kartu paket &amp; halaman detail di website publik. Kosongkan kalau tidak ingin ganti.</div>
+                        </div>
                         <div class="ss-form-group" style="grid-column:1/-1;">
                             <label class="ss-label">Nama Paket *</label>
                             <input type="text" name="name" class="ss-input" required
@@ -367,6 +451,47 @@ include 'layout-header.php';
 
         <div>
             <?php if ($editPkg): ?>
+                <div class="ss-card" style="margin-bottom:20px;">
+                    <div class="ss-card-header">
+                        <div>
+                            <div class="ss-card-title">Galeri Foto Trip</div>
+                            <div class="ss-card-sub">Foto-foto ini tampil di halaman detail paket pada website publik.</div>
+                        </div>
+                    </div>
+                    <form method="POST" enctype="multipart/form-data" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:14px;">
+                        <input type="hidden" name="action" value="gallery_add">
+                        <input type="hidden" name="package_id" value="<?php echo (int)$editPkg['id']; ?>">
+                        <div style="flex:1;min-width:160px;">
+                            <label class="ss-label">File Foto</label>
+                            <input type="file" name="gallery_image" accept="image/*" class="ss-input" required>
+                        </div>
+                        <div style="flex:1;min-width:160px;">
+                            <label class="ss-label">Keterangan</label>
+                            <input type="text" name="caption" class="ss-input" placeholder="Opsional">
+                        </div>
+                        <button type="submit" class="ss-btn ss-btn-primary ss-btn-sm">
+                            <i data-feather="plus"></i> Tambah
+                        </button>
+                    </form>
+                    <?php if (!$packageGallery): ?>
+                        <div style="font-size:12px;color:var(--ss-muted);">Belum ada foto galeri untuk paket ini.</div>
+                    <?php else: ?>
+                        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:10px;">
+                            <?php foreach ($packageGallery as $g): ?>
+                                <div style="border:1px solid var(--ss-border);border-radius:8px;overflow:hidden;">
+                                    <img src="<?php echo htmlspecialchars(sunseaAssetUrl($g['image_path'])); ?>" alt="" style="width:100%;height:80px;object-fit:cover;display:block;">
+                                    <form method="POST" onsubmit="return confirm('Hapus foto ini?');" style="padding:4px;">
+                                        <input type="hidden" name="action" value="gallery_delete">
+                                        <input type="hidden" name="package_id" value="<?php echo (int)$editPkg['id']; ?>">
+                                        <input type="hidden" name="gallery_id" value="<?php echo (int)$g['id']; ?>">
+                                        <button type="submit" style="width:100%;font-size:11px;color:#b91c1c;background:none;border:none;cursor:pointer;">Hapus</button>
+                                    </form>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+                </div>
+
                 <div class="ss-card">
                     <div class="ss-card-header">
                         <div>

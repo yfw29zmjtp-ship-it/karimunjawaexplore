@@ -557,6 +557,33 @@ function sunseaRupiah(float $amount, bool $short = false): string
 }
 
 /**
+ * Ensure trip_packages has a cover_image column and the trip_package_gallery table exists.
+ */
+function sunseaEnsurePackageMediaSchema(PDO $pdo): void
+{
+    try {
+        $check = $pdo->prepare("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'trip_packages' AND COLUMN_NAME = 'cover_image'");
+        $check->execute();
+        if ((int)$check->fetchColumn() === 0) {
+            $pdo->exec("ALTER TABLE trip_packages ADD COLUMN cover_image VARCHAR(255) NULL AFTER base_price");
+        }
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS `trip_package_gallery` (
+            `id`          INT AUTO_INCREMENT PRIMARY KEY,
+            `package_id`  INT NOT NULL,
+            `image_path`  VARCHAR(255) NOT NULL,
+            `caption`     VARCHAR(150) NULL,
+            `sort_order`  INT DEFAULT 0,
+            `created_at`  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_pkggallery_package (`package_id`),
+            CONSTRAINT fk_pkggallery_package FOREIGN KEY (`package_id`) REFERENCES `trip_packages`(`id`) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    } catch (Exception $e) {
+        @error_log('sunseaEnsurePackageMediaSchema: ' . $e->getMessage());
+    }
+}
+
+/**
  * Ensure tables used by the public website CMS (gallery + blog) exist.
  */
 function sunseaEnsureWebsiteContentSchema(PDO $pdo): void
