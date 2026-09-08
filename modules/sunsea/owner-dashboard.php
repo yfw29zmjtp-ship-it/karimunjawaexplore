@@ -547,7 +547,7 @@ $monthIncomePct = $financePieTotal > 0 ? round($monthIncome / $financePieTotal *
                         🌊
                     <?php endif; ?>
                 </div>
-                Explore Karimunjawa
+                Karimunjawa Explore
             </div>
             <div class="ob-user">
                 <div class="ob-avatar"><?php echo strtoupper(substr($userName, 0, 1)); ?></div>
