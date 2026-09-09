@@ -18,8 +18,8 @@ $weHeroBg = sunseaSetting($pdo, 'website_hero_bg', '');
 
 $weAboutP1 = sunseaSetting($pdo, 'website_about_p1', '') ?: ($weCompanyName . ' adalah penyedia jasa tour & travel yang berfokus pada wisata Kepulauan Karimunjawa, Jepara. Kami melayani open trip maupun private trip, lengkap dengan penginapan, transport laut/darat, island hopping, guide lokal berpengalaman, hingga dokumentasi perjalanan.');
 $weAboutExcerpt = trim(preg_replace('/\s+/', ' ', $weAboutP1));
-if (mb_strlen($weAboutExcerpt) > 180) {
-    $weAboutExcerpt = mb_substr($weAboutExcerpt, 0, 180) . '…';
+if (mb_strlen($weAboutExcerpt) > 380) {
+    $weAboutExcerpt = mb_substr($weAboutExcerpt, 0, 380) . '…';
 }
 $weAboutImage = $pdo->query("SELECT image_path FROM website_gallery WHERE is_active = 1 ORDER BY sort_order ASC, id DESC LIMIT 1")->fetchColumn();
 $weHeroStyle = $weHeroBg
