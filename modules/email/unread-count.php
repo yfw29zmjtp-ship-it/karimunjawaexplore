@@ -21,9 +21,23 @@ if ($emailConfig === null) {
     exit;
 }
 
+// Opening a real IMAP connection on every poll (every 1-2 min, from EVERY admin page) is
+// too slow/expensive on shared hosting - cache the result for a few minutes instead.
+$cacheFile = sys_get_temp_dir() . '/karexp_email_unread.json';
+$cacheTtl = 180; // seconds
+$cached = @json_decode((string)@file_get_contents($cacheFile), true);
+if (is_array($cached) && isset($cached['t'], $cached['unread']) && (time() - (int)$cached['t']) < $cacheTtl) {
+    echo json_encode(['unread' => (int)$cached['unread']]);
+    exit;
+}
+
 try {
     $emailHelper = new EmailHelper($emailConfig);
-    echo json_encode(['unread' => $emailHelper->countUnread()]);
+    $unread = $emailHelper->countUnread();
+    @file_put_contents($cacheFile, json_encode(['t' => time(), 'unread' => $unread]));
+    echo json_encode(['unread' => $unread]);
 } catch (Throwable $e) {
+    // Cache the failure too (briefly) so a broken mailbox doesn't hammer IMAP every poll.
+    @file_put_contents($cacheFile, json_encode(['t' => time(), 'unread' => 0]));
     echo json_encode(['unread' => 0]);
 }

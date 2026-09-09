@@ -27,7 +27,7 @@
                 }
             }
             checkEmailUnread();
-            setInterval(checkEmailUnread, 30000);
+            setInterval(checkEmailUnread, 180000);
         })();
     </script>
     <?php if (isset($additionalJS)): ?>
