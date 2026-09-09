@@ -144,6 +144,12 @@ include '../sunsea/layout-header.php';
             <div class="es-msg <?php echo $msgType; ?>"><?php echo htmlspecialchars($msg); ?></div>
         <?php endif; ?>
 
+        <div style="background:var(--ss-sky);border:1px solid var(--ss-gray-2);border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:0.82rem;color:var(--ss-text);">
+            <strong>Konfigurasi tersimpan saat ini:</strong><br>
+            IMAP: <?php echo htmlspecialchars($current['host'] . ':' . $current['port'] . ' (' . strtoupper($current['encryption']) . ')'); ?><br>
+            SMTP: <?php echo htmlspecialchars($current['host'] . ':' . ($current['smtp_port'] ?? 465) . ' (' . strtoupper($current['smtp_encryption'] ?? 'ssl') . ')'); ?>
+        </div>
+
         <form method="post">
             <div class="es-field">
                 <label>Incoming Server (IMAP Host)</label>
