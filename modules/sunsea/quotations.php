@@ -605,11 +605,43 @@ if ($action === 'print' && $quotation):
                 column-gap: 22px;
             }
 
-            .itinerary-day {
-                font-weight: 700;
-                color: #7C2D12;
-                margin-top: 5px;
+            .itinerary-day-group {
                 break-inside: avoid-column;
+                margin-bottom: 8px;
+            }
+
+            .itinerary-day {
+                display: inline-block;
+                font-weight: 700;
+                font-size: 10px;
+                color: #7C2D12;
+                background: #FFEDD5;
+                padding: 2px 9px;
+                border-radius: 4px;
+                margin-bottom: 4px;
+            }
+
+            .itinerary-row {
+                display: flex;
+                gap: 7px;
+                align-items: baseline;
+                margin-bottom: 3px;
+            }
+
+            .itinerary-time {
+                flex: 0 0 auto;
+                font-weight: 700;
+                color: #C2410C;
+                white-space: nowrap;
+                font-size: 9.5px;
+            }
+
+            .itinerary-desc {
+                flex: 1;
+            }
+
+            .itinerary-plain {
+                margin-bottom: 3px;
             }
 
             .signature-area {
@@ -764,14 +796,38 @@ if ($action === 'print' && $quotation):
         </div>
 
         <?php if (!empty($quotation['itinerary'])): ?>
+            <?php
+                // Group raw itinerary lines by "DAY n"/"Hari n" header so each day
+                // stays together when the box is laid out in print columns.
+                $itineraryGroups = [];
+                foreach (preg_split('/\r\n|\r|\n/', trim($quotation['itinerary'])) as $itLine) {
+                    $itLine = trim($itLine);
+                    if ($itLine === '') continue;
+                    if (preg_match('/^\.?\s*(day|hari)\s*(\d+)/i', $itLine, $dm)) {
+                        $itineraryGroups[] = ['header' => strtoupper($dm[1]) . ' ' . $dm[2], 'items' => []];
+                        continue;
+                    }
+                    if (empty($itineraryGroups)) {
+                        $itineraryGroups[] = ['header' => null, 'items' => []];
+                    }
+                    $lastIdx = count($itineraryGroups) - 1;
+                    $timeMatch = preg_match('/^([\d.:\/]+\s*WIB)\s*:\s*(.+)$/i', $itLine, $tm);
+                    $itineraryGroups[$lastIdx]['items'][] = $timeMatch ? ['time' => $tm[1], 'desc' => $tm[2]] : ['time' => null, 'desc' => $itLine];
+                }
+            ?>
             <div class="section-title">Itinerary (Jadwal Perjalanan)</div>
             <div class="itinerary-box">
-                <?php foreach (preg_split('/\r\n|\r|\n/', trim($quotation['itinerary'])) as $line):
-                    $line = trim($line);
-                    if ($line === '') continue;
-                    $isDayHeader = (bool)preg_match('/^\.?\s*Hari\s*\d+/i', $line);
-                ?>
-                    <div class="<?php echo $isDayHeader ? 'itinerary-day' : ''; ?>"><?php echo htmlspecialchars($line); ?></div>
+                <?php foreach ($itineraryGroups as $group): ?>
+                    <div class="itinerary-day-group">
+                        <?php if ($group['header']): ?><div class="itinerary-day"><?php echo htmlspecialchars($group['header']); ?></div><?php endif; ?>
+                        <?php foreach ($group['items'] as $item): ?>
+                            <?php if ($item['time']): ?>
+                                <div class="itinerary-row"><span class="itinerary-time"><?php echo htmlspecialchars($item['time']); ?></span><span class="itinerary-desc"><?php echo htmlspecialchars($item['desc']); ?></span></div>
+                            <?php else: ?>
+                                <div class="itinerary-plain"><?php echo htmlspecialchars($item['desc']); ?></div>
+                            <?php endif; ?>
+                        <?php endforeach; ?>
+                    </div>
                 <?php endforeach; ?>
             </div>
         <?php endif; ?>
