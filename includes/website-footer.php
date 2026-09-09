@@ -30,6 +30,75 @@
         </div>
     </footer>
 
+    <?php if ($weCompanyPhone): ?>
+        <?php $weChatWaBase = sunseaWaLink($weCompanyPhone); ?>
+        <div class="we-chat-widget" id="weChatWidget">
+            <div class="we-chat-panel" id="weChatPanel">
+                <div class="we-chat-header">
+                    <div class="we-chat-header-info">
+                        <span class="we-chat-avatar">🌊</span>
+                        <div>
+                            <div class="we-chat-title"><?php echo htmlspecialchars($weCompanyName); ?></div>
+                            <div class="we-chat-status">Biasanya membalas cepat via WhatsApp</div>
+                        </div>
+                    </div>
+                    <button type="button" class="we-chat-close" onclick="weChatToggle(false)">&times;</button>
+                </div>
+                <div class="we-chat-body" id="weChatBody">
+                    <div class="we-chat-bubble we-chat-bubble-in">
+                        Halo! 👋 Ada yang bisa kami bantu seputar trip ke Karimunjawa? Tulis pesan Anda di bawah ini.
+                    </div>
+                </div>
+                <div class="we-chat-footer">
+                    <input type="text" id="weChatInput" class="we-chat-input" placeholder="Tulis pesan Anda..." maxlength="500">
+                    <button type="button" class="we-chat-send" id="weChatSendBtn" onclick="weChatSend()" aria-label="Kirim">&#10148;</button>
+                </div>
+            </div>
+            <button type="button" class="we-chat-fab" id="weChatFab" onclick="weChatToggle()" aria-label="Chat WhatsApp">
+                <span class="we-chat-fab-icon">💬</span>
+            </button>
+        </div>
+
+        <script>
+            (function () {
+                var waBase = <?php echo json_encode($weChatWaBase); ?>;
+                var panel = document.getElementById('weChatPanel');
+                var widget = document.getElementById('weChatWidget');
+                var body = document.getElementById('weChatBody');
+                var input = document.getElementById('weChatInput');
+
+                window.weChatToggle = function (forceOpen) {
+                    var open = typeof forceOpen === 'boolean' ? forceOpen : !widget.classList.contains('we-open');
+                    widget.classList.toggle('we-open', open);
+                    if (open) input.focus();
+                };
+
+                window.weChatSend = function () {
+                    var msg = input.value.trim();
+                    if (!msg) return;
+
+                    var bubble = document.createElement('div');
+                    bubble.className = 'we-chat-bubble we-chat-bubble-out';
+                    bubble.textContent = msg;
+                    body.appendChild(bubble);
+                    body.scrollTop = body.scrollHeight;
+                    input.value = '';
+
+                    // Pesan diteruskan ke WhatsApp asli (bukan sekadar link statis) — nomor
+                    // dari setting company_phone, dibuka di tab baru begitu tamu menekan Enter/Kirim.
+                    window.open(waBase + '?text=' + encodeURIComponent(msg), '_blank');
+                };
+
+                input.addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        weChatSend();
+                    }
+                });
+            })();
+        </script>
+    <?php endif; ?>
+
     </body>
 
     </html>

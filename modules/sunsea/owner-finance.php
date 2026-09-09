@@ -11,7 +11,10 @@ require_once '../../includes/functions.php';
 require_once 'db-helper.php';
 
 $auth = new Auth();
-if (!$auth->isLoggedIn()) { header('Location: owner-login.php'); exit; }
+if (!$auth->isLoggedIn()) {
+    header('Location: owner-login.php');
+    exit;
+}
 $auth->requireLogin();
 
 $currentUser = $auth->getCurrentUser();
@@ -84,69 +87,235 @@ include 'owner-mobile-header.php';
 
 <style>
     .ob-charts-panel {
-        background:linear-gradient(135deg,#e0f2fe 0%,#ede9fe 50%,#fce7f3 100%);
-        border-radius:20px; padding:12px; margin-bottom:12px;
+        background: linear-gradient(135deg, #e0f2fe 0%, #ede9fe 50%, #fce7f3 100%);
+        border-radius: 20px;
+        padding: 12px;
+        margin-bottom: 12px;
     }
-    .ob-charts-row { display:flex; gap:10px; }
+
+    .ob-charts-row {
+        display: flex;
+        gap: 10px;
+    }
+
     .ob-chart-card {
-        flex:1; background:rgba(255,255,255,.55); backdrop-filter:blur(12px) saturate(160%);
-        -webkit-backdrop-filter:blur(12px) saturate(160%);
-        border:1px solid rgba(255,255,255,.7); border-radius:16px;
-        padding:12px 10px; box-shadow:0 8px 20px rgba(31,41,55,.08), inset 0 1px 0 rgba(255,255,255,.6);
-        text-align:center;
+        flex: 1;
+        background: rgba(255, 255, 255, .55);
+        backdrop-filter: blur(12px) saturate(160%);
+        -webkit-backdrop-filter: blur(12px) saturate(160%);
+        border: 1px solid rgba(255, 255, 255, .7);
+        border-radius: 16px;
+        padding: 12px 10px;
+        box-shadow: 0 8px 20px rgba(31, 41, 55, .08), inset 0 1px 0 rgba(255, 255, 255, .6);
+        text-align: center;
     }
-    .ob-chart-title { font-size:9.5px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.03em; margin-bottom:8px; }
+
+    .ob-chart-title {
+        font-size: 9.5px;
+        font-weight: 600;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: .03em;
+        margin-bottom: 8px;
+    }
+
     .ob-donut {
-        width:82px; height:82px; border-radius:50%; margin:0 auto 8px; position:relative;
-        background:conic-gradient(var(--success) 0% <?php echo $incomePct; ?>%, var(--danger) <?php echo $incomePct; ?>% 100%);
-        box-shadow:0 4px 14px rgba(31,41,55,.15);
+        width: 82px;
+        height: 82px;
+        border-radius: 50%;
+        margin: 0 auto 8px;
+        position: relative;
+        background: conic-gradient(var(--success) 0% <?php echo $incomePct; ?>%, var(--danger) <?php echo $incomePct; ?>% 100%);
+        box-shadow: 0 4px 14px rgba(31, 41, 55, .15);
     }
+
     .ob-donut::before {
-        content:''; position:absolute; inset:-4px; border-radius:50%;
-        background:conic-gradient(var(--success) 0% <?php echo $incomePct; ?>%, var(--danger) <?php echo $incomePct; ?>% 100%);
-        filter:blur(6px); opacity:.35; z-index:-1;
+        content: '';
+        position: absolute;
+        inset: -4px;
+        border-radius: 50%;
+        background: conic-gradient(var(--success) 0% <?php echo $incomePct; ?>%, var(--danger) <?php echo $incomePct; ?>% 100%);
+        filter: blur(6px);
+        opacity: .35;
+        z-index: -1;
     }
+
     .ob-donut::after {
-        content:''; position:absolute; inset:14px; background:rgba(255,255,255,.85);
-        backdrop-filter:blur(4px); border-radius:50%; box-shadow:inset 0 1px 3px rgba(0,0,0,.06);
+        content: '';
+        position: absolute;
+        inset: 14px;
+        background: rgba(255, 255, 255, .85);
+        backdrop-filter: blur(4px);
+        border-radius: 50%;
+        box-shadow: inset 0 1px 3px rgba(0, 0, 0, .06);
     }
+
     .ob-donut-label {
-        position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
-        font-size:13px; font-weight:700; color:var(--text); z-index:1;
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--text);
+        z-index: 1;
     }
-    .ob-chart-legend { display:flex; justify-content:center; gap:10px; font-size:9px; color:var(--muted); font-weight:500; }
-    .ob-chart-legend span { display:inline-flex; align-items:center; gap:3px; }
-    .ob-dot { width:7px; height:7px; border-radius:50%; display:inline-block; box-shadow:0 0 0 3px rgba(255,255,255,.5); }
+
+    .ob-chart-legend {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        font-size: 9px;
+        color: var(--muted);
+        font-weight: 500;
+    }
+
+    .ob-chart-legend span {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+    }
+
+    .ob-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        display: inline-block;
+        box-shadow: 0 0 0 3px rgba(255, 255, 255, .5);
+    }
+
     .ob-bars {
-        display:flex; align-items:flex-end; justify-content:space-between; gap:3px;
-        height:82px; margin-bottom:6px;
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 3px;
+        height: 82px;
+        margin-bottom: 6px;
     }
-    .ob-bar-col { flex:1; display:flex; align-items:flex-end; justify-content:center; gap:1.5px; height:100%; }
-    .ob-bar { width:5px; border-radius:3px 3px 0 0; min-height:2px; }
-    .ob-bar.inc { background:linear-gradient(180deg,#6ee7b7,var(--success)); box-shadow:0 0 6px rgba(16,185,129,.35); }
-    .ob-bar.exp { background:linear-gradient(180deg,#fca5a5,var(--danger)); box-shadow:0 0 6px rgba(239,68,68,.35); }
-    .ob-bar-labels { display:flex; justify-content:space-between; font-size:7.5px; color:var(--muted); font-weight:500; }
+
+    .ob-bar-col {
+        flex: 1;
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+        gap: 1.5px;
+        height: 100%;
+    }
+
+    .ob-bar {
+        width: 5px;
+        border-radius: 3px 3px 0 0;
+        min-height: 2px;
+    }
+
+    .ob-bar.inc {
+        background: linear-gradient(180deg, #6ee7b7, var(--success));
+        box-shadow: 0 0 6px rgba(16, 185, 129, .35);
+    }
+
+    .ob-bar.exp {
+        background: linear-gradient(180deg, #fca5a5, var(--danger));
+        box-shadow: 0 0 6px rgba(239, 68, 68, .35);
+    }
+
+    .ob-bar-labels {
+        display: flex;
+        justify-content: space-between;
+        font-size: 7.5px;
+        color: var(--muted);
+        font-weight: 500;
+    }
+
     .ob-tx-row {
-        display:flex; align-items:center; gap:10px; padding:9px 4px;
-        border-bottom:1px solid var(--border);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 9px 4px;
+        border-bottom: 1px solid var(--border);
     }
-    .ob-tx-row:last-child { border-bottom:none; }
+
+    .ob-tx-row:last-child {
+        border-bottom: none;
+    }
+
     .ob-tx-date {
-        flex-shrink:0; width:38px; text-align:center; border-radius:10px;
-        background:rgba(99,102,241,.08); padding:4px 2px;
+        flex-shrink: 0;
+        width: 38px;
+        text-align: center;
+        border-radius: 10px;
+        background: rgba(99, 102, 241, .08);
+        padding: 4px 2px;
     }
-    .ob-tx-date .d { font-size:12px; font-weight:600; color:var(--text); line-height:1.1; }
-    .ob-tx-date .m { font-size:8px; color:var(--muted); text-transform:uppercase; }
-    .ob-tx-mid { flex:1; min-width:0; }
-    .ob-tx-title { font-size:11.5px; font-weight:500; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .ob-tx-sub { font-size:10px; color:var(--muted); font-weight:400; margin-top:1px; }
-    .ob-tx-amount { font-size:11px; font-weight:600; flex-shrink:0; }
-    .ob-summary { margin-bottom:10px; }
-    .ob-summary-item { padding:8px 6px; }
-    .ob-summary-label { font-size:8.5px; font-weight:500; }
-    .ob-summary-value { font-size:12.5px; font-weight:600; margin-top:2px; }
-    .ob-section-head { margin-bottom:6px; }
-    .ob-section-title { font-size:12px; font-weight:600; color:var(--text); }
+
+    .ob-tx-date .d {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text);
+        line-height: 1.1;
+    }
+
+    .ob-tx-date .m {
+        font-size: 8px;
+        color: var(--muted);
+        text-transform: uppercase;
+    }
+
+    .ob-tx-mid {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .ob-tx-title {
+        font-size: 11.5px;
+        font-weight: 500;
+        color: var(--text);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .ob-tx-sub {
+        font-size: 10px;
+        color: var(--muted);
+        font-weight: 400;
+        margin-top: 1px;
+    }
+
+    .ob-tx-amount {
+        font-size: 11px;
+        font-weight: 600;
+        flex-shrink: 0;
+    }
+
+    .ob-summary {
+        margin-bottom: 10px;
+    }
+
+    .ob-summary-item {
+        padding: 8px 6px;
+    }
+
+    .ob-summary-label {
+        font-size: 8.5px;
+        font-weight: 500;
+    }
+
+    .ob-summary-value {
+        font-size: 12.5px;
+        font-weight: 600;
+        margin-top: 2px;
+    }
+
+    .ob-section-head {
+        margin-bottom: 6px;
+    }
+
+    .ob-section-title {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text);
+    }
 </style>
 
 <div class="ob-summary">
@@ -188,8 +357,9 @@ include 'owner-mobile-header.php';
             </div>
             <div class="ob-bar-labels">
                 <?php foreach ($trendDays as $i => $t): if ($i % 2 === 0): ?>
-                    <span><?php echo $t['label']; ?></span>
-                <?php endif; endforeach; ?>
+                        <span><?php echo $t['label']; ?></span>
+                <?php endif;
+                endforeach; ?>
             </div>
         </div>
     </div>

@@ -11,7 +11,10 @@ require_once '../../includes/functions.php';
 require_once 'db-helper.php';
 
 $auth = new Auth();
-if (!$auth->isLoggedIn()) { header('Location: owner-login.php'); exit; }
+if (!$auth->isLoggedIn()) {
+    header('Location: owner-login.php');
+    exit;
+}
 $auth->requireLogin();
 
 $currentUser = $auth->getCurrentUser();
@@ -63,7 +66,9 @@ include 'owner-mobile-header.php';
 </div>
 
 <?php if (empty($invoices)): ?>
-    <div class="ob-section"><div class="ob-empty">Belum ada data invoice.</div></div>
+    <div class="ob-section">
+        <div class="ob-empty">Belum ada data invoice.</div>
+    </div>
 <?php else: ?>
     <?php foreach ($invoices as $inv): ?>
         <?php $badge = $statusBadge[$inv['status']] ?? ['ob-badge-draft', $inv['status']]; ?>

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * NARAYANA HOTEL MANAGEMENT SYSTEM
  * Logout
@@ -25,4 +26,3 @@ if (($_GET['redirect'] ?? '') === 'owner') {
 }
 
 redirect(BASE_URL . '/login.php');
-?>

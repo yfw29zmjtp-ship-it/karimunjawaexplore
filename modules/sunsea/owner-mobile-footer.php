@@ -1,4 +1,7 @@
 </div>
-<script>if (window.feather) feather.replace();</script>
+<script>
+    if (window.feather) feather.replace();
+</script>
 </body>
+
 </html>

@@ -207,9 +207,9 @@ include 'layout-header.php';
             <tbody>
                 <?php foreach ($bookings as $b): ?>
                     <?php
-                        // Durasi paket dibaca otomatis dari selisih tanggal mulai & selesai (mis. 3H2M, 4H3M).
-                        $nights = max(0, (int)round((strtotime($b['end_date']) - strtotime($b['start_date'])) / 86400));
-                        $durationLabel = ($nights + 1) . 'H' . $nights . 'M';
+                    // Durasi paket dibaca otomatis dari selisih tanggal mulai & selesai (mis. 3H2M, 4H3M).
+                    $nights = max(0, (int)round((strtotime($b['end_date']) - strtotime($b['start_date'])) / 86400));
+                    $durationLabel = ($nights + 1) . 'H' . $nights . 'M';
                     ?>
                     <tr style="cursor:pointer;" onclick="openBookingDetail(<?php echo $b['id']; ?>)">
                         <td><a href="javascript:void(0)" onclick="event.stopPropagation();openBookingDetail(<?php echo $b['id']; ?>)" style="color:var(--ss-ocean);font-weight:600;text-decoration:none;"><?php echo htmlspecialchars($b['booking_no']); ?></a></td>
@@ -263,17 +263,17 @@ include 'layout-header.php';
         overflow: hidden;
     }
 
-    #bookingDetailBody .bd-grid > div {
+    #bookingDetailBody .bd-grid>div {
         padding: 12px 16px;
         border-right: 1px solid var(--ss-gray-1);
         border-bottom: 1px solid var(--ss-gray-1);
     }
 
-    #bookingDetailBody .bd-grid > div:nth-child(3n) {
+    #bookingDetailBody .bd-grid>div:nth-child(3n) {
         border-right: none;
     }
 
-    #bookingDetailBody .bd-grid > div:nth-last-child(-n+3) {
+    #bookingDetailBody .bd-grid>div:nth-last-child(-n+3) {
         border-bottom: none;
     }
 
@@ -444,23 +444,23 @@ include 'layout-header.php';
             grid-template-columns: repeat(2, 1fr);
         }
 
-        #bookingDetailBody .bd-grid > div {
+        #bookingDetailBody .bd-grid>div {
             border-right: 1px solid var(--ss-gray-1);
         }
 
-        #bookingDetailBody .bd-grid > div:nth-child(3n) {
+        #bookingDetailBody .bd-grid>div:nth-child(3n) {
             border-right: 1px solid var(--ss-gray-1);
         }
 
-        #bookingDetailBody .bd-grid > div:nth-child(2n) {
+        #bookingDetailBody .bd-grid>div:nth-child(2n) {
             border-right: none;
         }
 
-        #bookingDetailBody .bd-grid > div:nth-last-child(-n+3) {
+        #bookingDetailBody .bd-grid>div:nth-last-child(-n+3) {
             border-bottom: 1px solid var(--ss-gray-1);
         }
 
-        #bookingDetailBody .bd-grid > div:nth-last-child(-n+2) {
+        #bookingDetailBody .bd-grid>div:nth-last-child(-n+2) {
             border-bottom: none;
         }
 

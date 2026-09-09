@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Business Configuration
  * Defines all businesses with separate databases
@@ -15,7 +16,8 @@ $BUSINESSES = [
 ];
 
 // Helper function to get business by ID
-function getBusinessById($id) {
+function getBusinessById($id)
+{
     global $BUSINESSES;
     foreach ($BUSINESSES as $business) {
         if ($business['id'] == $id) {
@@ -26,7 +28,8 @@ function getBusinessById($id) {
 }
 
 // Helper function to get business by database name
-function getBusinessByDatabase($dbName) {
+function getBusinessByDatabase($dbName)
+{
     global $BUSINESSES;
     foreach ($BUSINESSES as $business) {
         if ($business['database'] == $dbName) {
@@ -37,9 +40,10 @@ function getBusinessByDatabase($dbName) {
 }
 
 // Helper function to get all active businesses
-function getActiveBusinesses() {
+function getActiveBusinesses()
+{
     global $BUSINESSES;
-    return array_filter($BUSINESSES, function($b) {
+    return array_filter($BUSINESSES, function ($b) {
         return $b['active'] === true;
     });
 }

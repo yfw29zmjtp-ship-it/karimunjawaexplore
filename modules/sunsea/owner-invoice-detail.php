@@ -11,7 +11,10 @@ require_once '../../includes/functions.php';
 require_once 'db-helper.php';
 
 $auth = new Auth();
-if (!$auth->isLoggedIn()) { header('Location: owner-login.php'); exit; }
+if (!$auth->isLoggedIn()) {
+    header('Location: owner-login.php');
+    exit;
+}
 $auth->requireLogin();
 
 $currentUser = $auth->getCurrentUser();
@@ -107,20 +110,20 @@ include 'owner-mobile-header.php';
 </div>
 
 <?php if (!empty($payments)): ?>
-<div class="ob-section">
-    <div class="ob-section-head">
-        <div class="ob-section-title">Riwayat Pembayaran</div>
-    </div>
-    <?php foreach ($payments as $p): ?>
-        <div class="ob-item-row">
-            <div>
-                <?php echo date('d M Y', strtotime($p['payment_date'])); ?>
-                <div style="color:var(--muted);font-size:10.5px;"><?php echo htmlspecialchars($p['method'] ?? '-'); ?></div>
-            </div>
-            <div style="font-weight:700;color:var(--success);">+<?php echo sunseaRupiah((float)$p['amount']); ?></div>
+    <div class="ob-section">
+        <div class="ob-section-head">
+            <div class="ob-section-title">Riwayat Pembayaran</div>
         </div>
-    <?php endforeach; ?>
-</div>
+        <?php foreach ($payments as $p): ?>
+            <div class="ob-item-row">
+                <div>
+                    <?php echo date('d M Y', strtotime($p['payment_date'])); ?>
+                    <div style="color:var(--muted);font-size:10.5px;"><?php echo htmlspecialchars($p['method'] ?? '-'); ?></div>
+                </div>
+                <div style="font-weight:700;color:var(--success);">+<?php echo sunseaRupiah((float)$p['amount']); ?></div>
+            </div>
+        <?php endforeach; ?>
+    </div>
 <?php endif; ?>
 
 <a href="invoices.php?action=print&id=<?php echo (int)$invoice['id']; ?>" target="_blank" class="ob-qbtn" style="width:100%;">

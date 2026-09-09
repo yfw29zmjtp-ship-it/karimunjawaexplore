@@ -48,56 +48,119 @@ $users = $masterPdo->query("SELECT id, username, full_name, role_id, is_active F
 ?>
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
-<meta charset="UTF-8">
-<title>Master DB - Atur Role User (Owner Login)</title>
-<style>
-body{font-family:Arial,sans-serif;background:#f8fafc;padding:24px;color:#1e293b;}
-.box{max-width:800px;margin:0 auto;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:20px;}
-h2{margin-top:0;font-size:18px;}
-.note{background:#FFF7ED;border:1px solid #FDE4CC;border-radius:8px;padding:10px 14px;font-size:13px;margin-bottom:16px;}
-table{width:100%;border-collapse:collapse;font-size:13px;}
-th,td{padding:8px 10px;border-bottom:1px solid #e2e8f0;text-align:left;}
-select{padding:4px 6px;}
-.flash{padding:10px 14px;border-radius:8px;margin-bottom:14px;font-size:13px;}
-.flash.success{background:#ECFDF5;color:#065F46;border:1px solid #A7F3D0;}
-.flash.error{background:#FEF2F2;color:#991B1B;border:1px solid #FECACA;}
-</style>
+    <meta charset="UTF-8">
+    <title>Master DB - Atur Role User (Owner Login)</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f8fafc;
+            padding: 24px;
+            color: #1e293b;
+        }
+
+        .box {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        h2 {
+            margin-top: 0;
+            font-size: 18px;
+        }
+
+        .note {
+            background: #FFF7ED;
+            border: 1px solid #FDE4CC;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 13px;
+            margin-bottom: 16px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        th,
+        td {
+            padding: 8px 10px;
+            border-bottom: 1px solid #e2e8f0;
+            text-align: left;
+        }
+
+        select {
+            padding: 4px 6px;
+        }
+
+        .flash {
+            padding: 10px 14px;
+            border-radius: 8px;
+            margin-bottom: 14px;
+            font-size: 13px;
+        }
+
+        .flash.success {
+            background: #ECFDF5;
+            color: #065F46;
+            border: 1px solid #A7F3D0;
+        }
+
+        .flash.error {
+            background: #FEF2F2;
+            color: #991B1B;
+            border: 1px solid #FECACA;
+        }
+    </style>
 </head>
+
 <body>
-<div class="box">
-    <h2>Master Database - Atur Role User</h2>
-    <div class="note">
-        Tool ini mengubah role di database master (<code><?php echo htmlspecialchars(DB_NAME); ?></code>), yang dipakai
-        oleh tombol <strong>"Owner Login"</strong> di halaman login utama / <code>owner-login.php</code>.
-        Ini <strong>berbeda</strong> dari role di Pengaturan modul Sunsea (yang hanya mengatur akses "Owner Dashboard" Sunsea).
+    <div class="box">
+        <h2>Master Database - Atur Role User</h2>
+        <div class="note">
+            Tool ini mengubah role di database master (<code><?php echo htmlspecialchars(DB_NAME); ?></code>), yang dipakai
+            oleh tombol <strong>"Owner Login"</strong> di halaman login utama / <code>owner-login.php</code>.
+            Ini <strong>berbeda</strong> dari role di Pengaturan modul Sunsea (yang hanya mengatur akses "Owner Dashboard" Sunsea).
+        </div>
+        <?php if ($flashMsg): ?>
+            <div class="flash <?php echo $flashType; ?>"><?php echo htmlspecialchars($flashMsg); ?></div>
+        <?php endif; ?>
+        <table>
+            <tr>
+                <th>Username</th>
+                <th>Nama</th>
+                <th>Role Saat Ini</th>
+                <th>Ubah Role</th>
+            </tr>
+            <?php foreach ($users as $u): ?>
+                <tr>
+                    <td><?php echo htmlspecialchars($u['username']); ?></td>
+                    <td><?php echo htmlspecialchars($u['full_name']); ?></td>
+                    <td><?php echo htmlspecialchars($roleNameById[$u['role_id']] ?? '-'); ?></td>
+                    <td>
+                        <form method="POST" style="display:flex;gap:6px;">
+                            <input type="hidden" name="user_id" value="<?php echo (int)$u['id']; ?>">
+                            <select name="role_id">
+                                <?php foreach ($roles as $r): ?>
+                                    <option value="<?php echo (int)$r['id']; ?>" <?php echo ($r['id'] == $u['role_id']) ? 'selected' : ''; ?>>
+                                        <?php echo htmlspecialchars($r['role_name']); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                            <button type="submit">Simpan</button>
+                        </form>
+                    </td>
+                </tr>
+            <?php endforeach; ?>
+        </table>
     </div>
-    <?php if ($flashMsg): ?>
-        <div class="flash <?php echo $flashType; ?>"><?php echo htmlspecialchars($flashMsg); ?></div>
-    <?php endif; ?>
-    <table>
-        <tr><th>Username</th><th>Nama</th><th>Role Saat Ini</th><th>Ubah Role</th></tr>
-        <?php foreach ($users as $u): ?>
-        <tr>
-            <td><?php echo htmlspecialchars($u['username']); ?></td>
-            <td><?php echo htmlspecialchars($u['full_name']); ?></td>
-            <td><?php echo htmlspecialchars($roleNameById[$u['role_id']] ?? '-'); ?></td>
-            <td>
-                <form method="POST" style="display:flex;gap:6px;">
-                    <input type="hidden" name="user_id" value="<?php echo (int)$u['id']; ?>">
-                    <select name="role_id">
-                        <?php foreach ($roles as $r): ?>
-                            <option value="<?php echo (int)$r['id']; ?>" <?php echo ($r['id'] == $u['role_id']) ? 'selected' : ''; ?>>
-                                <?php echo htmlspecialchars($r['role_name']); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                    <button type="submit">Simpan</button>
-                </form>
-            </td>
-        </tr>
-        <?php endforeach; ?>
-    </table>
-</div>
 </body>
+
 </html>

@@ -165,3 +165,6 @@ config/backup-secrets.php
 # Per-hosting DB override (standalone deployments, e.g. Sunsea)
 # =============================================
 config/local-db-config.php
+
+# Runtime PHP session files (should not be tracked)
+tmp_sessions/*

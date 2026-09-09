@@ -11,7 +11,10 @@ require_once '../../includes/functions.php';
 require_once 'db-helper.php';
 
 $auth = new Auth();
-if (!$auth->isLoggedIn()) { header('Location: owner-login.php'); exit; }
+if (!$auth->isLoggedIn()) {
+    header('Location: owner-login.php');
+    exit;
+}
 $auth->requireLogin();
 
 $currentUser = $auth->getCurrentUser();
@@ -60,7 +63,9 @@ include 'owner-mobile-header.php';
 </div>
 
 <?php if (empty($bookings)): ?>
-    <div class="ob-section"><div class="ob-empty">Belum ada data reservasi.</div></div>
+    <div class="ob-section">
+        <div class="ob-empty">Belum ada data reservasi.</div>
+    </div>
 <?php else: ?>
     <?php foreach ($bookings as $b): ?>
         <?php

@@ -215,7 +215,9 @@ include 'layout-header.php';
                 </thead>
                 <tbody>
                     <?php if (empty($rows)): ?>
-                        <tr><td colspan="7" style="text-align:center;color:var(--ss-muted);padding:20px;font-size:12px;">Belum ada transaksi pada periode ini.</td></tr>
+                        <tr>
+                            <td colspan="7" style="text-align:center;color:var(--ss-muted);padding:20px;font-size:12px;">Belum ada transaksi pada periode ini.</td>
+                        </tr>
                     <?php endif; ?>
                     <?php foreach ($rows as $r): ?>
                         <tr>
@@ -264,7 +266,9 @@ include 'layout-header.php';
                 </thead>
                 <tbody>
                     <?php if (empty($perGuest)): ?>
-                        <tr><td colspan="4" style="text-align:center;color:var(--ss-muted);padding:20px;font-size:12px;">Belum ada pengeluaran per tamu pada periode ini.</td></tr>
+                        <tr>
+                            <td colspan="4" style="text-align:center;color:var(--ss-muted);padding:20px;font-size:12px;">Belum ada pengeluaran per tamu pada periode ini.</td>
+                        </tr>
                     <?php endif; ?>
                     <?php foreach ($perGuest as $g): ?>
                         <tr>
