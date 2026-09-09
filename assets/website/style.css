@@ -812,19 +812,23 @@ a {
 }
 
 /* Section "Tentang" ringkas di beranda, sebelum daftar paket wisata */
+.we-about-section {
+  padding: 30px 0;
+}
+
 .we-about-block {
   display: grid;
-  grid-template-columns: 280px 1fr;
-  gap: 36px;
+  grid-template-columns: 150px 1fr;
+  gap: 22px;
   align-items: center;
 }
 
 .we-about-media {
   width: 100%;
-  aspect-ratio: 4 / 3;
-  border-radius: 14px;
+  aspect-ratio: 1 / 1;
+  border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.12);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
   background: var(--we-bg);
 }
 
@@ -841,23 +845,43 @@ a {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 60px;
+  font-size: 34px;
+}
+
+.we-about-text h2 {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--we-brand-dark);
+  margin: 0 0 6px;
 }
 
 .we-about-text p {
-  line-height: 1.85;
-  color: var(--we-text);
-  margin: 4px 0 20px;
+  line-height: 1.6;
+  color: var(--we-muted);
+  font-size: 13.5px;
+  margin: 0 0 12px;
+}
+
+.we-about-text .we-btn {
+  padding: 8px 18px;
+  font-size: 13px;
 }
 
 @media (max-width: 720px) {
   .we-about-block {
-    grid-template-columns: 1fr;
+    grid-template-columns: 90px 1fr;
+    gap: 14px;
   }
 
-  .we-about-media {
-    max-width: 260px;
-    margin: 0 auto;
+  .we-about-text h2 {
+    font-size: 15.5px;
+  }
+
+  .we-about-text p {
+    -webkit-line-clamp: 3;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 }
 
