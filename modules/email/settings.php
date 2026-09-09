@@ -23,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $port = (int)($_POST['port'] ?? 993);
     $encryption = ($_POST['encryption'] ?? 'ssl') === 'tls' ? 'tls' : 'ssl';
     $user = trim((string)($_POST['user'] ?? ''));
-    $pass = (string)($_POST['pass'] ?? '');
+    $pass = trim((string)($_POST['pass'] ?? ''));
     $smtpPort = (int)($_POST['smtp_port'] ?? 465);
     $smtpEncryption = ($_POST['smtp_encryption'] ?? 'ssl') === 'tls' ? 'tls' : 'ssl';
 
