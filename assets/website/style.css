@@ -831,7 +831,9 @@ a {
   box-shadow: 12px 16px 28px rgba(15, 23, 42, 0.22);
   background: var(--we-bg);
   transform: perspective(700px) rotateY(-10deg) rotateX(3deg);
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease;
 }
 
 .we-about-media:hover {
@@ -910,17 +912,23 @@ a {
   border: none;
   background: linear-gradient(135deg, var(--we-ocean), var(--we-ocean-dark));
   color: #fff;
-  box-shadow: 0 10px 26px rgba(3, 105, 161, 0.35), 0 0 0 4px rgba(255, 255, 255, 0.6);
+  box-shadow:
+    0 10px 26px rgba(3, 105, 161, 0.35),
+    0 0 0 4px rgba(255, 255, 255, 0.6);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
 }
 
 .we-chat-fab:hover {
   transform: scale(1.07);
-  box-shadow: 0 14px 32px rgba(3, 105, 161, 0.45), 0 0 0 4px rgba(255, 255, 255, 0.7);
+  box-shadow:
+    0 14px 32px rgba(3, 105, 161, 0.45),
+    0 0 0 4px rgba(255, 255, 255, 0.7);
 }
 
 .we-chat-fab-icon {
@@ -941,7 +949,10 @@ a {
   display: flex;
   flex-direction: column;
   transform: translateY(12px);
-  transition: max-height 0.25s ease, opacity 0.2s ease, transform 0.2s ease;
+  transition:
+    max-height 0.25s ease,
+    opacity 0.2s ease,
+    transform 0.2s ease;
 }
 
 .we-chat-widget.we-open .we-chat-panel {
@@ -1029,7 +1040,10 @@ a {
   padding: 5px 12px;
   border-radius: 14px;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s;
 }
 
 .we-chat-admin-chip.we-active {

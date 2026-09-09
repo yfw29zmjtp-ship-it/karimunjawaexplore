@@ -22,7 +22,9 @@
                     const res = await fetch('<?php echo BASE_URL; ?>/modules/email/unread-count.php');
                     const data = await res.json();
                     dot.style.display = (data.unread > 0) ? 'inline-block' : 'none';
-                } catch (e) { /* ignore */ }
+                } catch (e) {
+                    /* ignore */
+                }
             }
             checkEmailUnread();
             setInterval(checkEmailUnread, 30000);

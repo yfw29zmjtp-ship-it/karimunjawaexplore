@@ -121,17 +121,11 @@ class EmailHelper
         }
 
         foreach ($values as $key => $value) {
-            $exists = $db->fetchOne("SELECT id FROM settings WHERE setting_key = :k", ['k' => $key]);
-            if ($exists) {
-                $db->query("UPDATE settings SET setting_value = :v WHERE setting_key = :k", ['v' => $value, 'k' => $key]);
-            } else {
-                $db->insert('settings', [
-                    'setting_key' => $key,
-                    'setting_value' => $value,
-                    'setting_type' => 'text',
-                    'description' => 'Email Kantor IMAP setting',
-                ]);
-            }
+            $db->query(
+                "INSERT INTO settings (setting_key, setting_value) VALUES (:k, :v)
+                 ON DUPLICATE KEY UPDATE setting_value = :v2, updated_at = NOW()",
+                ['k' => $key, 'v' => $value, 'v2' => $value]
+            );
         }
     }
 

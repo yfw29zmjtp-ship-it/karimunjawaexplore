@@ -68,13 +68,13 @@
             </div>
             <button type="button" class="we-chat-fab" id="weChatFab" onclick="weChatToggle()" aria-label="Chat WhatsApp">
                 <svg class="we-chat-fab-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 3C7.03 3 3 6.58 3 11c0 2.39 1.19 4.53 3.08 6.02-.1.98-.42 2.28-1.28 3.48-.14.2.02.47.27.44 1.7-.2 3.13-.9 4.2-1.58.86.24 1.78.37 2.73.37 4.97 0 9-3.58 9-8s-4.03-8-9-8z" fill="currentColor"/>
+                    <path d="M12 3C7.03 3 3 6.58 3 11c0 2.39 1.19 4.53 3.08 6.02-.1.98-.42 2.28-1.28 3.48-.14.2.02.47.27.44 1.7-.2 3.13-.9 4.2-1.58.86.24 1.78.37 2.73.37 4.97 0 9-3.58 9-8s-4.03-8-9-8z" fill="currentColor" />
                 </svg>
             </button>
         </div>
 
         <script>
-            (function () {
+            (function() {
                 var admins = <?php echo json_encode(array_map(fn($a) => $a['wa'], $weWaAdmins)); ?>;
                 var selectedIndex = 0;
                 var panel = document.getElementById('weChatPanel');
@@ -83,24 +83,24 @@
                 var input = document.getElementById('weChatInput');
                 var adminsBar = document.getElementById('weChatAdmins');
 
-                window.weChatToggle = function (forceOpen) {
+                window.weChatToggle = function(forceOpen) {
                     var open = typeof forceOpen === 'boolean' ? forceOpen : !widget.classList.contains('we-open');
                     widget.classList.toggle('we-open', open);
                     if (open) input.focus();
                 };
 
                 if (adminsBar) {
-                    adminsBar.addEventListener('click', function (e) {
+                    adminsBar.addEventListener('click', function(e) {
                         var chip = e.target.closest('.we-chat-admin-chip');
                         if (!chip) return;
                         selectedIndex = parseInt(chip.dataset.index, 10) || 0;
-                        adminsBar.querySelectorAll('.we-chat-admin-chip').forEach(function (c) {
+                        adminsBar.querySelectorAll('.we-chat-admin-chip').forEach(function(c) {
                             c.classList.toggle('we-active', c === chip);
                         });
                     });
                 }
 
-                window.weChatSend = function () {
+                window.weChatSend = function() {
                     var msg = input.value.trim();
                     if (!msg) return;
 
@@ -117,7 +117,7 @@
                     window.open(waBase + '?text=' + encodeURIComponent(msg), '_blank');
                 };
 
-                input.addEventListener('keydown', function (e) {
+                input.addEventListener('keydown', function(e) {
                     if (e.key === 'Enter') {
                         e.preventDefault();
                         weChatSend();
