@@ -986,7 +986,7 @@ include 'layout-header.php';
                             </div>
                             <div class="ss-form-group">
                                 <label class="ss-label">Paket (opsional)</label>
-                                <select name="package_id" class="ss-select" id="pkgSelect" onchange="fillItineraryFromPackage(); applyPackageMode();">
+                                <select name="package_id" class="ss-select" id="pkgSelect" onchange="fillItineraryFromPackage(); applyPackageMode(); autoFillTripEndDate();">
                                     <option value="">-- Custom / Tidak pakai paket --</option>
                                     <?php foreach ($packages as $p): ?>
                                         <option value="<?php echo $p['id']; ?>"
@@ -1007,12 +1007,12 @@ include 'layout-header.php';
                             </div>
                             <div class="ss-form-group">
                                 <label class="ss-label">Tanggal Trip</label>
-                                <input type="date" name="trip_date" class="ss-input"
-                                    value="<?php echo $quotation['trip_date'] ?? ''; ?>">
+                                <input type="date" name="trip_date" id="tripDateInput" class="ss-input"
+                                    value="<?php echo $quotation['trip_date'] ?? ''; ?>" onchange="autoFillTripEndDate()">
                             </div>
                             <div class="ss-form-group">
                                 <label class="ss-label">Tanggal Selesai</label>
-                                <input type="date" name="trip_end_date" class="ss-input"
+                                <input type="date" name="trip_end_date" id="tripEndInput" class="ss-input"
                                     value="<?php echo $quotation['trip_end_date'] ?? ''; ?>">
                             </div>
                         </div>
@@ -1310,6 +1310,21 @@ HTML;
         if (forceOverwrite || !box.value.trim()) {
             box.value = itinerary;
         }
+    }
+
+    // Package duration (e.g. "3H2M" -> data-days=3) implies the trip end date, so
+    // fill/recompute it whenever the package or start date changes.
+    function autoFillTripEndDate() {
+        var sel = document.getElementById('pkgSelect');
+        var startInput = document.getElementById('tripDateInput');
+        var endInput = document.getElementById('tripEndInput');
+        if (!sel || !startInput || !endInput || !startInput.value) return;
+        var opt = sel.options[sel.selectedIndex];
+        var days = opt ? parseInt(opt.getAttribute('data-days') || '0', 10) : 0;
+        if (!days || days < 1) return;
+        var start = new Date(startInput.value + 'T00:00:00');
+        start.setDate(start.getDate() + (days - 1));
+        endInput.value = start.toISOString().slice(0, 10);
     }
 
     function packageRowHtml(name, qty, price) {
