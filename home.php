@@ -141,10 +141,17 @@ require __DIR__ . '/includes/website-header.php';
 
 <script>
     function weOpenQuoteModal() {
+        // Only validate the fields visible in the bar itself — q_name/q_phone live
+        // inside the (still-hidden) modal, and browsers silently fail reportValidity()
+        // on required fields that aren't rendered yet, making the button look dead.
         var form = document.getElementById('weQuoteForm');
-        if (!form.reportValidity()) return;
+        var barFields = form.querySelectorAll('.we-quotebar-field:not(.we-quotebar-submit) input, .we-quotebar-field:not(.we-quotebar-submit) select');
+        for (var i = 0; i < barFields.length; i++) {
+            if (!barFields[i].reportValidity()) return;
+        }
         document.getElementById('weQuoteModalOverlay').classList.add('open');
     }
+
     function weCloseQuoteModal() {
         document.getElementById('weQuoteModalOverlay').classList.remove('open');
     }

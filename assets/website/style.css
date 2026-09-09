@@ -152,20 +152,23 @@ a {
 
 /* Quick quote bar (Traveloka-style), overlaps bottom edge of hero */
 .we-quotebar-wrap {
-  max-width: 1140px;
-  margin: -38px auto 40px;
+  max-width: 780px;
+  margin: -30px auto 40px;
   padding: 0 20px;
   position: relative;
   z-index: 5;
 }
 .we-quotebar {
-  background: #fff;
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
   border-radius: 12px;
-  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.15);
-  padding: 12px 16px;
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.12);
+  padding: 10px 14px;
   display: grid;
-  grid-template-columns: 0.7fr 0.6fr 1.6fr auto;
-  gap: 10px;
+  grid-template-columns: 0.7fr 0.55fr 1.3fr auto;
+  gap: 8px;
   align-items: end;
 }
 .we-quotebar-field-date input {
@@ -184,12 +187,12 @@ a {
 .we-quotebar-field input,
 .we-quotebar-field select {
   width: 100%;
-  padding: 7px 9px;
-  border: 1px solid var(--we-border);
+  padding: 6px 8px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
   border-radius: 7px;
-  font-size: 12.5px;
+  font-size: 12px;
   color: var(--we-text);
-  background: #fff;
+  background: rgba(255, 255, 255, 0.7);
 }
 .we-quotebar-btn {
   width: 100%;
