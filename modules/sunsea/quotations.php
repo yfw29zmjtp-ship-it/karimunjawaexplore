@@ -374,6 +374,11 @@ if ($action === 'print' && $quotation):
         <meta charset="UTF-8">
         <title>Penawaran <?php echo htmlspecialchars($quotation['quotation_no']); ?></title>
         <style>
+            @page {
+                size: A4;
+                margin: 9mm 11mm;
+            }
+
             * {
                 box-sizing: border-box;
                 -webkit-print-color-adjust: exact;
@@ -384,7 +389,7 @@ if ($action === 'print' && $quotation):
             body {
                 font-family: 'Segoe UI', Arial, sans-serif;
                 font-size: 12px;
-                padding: 22px 32px;
+                padding: 12px 18px;
                 color: #1e293b;
                 background: #fff;
             }
@@ -533,7 +538,7 @@ if ($action === 'print' && $quotation):
             }
 
             tbody td {
-                padding: 8px 10px;
+                padding: 6px 10px;
                 border-bottom: 1px solid #EEF2F7;
                 font-size: 12px;
             }
@@ -553,7 +558,7 @@ if ($action === 'print' && $quotation):
                 background: #F0FDF4;
                 border: 1px solid #BBF7D0;
                 border-radius: 8px;
-                padding: 8px 16px;
+                padding: 6px 14px;
                 margin-top: 4px;
             }
 
@@ -618,8 +623,8 @@ if ($action === 'print' && $quotation):
 
             .itinerary-day-group {
                 break-inside: avoid-column;
-                margin-bottom: 10px;
-                padding: 8px 10px 9px;
+                margin-bottom: 8px;
+                padding: 6px 10px 7px;
                 background: #FBFBFA;
                 border: 1px solid #E2E8F0;
                 border-radius: 6px;
@@ -663,7 +668,7 @@ if ($action === 'print' && $quotation):
 
             .thanks-note {
                 text-align: center;
-                margin-top: 16px;
+                margin-top: 10px;
                 font-size: 12px;
                 font-weight: 700;
                 color: #7C2D12;
@@ -671,8 +676,8 @@ if ($action === 'print' && $quotation):
 
             .footer-note {
                 clear: both;
-                margin-top: 18px;
-                padding-top: 12px;
+                margin-top: 10px;
+                padding-top: 8px;
                 border-top: 1px dashed #E2E8F0;
                 font-size: 10.5px;
                 color: #94a3b8;
@@ -695,7 +700,7 @@ if ($action === 'print' && $quotation):
             }
 
             .footer-adf-system {
-                margin-top: 14px;
+                margin-top: 8px;
                 font-size: 8px;
                 font-style: normal;
                 color: #cbd5e1;
@@ -704,7 +709,7 @@ if ($action === 'print' && $quotation):
 
             @media print {
                 body {
-                    padding: 15px;
+                    padding: 0;
                 }
             }
         </style>
