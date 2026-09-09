@@ -320,7 +320,7 @@ $listParams  = $filter ? [$filter] : [];
 
 $quotations = $pdo->prepare("
     SELECT q.id, q.quotation_no, q.status, q.total_amount, q.trip_date, q.valid_until, q.created_at,
-           c.name as customer_name, q.pax_count
+           q.created_by, c.name as customer_name, q.pax_count
     FROM quotations q
     JOIN customers c ON c.id = q.customer_id
     $whereClause
@@ -1207,6 +1207,7 @@ include 'layout-header.php';
                         <tr>
                             <th>No. Penawaran</th>
                             <th>Customer</th>
+                            <th>Sumber</th>
                             <th>Tgl Trip</th>
                             <th>Pax</th>
                             <th>Total</th>
@@ -1222,6 +1223,13 @@ include 'layout-header.php';
                                         <?php echo htmlspecialchars($q['quotation_no']); ?>
                                     </a></td>
                                 <td><?php echo htmlspecialchars($q['customer_name']); ?></td>
+                                <td>
+                                    <?php if (($q['created_by'] ?? '') === 'website'): ?>
+                                        <span class="ss-status" style="background:#e0e7ff;color:#3730a3;">🌐 Web</span>
+                                    <?php else: ?>
+                                        <span class="ss-status" style="background:#f1f5f9;color:#475569;">Manual</span>
+                                    <?php endif; ?>
+                                </td>
                                 <td><?php echo $q['trip_date'] ? date('d M Y', strtotime($q['trip_date'])) : '-'; ?></td>
                                 <td><?php echo $q['pax_count']; ?></td>
                                 <td style="font-weight:600;"><?php echo sunseaRupiah((float)$q['total_amount']); ?></td>
@@ -1229,6 +1237,9 @@ include 'layout-header.php';
                                 <td>
                                     <a href="quotations.php?action=view&id=<?php echo $q['id']; ?>" class="ss-btn ss-btn-outline ss-btn-sm">
                                         <i data-feather="eye"></i>
+                                    </a>
+                                    <a href="quotations.php?action=edit&id=<?php echo $q['id']; ?>" class="ss-btn ss-btn-outline ss-btn-sm">
+                                        <i data-feather="edit-2"></i>
                                     </a>
                                     <a href="quotations.php?action=print&id=<?php echo $q['id']; ?>" target="_blank" class="ss-btn ss-btn-outline ss-btn-sm">
                                         <i data-feather="printer"></i>
