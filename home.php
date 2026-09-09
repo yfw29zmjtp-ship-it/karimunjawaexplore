@@ -15,6 +15,9 @@ $weAllPackages = $pdo->query(
 $weHeroTitle = sunseaSetting($pdo, 'website_hero_title', 'Jelajahi Keindahan Karimunjawa Bersama Kami');
 $weHeroSubtitle = sunseaSetting($pdo, 'website_hero_subtitle', 'Paket wisata open trip & private trip, island hopping, penginapan, hingga transport laut/darat — kami urus, Anda tinggal menikmati liburan.');
 $weHeroBg = sunseaSetting($pdo, 'website_hero_bg', '');
+
+$weAboutP1 = sunseaSetting($pdo, 'website_about_p1', '') ?: ($weCompanyName . ' adalah penyedia jasa tour & travel yang berfokus pada wisata Kepulauan Karimunjawa, Jepara. Kami melayani open trip maupun private trip, lengkap dengan penginapan, transport laut/darat, island hopping, guide lokal berpengalaman, hingga dokumentasi perjalanan.');
+$weAboutImage = $pdo->query("SELECT image_path FROM website_gallery WHERE is_active = 1 ORDER BY sort_order ASC, id DESC LIMIT 1")->fetchColumn();
 $weHeroStyle = $weHeroBg
     ? 'background-image:linear-gradient(135deg,rgba(6,54,84,.72),rgba(6,54,84,.72)),url(\'' . htmlspecialchars(sunseaAssetUrl($weHeroBg)) . '\');background-size:cover;background-position:center;'
     : '';
@@ -159,6 +162,29 @@ require __DIR__ . '/includes/website-header.php';
         document.addEventListener('DOMContentLoaded', weOpenQuoteModal);
     <?php endif; ?>
 </script>
+
+<section class="we-section we-section-alt">
+    <div class="we-container">
+        <div class="we-about-block">
+            <div class="we-about-media">
+                <?php if ($weAboutImage): ?>
+                    <img src="<?php echo htmlspecialchars(sunseaAssetUrl($weAboutImage)); ?>" alt="Tentang <?php echo htmlspecialchars($weCompanyName); ?>">
+                <?php elseif ($weLogoSrc): ?>
+                    <img src="<?php echo htmlspecialchars($weLogoSrc); ?>" alt="Tentang <?php echo htmlspecialchars($weCompanyName); ?>" style="object-fit:contain;background:#fff;padding:24px;">
+                <?php else: ?>
+                    <div class="we-about-media-fallback">🏝️</div>
+                <?php endif; ?>
+            </div>
+            <div class="we-about-text">
+                <div class="we-section-title" style="text-align:left;">
+                    <h2>Tentang <?php echo htmlspecialchars($weCompanyName); ?></h2>
+                </div>
+                <p><?php echo nl2br(htmlspecialchars($weAboutP1)); ?></p>
+                <a href="tentang-kami.php" class="we-btn we-btn-primary">Selengkapnya</a>
+            </div>
+        </div>
+    </div>
+</section>
 
 <section class="we-section">
     <div class="we-container">
