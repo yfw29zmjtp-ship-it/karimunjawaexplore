@@ -600,17 +600,17 @@ if ($action === 'print' && $quotation):
             .row {
                 display: flex;
                 justify-content: space-between;
-                padding: 4px 0;
-                font-size: 12px;
+                padding: 3px 0;
+                font-size: 10.5px;
             }
 
             .row.final {
-                font-size: 15px;
+                font-size: 12.5px;
                 font-weight: 800;
                 color: #C2410C;
                 border-top: 2px solid #C2410C;
-                padding-top: 8px;
-                margin-top: 4px;
+                padding-top: 6px;
+                margin-top: 3px;
             }
 
             .itinerary-box {
@@ -782,17 +782,6 @@ if ($action === 'print' && $quotation):
             </tbody>
         </table>
 
-        <?php if (!empty($facilityLines)): ?>
-            <div class="section-title">Fasilitas yang Didapat</div>
-            <div class="facility-box">
-                <ul class="facility-list">
-                    <?php foreach ($facilityLines as $line): ?>
-                        <li><?php echo htmlspecialchars($line); ?></li>
-                    <?php endforeach; ?>
-                </ul>
-            </div>
-        <?php endif; ?>
-
         <div class="bottom-flex">
             <div class="bank-box">
                 <?php if ($bankName || $bankAccount): ?>
@@ -809,6 +798,17 @@ if ($action === 'print' && $quotation):
                 <div class="row final"><span>TOTAL</span><strong><?php echo sunseaRupiah((float)$quotation['total_amount']); ?></strong></div>
             </div>
         </div>
+
+        <?php if (!empty($facilityLines)): ?>
+            <div class="section-title">Fasilitas yang Didapat</div>
+            <div class="facility-box">
+                <ul class="facility-list">
+                    <?php foreach ($facilityLines as $line): ?>
+                        <li><?php echo htmlspecialchars($line); ?></li>
+                    <?php endforeach; ?>
+                </ul>
+            </div>
+        <?php endif; ?>
 
         <?php if (!empty($quotation['itinerary'])): ?>
             <?php
