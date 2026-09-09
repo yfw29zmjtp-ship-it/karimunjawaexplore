@@ -461,25 +461,31 @@ if ($action === 'print' && $quotation):
 
             .meta-box {
                 display: flex;
-                justify-content: space-between;
-                gap: 16px;
+                justify-content: flex-start;
                 background: #FFF7ED;
                 border: 1px solid #FDE4CC;
                 border-radius: 8px;
-                padding: 14px 18px;
                 margin-top: 18px;
+                overflow: hidden;
             }
 
             .meta-box .item {
-                font-size: 11px;
+                flex: 0 0 auto;
+                padding: 10px 22px;
+                font-size: 10px;
                 color: #7C2D12;
+                border-right: 1px solid #FDE4CC;
+            }
+
+            .meta-box .item:last-child {
+                border-right: none;
             }
 
             .meta-box .item b {
                 display: block;
-                font-size: 12.5px;
+                font-size: 12px;
                 color: #1e293b;
-                margin-top: 2px;
+                margin-top: 3px;
                 font-weight: 700;
             }
 
