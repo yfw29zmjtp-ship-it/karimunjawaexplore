@@ -379,24 +379,24 @@ if ($action === 'print' && $quotation):
 
             body {
                 font-family: 'Segoe UI', Arial, sans-serif;
-                font-size: 12.5px;
-                padding: 32px 40px;
+                font-size: 12px;
+                padding: 22px 32px;
                 color: #1e293b;
                 background: #fff;
             }
 
             .accent-bar {
-                height: 6px;
+                height: 5px;
                 border-radius: 4px;
                 background: linear-gradient(90deg, #7C2D12, #C2410C 55%, #EA580C);
-                margin-bottom: 22px;
+                margin-bottom: 14px;
             }
 
             .head {
                 display: flex;
                 justify-content: space-between;
                 align-items: flex-start;
-                padding-bottom: 18px;
+                padding-bottom: 12px;
                 border-bottom: 1px solid #E2E8F0;
             }
 
@@ -443,7 +443,7 @@ if ($action === 'print' && $quotation):
                 display: flex;
                 align-items: center;
                 gap: 10px;
-                margin-top: 18px;
+                margin-top: 12px;
             }
 
             .cust-row .cust-name {
@@ -465,13 +465,13 @@ if ($action === 'print' && $quotation):
                 background: #FFF7ED;
                 border: 1px solid #FDE4CC;
                 border-radius: 8px;
-                margin-top: 18px;
+                margin-top: 12px;
                 overflow: hidden;
             }
 
             .meta-box .item {
                 flex: 0 0 auto;
-                padding: 10px 22px;
+                padding: 7px 20px;
                 font-size: 10px;
                 color: #7C2D12;
                 border-right: 1px solid #FDE4CC;
@@ -483,9 +483,9 @@ if ($action === 'print' && $quotation):
 
             .meta-box .item b {
                 display: block;
-                font-size: 12px;
+                font-size: 11.5px;
                 color: #1e293b;
-                margin-top: 3px;
+                margin-top: 2px;
                 font-weight: 700;
             }
 
@@ -495,7 +495,7 @@ if ($action === 'print' && $quotation):
                 text-transform: uppercase;
                 letter-spacing: .5px;
                 color: #7C2D12;
-                margin: 20px 0 8px;
+                margin: 14px 0 6px;
             }
 
             table {
@@ -542,8 +542,8 @@ if ($action === 'print' && $quotation):
                 background: #F0FDF4;
                 border: 1px solid #BBF7D0;
                 border-radius: 8px;
-                padding: 12px 16px;
-                margin-top: 6px;
+                padding: 8px 16px;
+                margin-top: 4px;
             }
 
             .facility-list {
@@ -551,16 +551,16 @@ if ($action === 'print' && $quotation):
                 column-gap: 24px;
                 margin: 0;
                 padding-left: 18px;
-                font-size: 11.5px;
+                font-size: 10.5px;
                 color: #15803D;
-                line-height: 1.7;
+                line-height: 1.5;
             }
 
             .bottom-flex {
                 display: flex;
                 justify-content: space-between;
                 gap: 24px;
-                margin-top: 20px;
+                margin-top: 12px;
             }
 
             .bank-box {
@@ -598,21 +598,24 @@ if ($action === 'print' && $quotation):
             }
 
             .itinerary-box {
-                font-size: 11.5px;
+                font-size: 10px;
                 color: #334155;
-                line-height: 1.7;
+                line-height: 1.45;
+                columns: 2;
+                column-gap: 22px;
             }
 
             .itinerary-day {
                 font-weight: 700;
                 color: #7C2D12;
-                margin-top: 8px;
+                margin-top: 5px;
+                break-inside: avoid-column;
             }
 
             .signature-area {
                 display: flex;
                 justify-content: space-between;
-                margin-top: 30px;
+                margin-top: 16px;
             }
 
             .notes-col {
@@ -629,7 +632,7 @@ if ($action === 'print' && $quotation):
             }
 
             .sign-place {
-                margin-bottom: 46px;
+                margin-bottom: 30px;
             }
 
             .stamp-img {
