@@ -62,8 +62,7 @@ include '../sunsea/layout-header.php';
 
 <style>
     .em-wrap {
-        max-width: 1180px;
-        margin: 0 auto;
+        max-width: 100%;
     }
 
     .em-layout {

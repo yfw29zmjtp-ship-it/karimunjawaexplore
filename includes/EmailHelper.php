@@ -48,6 +48,8 @@ class EmailHelper
 
         $this->mailbox = '{' . $config['host'] . ':' . $port . $flag . '/novalidate-cert}' . $this->folder;
 
+        @imap_timeout(IMAP_OPENTIMEOUT, 10);
+        @imap_timeout(IMAP_READTIMEOUT, 20);
         $conn = @imap_open($this->mailbox, $config['user'], $config['pass']);
         if ($conn === false) {
             throw new RuntimeException('Gagal konek ke email: ' . imap_last_error());

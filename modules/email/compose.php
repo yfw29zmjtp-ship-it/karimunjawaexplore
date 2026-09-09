@@ -34,11 +34,12 @@ if ($replyUid > 0 && $_SERVER['REQUEST_METHOD'] !== 'POST' && $emailConfig !== n
     try {
         $helper = new EmailHelper($emailConfig, $replyFolder);
         $original = $helper->getMessageByUid($replyUid);
-        $to = $to !== '' ? $to : $original['from'];
+        if ($to === '') {
+            // "From" header often includes a display name (e.g. "Arif <a@b.com>") -
+            // the "Kepada" field needs the bare address only, or the browser rejects it.
+            $to = preg_match('/<([^<>]+)>/', $original['from'], $m) ? trim($m[1]) : trim($original['from']);
+        }
         $subject = $subject !== '' ? $subject : (stripos($original['subject'], 're:') === 0 ? $original['subject'] : 'Re: ' . $original['subject']);
-        $quotedSource = $original['body_plain'] !== '' ? $original['body_plain'] : strip_tags($original['body_html']);
-        $quoted = '> ' . str_replace("\n", "\n> ", trim($quotedSource));
-        $body = "\n\n---- Pesan asli dari " . $original['from'] . " (" . $original['date'] . ") ----\n" . $quoted;
     } catch (Throwable $e) {
         // Ignore - user can still compose manually.
     }
@@ -76,8 +77,7 @@ include '../sunsea/layout-header.php';
 
 <style>
     .ec-wrap {
-        max-width: 700px;
-        margin: 0 auto;
+        max-width: 100%;
     }
 
     .ec-card {

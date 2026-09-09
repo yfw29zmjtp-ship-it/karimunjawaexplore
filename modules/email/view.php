@@ -52,8 +52,7 @@ include '../sunsea/layout-header.php';
 
 <style>
     .em-wrap {
-        max-width: 900px;
-        margin: 0 auto;
+        max-width: 100%;
     }
 
     .em-card {

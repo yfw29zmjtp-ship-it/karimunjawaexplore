@@ -136,6 +136,9 @@ class SmtpMailer
         }
         $code = (int)substr($response, 0, 3);
         if (!in_array($code, $codes, true)) {
+            if (stripos($response, 'dovecot') !== false || stripos($response, 'IMAP4') !== false) {
+                throw new RuntimeException('Port/Enkripsi SMTP salah - server membalas sebagai IMAP (Dovecot), bukan SMTP. Cek "Outgoing Server Port" di Pengaturan Email (gunakan 465+SSL atau 587+TLS).');
+            }
             throw new RuntimeException('SMTP error: ' . trim($response));
         }
     }
