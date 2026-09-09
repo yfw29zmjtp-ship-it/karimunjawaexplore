@@ -11,19 +11,21 @@
  */
 if (!defined('APP_ACCESS')) define('APP_ACCESS', true);
 
+// Absolute (BASE_URL-prefixed) so the nav still works from other module folders (e.g. modules/email/).
 $sunseaNavItems = [
-    'dashboard'     => ['icon' => 'home',       'label' => 'Dashboard',         'url' => 'dashboard.php'],
-    'owner_dashboard' => ['icon' => 'smartphone', 'label' => 'Owner Dashboard', 'url' => 'owner-dashboard.php'],
-    'database'      => ['icon' => 'database',   'label' => 'Database',          'url' => 'database.php'],
-    'bookings'      => ['icon' => 'briefcase',  'label' => 'Booking',           'url' => 'bookings.php'],
-    'calendar'      => ['icon' => 'calendar',   'label' => 'Kalender Booking',  'url' => 'calendar.php'],
-    'coordinators'  => ['icon' => 'user-check', 'label' => 'Koordinator',       'url' => 'coordinators.php'],
-    'packages'      => ['icon' => 'package',    'label' => 'Paket Wisata',      'url' => 'packages.php'],
-    'quotations'    => ['icon' => 'file-text',  'label' => 'Penawaran',         'url' => 'quotations.php'],
-    'invoices'      => ['icon' => 'credit-card', 'label' => 'Invoice',          'url' => 'invoices.php'],
-    'finance'       => ['icon' => 'dollar-sign', 'label' => 'Finance',          'url' => 'finance.php'],
-    'settings'      => ['icon' => 'settings',   'label' => 'Pengaturan',        'url' => 'settings.php'],
-    'website_settings' => ['icon' => 'globe',   'label' => 'Setting Website',   'url' => 'website-settings.php'],
+    'dashboard'     => ['icon' => 'home',       'label' => 'Dashboard',         'url' => BASE_URL . '/modules/sunsea/dashboard.php'],
+    'owner_dashboard' => ['icon' => 'smartphone', 'label' => 'Owner Dashboard', 'url' => BASE_URL . '/modules/sunsea/owner-dashboard.php'],
+    'database'      => ['icon' => 'database',   'label' => 'Database',          'url' => BASE_URL . '/modules/sunsea/database.php'],
+    'bookings'      => ['icon' => 'briefcase',  'label' => 'Booking',           'url' => BASE_URL . '/modules/sunsea/bookings.php'],
+    'calendar'      => ['icon' => 'calendar',   'label' => 'Kalender Booking',  'url' => BASE_URL . '/modules/sunsea/calendar.php'],
+    'coordinators'  => ['icon' => 'user-check', 'label' => 'Koordinator',       'url' => BASE_URL . '/modules/sunsea/coordinators.php'],
+    'packages'      => ['icon' => 'package',    'label' => 'Paket Wisata',      'url' => BASE_URL . '/modules/sunsea/packages.php'],
+    'quotations'    => ['icon' => 'file-text',  'label' => 'Penawaran',         'url' => BASE_URL . '/modules/sunsea/quotations.php'],
+    'invoices'      => ['icon' => 'credit-card', 'label' => 'Invoice',          'url' => BASE_URL . '/modules/sunsea/invoices.php'],
+    'finance'       => ['icon' => 'dollar-sign', 'label' => 'Finance',          'url' => BASE_URL . '/modules/sunsea/finance.php'],
+    'email'         => ['icon' => 'mail',        'label' => 'Email Kantor',     'url' => BASE_URL . '/modules/email/index.php'],
+    'settings'      => ['icon' => 'settings',   'label' => 'Pengaturan',        'url' => BASE_URL . '/modules/sunsea/settings.php'],
+    'website_settings' => ['icon' => 'globe',   'label' => 'Setting Website',   'url' => BASE_URL . '/modules/sunsea/website-settings.php'],
 ];
 
 // Sub-menu grouping: parent key => list of child keys shown in a collapsible dropdown
@@ -80,7 +82,7 @@ if (isset($pdo)) {
             if (is_array($__selected) && !empty($__selected)) {
                 $visibleMenuKeys = array_values(array_intersect(array_keys($sunseaNavItems), $__selected));
                 // Always show newly-added menus even for sidebar configs saved before they existed.
-                foreach (['website_settings'] as $__newKey) {
+                foreach (['website_settings', 'email'] as $__newKey) {
                     if (isset($sunseaNavItems[$__newKey]) && !in_array($__newKey, $visibleMenuKeys, true)) {
                         $visibleMenuKeys[] = $__newKey;
                     }
@@ -1029,14 +1031,14 @@ if (empty($sunseaNavItemsVisible)) {
     <aside class="ss-sidebar" id="sunseaSidebar">
         <div class="ss-brand">
             <?php if ($_sidebarLogoSrc): ?>
-                <a href="dashboard.php" class="ss-brand-logo-wrap">
+                <a href="<?php echo BASE_URL; ?>/modules/sunsea/dashboard.php" class="ss-brand-logo-wrap">
                     <img src="<?php echo htmlspecialchars($_sidebarLogoSrc); ?>" alt="Logo" class="ss-brand-logo-img">
                     <div style="text-align:center;">
                         <div class="ss-brand-sub"><?php echo htmlspecialchars($_sidebarCompanyName); ?></div>
                     </div>
                 </a>
             <?php else: ?>
-                <a href="dashboard.php" class="ss-brand-logo">
+                <a href="<?php echo BASE_URL; ?>/modules/sunsea/dashboard.php" class="ss-brand-logo">
                     <div class="ss-brand-icon">🌊</div>
                     <div>
                         <div class="ss-brand-name"><?php echo htmlspecialchars($_sidebarCompanyName); ?></div>
@@ -1101,6 +1103,9 @@ if (empty($sunseaNavItemsVisible)) {
                         <?php echo $item['label']; ?>
                         <?php if ($key === 'quotations' && $sunseaNewQuotationCount > 0): ?>
                             <span class="ss-nav-dot" title="<?php echo (int)$sunseaNewQuotationCount; ?> penawaran baru dari website"></span>
+                        <?php endif; ?>
+                        <?php if ($key === 'email'): ?>
+                            <span class="ss-nav-dot" id="sunseaEmailUnreadDot" style="display:none;" title="Email belum dibaca"></span>
                         <?php endif; ?>
                     </a>
             <?php

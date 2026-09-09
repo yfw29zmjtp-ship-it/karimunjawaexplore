@@ -12,6 +12,21 @@
                 if (btn) btn.style.display = window.innerWidth <= 768 ? 'block' : 'none';
             });
         })();
+
+        // Poll unread count for "Email Kantor" nav dot (IMAP check is slow, so it's async).
+        (function() {
+            var dot = document.getElementById('sunseaEmailUnreadDot');
+            if (!dot) return;
+            async function checkEmailUnread() {
+                try {
+                    const res = await fetch('<?php echo BASE_URL; ?>/modules/email/unread-count.php');
+                    const data = await res.json();
+                    dot.style.display = (data.unread > 0) ? 'inline-block' : 'none';
+                } catch (e) { /* ignore */ }
+            }
+            checkEmailUnread();
+            setInterval(checkEmailUnread, 30000);
+        })();
     </script>
     <?php if (isset($additionalJS)): ?>
         <?php foreach ($additionalJS as $js): ?>
