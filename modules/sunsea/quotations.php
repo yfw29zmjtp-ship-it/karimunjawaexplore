@@ -376,6 +376,9 @@ if ($action === 'print' && $quotation):
         <style>
             * {
                 box-sizing: border-box;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+                color-adjust: exact;
             }
 
             body {
@@ -608,29 +611,35 @@ if ($action === 'print' && $quotation):
 
             .itinerary-day-group {
                 break-inside: avoid-column;
-                margin-bottom: 8px;
+                margin-bottom: 10px;
+                padding: 8px 10px 9px;
+                background: #FBFBFA;
+                border: 1px solid #E2E8F0;
+                border-radius: 6px;
             }
 
             .itinerary-day {
                 display: inline-block;
                 font-weight: 700;
-                font-size: 10px;
-                color: #7C2D12;
-                background: #FFEDD5;
-                padding: 2px 9px;
+                font-size: 9.5px;
+                letter-spacing: .4px;
+                text-transform: uppercase;
+                color: #fff;
+                background: #C2410C;
+                padding: 2px 10px;
                 border-radius: 4px;
-                margin-bottom: 4px;
+                margin-bottom: 6px;
             }
 
             .itinerary-row {
-                display: flex;
-                gap: 7px;
+                display: grid;
+                grid-template-columns: 76px 1fr;
+                gap: 6px;
                 align-items: baseline;
-                margin-bottom: 3px;
+                margin-bottom: 4px;
             }
 
             .itinerary-time {
-                flex: 0 0 auto;
                 font-weight: 700;
                 color: #C2410C;
                 white-space: nowrap;
@@ -642,7 +651,7 @@ if ($action === 'print' && $quotation):
             }
 
             .itinerary-plain {
-                margin-bottom: 3px;
+                margin-bottom: 4px;
             }
 
             .thanks-note {
