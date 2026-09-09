@@ -828,19 +828,24 @@ a {
   height: 58px;
   border-radius: 50%;
   border: none;
-  background: linear-gradient(135deg, #25d366, #128c7e);
+  background: linear-gradient(135deg, var(--we-ocean), var(--we-ocean-dark));
   color: #fff;
-  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.25);
+  box-shadow: 0 10px 26px rgba(3, 105, 161, 0.35), 0 0 0 4px rgba(255, 255, 255, 0.6);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 26px;
-  transition: transform 0.15s;
+  transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .we-chat-fab:hover {
-  transform: scale(1.06);
+  transform: scale(1.07);
+  box-shadow: 0 14px 32px rgba(3, 105, 161, 0.45), 0 0 0 4px rgba(255, 255, 255, 0.7);
+}
+
+.we-chat-fab-icon {
+  width: 27px;
+  height: 27px;
 }
 
 .we-chat-panel {
@@ -886,12 +891,19 @@ a {
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.2);
+  background: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 17px;
   flex-shrink: 0;
+  overflow: hidden;
+}
+
+.we-chat-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .we-chat-title {
