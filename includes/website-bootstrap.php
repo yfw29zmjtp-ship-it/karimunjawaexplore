@@ -22,3 +22,5 @@ $weCompanyAddr  = sunseaSetting($pdo, 'company_address', 'Karimunjawa, Jepara, J
 
 $weLogoSetting = sunseaSetting($pdo, 'company_logo', '');
 $weLogoSrc = $weLogoSetting ? sunseaAssetUrl($weLogoSetting) : '';
+
+$weWaAdmins = sunseaWaAdminList($pdo);

@@ -87,6 +87,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             setSetting($pdo, $f, trim($_POST[$f] ?? ''));
         }
 
+        // Multi-admin WhatsApp numbers for the website chat widget (one "Nama|No.WA" per line).
+        $waAdminLines = preg_split('/\r\n|\r|\n/', trim($_POST['company_whatsapp_admins'] ?? ''));
+        $waAdminLines = array_values(array_filter(array_map('trim', $waAdminLines), fn($l) => $l !== ''));
+        setSetting($pdo, 'company_whatsapp_admins', implode("\n", $waAdminLines));
+
         // Logo upload
         $logoUploadError = '';
         if (!empty($_FILES['company_logo']['tmp_name'])) {
@@ -418,6 +423,7 @@ $keys = [
     'company_website',
     'company_npwp',
     'company_logo',
+    'company_whatsapp_admins',
     'invoice_prefix',
     'invoice_footer',
     'invoice_notes',
@@ -570,6 +576,13 @@ $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : '
                     <input type="file" name="company_logo" accept="image/*"
                         style="width:100%;padding:6px;border:1px solid #ccc;border-radius:5px;font-family:inherit;font-size:13px;box-sizing:border-box;">
                     <small style="color:#888;">Format: PNG/JPG/WEBP. Maks 2MB. Digunakan di header, sidebar, dokumen.</small>
+                </div>
+
+                <div>
+                    <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;">Nomor WhatsApp Admin (bisa lebih dari 1)</label>
+                    <textarea name="company_whatsapp_admins" rows="4" placeholder="Admin 1|08123456789&#10;Admin 2|08129876543"
+                        style="width:100%;padding:9px 12px;border:1px solid #ccc;border-radius:5px;font-family:inherit;font-size:14px;box-sizing:border-box;resize:vertical;"><?php echo htmlspecialchars($cfg['company_whatsapp_admins']); ?></textarea>
+                    <small style="color:#888;">1 baris = 1 admin, format <code>Nama|NomorWA</code>. Tamu bisa pilih admin sebelum kirim pesan di widget chat website. Kosongkan untuk pakai nomor "Telepon / WA" di atas saja.</small>
                 </div>
 
                 <div style="padding-top:6px;">

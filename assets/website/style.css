@@ -930,6 +930,34 @@ a {
   opacity: 1;
 }
 
+.we-chat-admins {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px 12px;
+  background: #eef4f9;
+  border-bottom: 1px solid var(--we-border);
+  flex-shrink: 0;
+}
+
+.we-chat-admin-chip {
+  border: 1px solid var(--we-border);
+  background: #fff;
+  color: var(--we-text);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.we-chat-admin-chip.we-active {
+  background: var(--we-ocean);
+  border-color: var(--we-ocean);
+  color: #fff;
+}
+
 .we-chat-body {
   flex: 1;
   min-height: 180px;

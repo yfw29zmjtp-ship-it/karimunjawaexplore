@@ -670,3 +670,31 @@ function sunseaWaLink(string $phone, string $message = ''): string
     }
     return $url;
 }
+
+/**
+ * Parse the "company_whatsapp_admins" setting (one "Nama|NomorWA" per line) into a list of
+ * ['label' => ..., 'wa' => wa.me base link] for the website chat widget. Falls back to a
+ * single entry built from company_phone when the multi-admin setting is empty.
+ */
+function sunseaWaAdminList(PDO $pdo): array
+{
+    $raw = sunseaSetting($pdo, 'company_whatsapp_admins', '');
+    $admins = [];
+    foreach (preg_split('/\r\n|\r|\n/', trim($raw)) as $line) {
+        $line = trim($line);
+        if ($line === '') continue;
+        $parts = explode('|', $line, 2);
+        $label = count($parts) === 2 ? trim($parts[0]) : 'Admin';
+        $phone = count($parts) === 2 ? trim($parts[1]) : trim($parts[0]);
+        $wa = sunseaWaLink($phone);
+        if ($wa !== '') $admins[] = ['label' => $label, 'wa' => $wa];
+    }
+
+    if (!$admins) {
+        $companyPhone = sunseaSetting($pdo, 'company_phone', '');
+        $wa = $companyPhone ? sunseaWaLink($companyPhone) : '';
+        if ($wa !== '') $admins[] = ['label' => 'Admin', 'wa' => $wa];
+    }
+
+    return $admins;
+}

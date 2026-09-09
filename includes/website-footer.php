@@ -30,8 +30,7 @@
         </div>
     </footer>
 
-    <?php if ($weCompanyPhone): ?>
-        <?php $weChatWaBase = sunseaWaLink($weCompanyPhone); ?>
+    <?php if ($weWaAdmins): ?>
         <div class="we-chat-widget" id="weChatWidget">
             <div class="we-chat-panel" id="weChatPanel">
                 <div class="we-chat-header">
@@ -50,6 +49,13 @@
                     </div>
                     <button type="button" class="we-chat-close" onclick="weChatToggle(false)">&times;</button>
                 </div>
+                <?php if (count($weWaAdmins) > 1): ?>
+                    <div class="we-chat-admins" id="weChatAdmins">
+                        <?php foreach ($weWaAdmins as $i => $wa): ?>
+                            <button type="button" class="we-chat-admin-chip<?php echo $i === 0 ? ' we-active' : ''; ?>" data-index="<?php echo $i; ?>"><?php echo htmlspecialchars($wa['label']); ?></button>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
                 <div class="we-chat-body" id="weChatBody">
                     <div class="we-chat-bubble we-chat-bubble-in">
                         Halo! 👋 Ada yang bisa kami bantu seputar trip ke Karimunjawa? Tulis pesan Anda di bawah ini.
@@ -69,17 +75,30 @@
 
         <script>
             (function () {
-                var waBase = <?php echo json_encode($weChatWaBase); ?>;
+                var admins = <?php echo json_encode(array_map(fn($a) => $a['wa'], $weWaAdmins)); ?>;
+                var selectedIndex = 0;
                 var panel = document.getElementById('weChatPanel');
                 var widget = document.getElementById('weChatWidget');
                 var body = document.getElementById('weChatBody');
                 var input = document.getElementById('weChatInput');
+                var adminsBar = document.getElementById('weChatAdmins');
 
                 window.weChatToggle = function (forceOpen) {
                     var open = typeof forceOpen === 'boolean' ? forceOpen : !widget.classList.contains('we-open');
                     widget.classList.toggle('we-open', open);
                     if (open) input.focus();
                 };
+
+                if (adminsBar) {
+                    adminsBar.addEventListener('click', function (e) {
+                        var chip = e.target.closest('.we-chat-admin-chip');
+                        if (!chip) return;
+                        selectedIndex = parseInt(chip.dataset.index, 10) || 0;
+                        adminsBar.querySelectorAll('.we-chat-admin-chip').forEach(function (c) {
+                            c.classList.toggle('we-active', c === chip);
+                        });
+                    });
+                }
 
                 window.weChatSend = function () {
                     var msg = input.value.trim();
@@ -93,7 +112,8 @@
                     input.value = '';
 
                     // Pesan diteruskan ke WhatsApp asli (bukan sekadar link statis) — nomor
-                    // dari setting company_phone, dibuka di tab baru begitu tamu menekan Enter/Kirim.
+                    // admin yang dipilih tamu (kalau lebih dari 1), dibuka di tab baru saat Enter/Kirim.
+                    var waBase = admins[selectedIndex] || admins[0];
                     window.open(waBase + '?text=' + encodeURIComponent(msg), '_blank');
                 };
 
