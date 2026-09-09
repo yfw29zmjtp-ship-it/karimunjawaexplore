@@ -443,11 +443,18 @@ if ($action === 'print' && $quotation):
                 font-weight: 600;
             }
 
+            .head-info-row {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                gap: 18px;
+                margin-top: 12px;
+            }
+
             .cust-row {
                 display: flex;
                 align-items: center;
                 gap: 10px;
-                margin-top: 12px;
             }
 
             .cust-row .cust-name {
@@ -465,17 +472,17 @@ if ($action === 'print' && $quotation):
 
             .meta-box {
                 display: flex;
+                flex: 0 0 auto;
                 justify-content: flex-start;
                 background: #FFF7ED;
                 border: 1px solid #FDE4CC;
                 border-radius: 8px;
-                margin-top: 12px;
                 overflow: hidden;
             }
 
             .meta-box .item {
                 flex: 0 0 auto;
-                padding: 7px 20px;
+                padding: 7px 16px;
                 font-size: 10px;
                 color: #7C2D12;
                 border-right: 1px solid #FDE4CC;
@@ -723,23 +730,25 @@ if ($action === 'print' && $quotation):
             </div>
         </div>
 
-        <div class="cust-row">
-            <div>
-                <div class="cust-label">Kepada Yth.</div>
-                <div class="cust-name"><?php echo htmlspecialchars($quotation['customer_name']); ?></div>
-                <?php if ($quotation['customer_address'] || $quotation['customer_city']): ?>
-                    <div style="font-size:11px;color:#64748B;"><?php echo htmlspecialchars(trim($quotation['customer_address'] . ' ' . $quotation['customer_city'])); ?></div>
-                <?php endif; ?>
-                <?php if ($quotation['customer_phone']): ?><div style="font-size:11px;color:#64748B;">📞 <?php echo htmlspecialchars($quotation['customer_phone']); ?></div><?php endif; ?>
+        <div class="head-info-row">
+            <div class="cust-row">
+                <div>
+                    <div class="cust-label">Kepada Yth.</div>
+                    <div class="cust-name"><?php echo htmlspecialchars($quotation['customer_name']); ?></div>
+                    <?php if ($quotation['customer_address'] || $quotation['customer_city']): ?>
+                        <div style="font-size:11px;color:#64748B;"><?php echo htmlspecialchars(trim($quotation['customer_address'] . ' ' . $quotation['customer_city'])); ?></div>
+                    <?php endif; ?>
+                    <?php if ($quotation['customer_phone']): ?><div style="font-size:11px;color:#64748B;">📞 <?php echo htmlspecialchars($quotation['customer_phone']); ?></div><?php endif; ?>
+                </div>
             </div>
-        </div>
 
-        <div class="meta-box">
-            <div class="item">Jumlah Peserta<b><?php echo (int)$quotation['pax_count']; ?> orang</b></div>
-            <?php if ($quotation['package_name']): ?><div class="item">Paket<b><?php echo htmlspecialchars($quotation['package_name']); ?></b></div><?php endif; ?>
-            <?php if ($quotation['trip_date']): ?>
-                <div class="item">Tanggal Trip<b><?php echo date('d M Y', strtotime($quotation['trip_date'])); ?><?php echo $quotation['trip_end_date'] ? ' - ' . date('d M Y', strtotime($quotation['trip_end_date'])) : ''; ?></b></div>
-            <?php endif; ?>
+            <div class="meta-box">
+                <div class="item">Jumlah Peserta<b><?php echo (int)$quotation['pax_count']; ?> orang</b></div>
+                <?php if ($quotation['package_name']): ?><div class="item">Paket<b><?php echo htmlspecialchars($quotation['package_name']); ?></b></div><?php endif; ?>
+                <?php if ($quotation['trip_date']): ?>
+                    <div class="item">Tanggal Trip<b><?php echo date('d M Y', strtotime($quotation['trip_date'])); ?><?php echo $quotation['trip_end_date'] ? ' - ' . date('d M Y', strtotime($quotation['trip_end_date'])) : ''; ?></b></div>
+                <?php endif; ?>
+            </div>
         </div>
 
         <div class="section-title">Rincian Penawaran</div>
