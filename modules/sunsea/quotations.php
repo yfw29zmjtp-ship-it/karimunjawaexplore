@@ -448,18 +448,20 @@ if ($action === 'print' && $quotation):
                 font-weight: 600;
             }
 
-            .head-info-row {
+            .section-title-row {
                 display: flex;
                 justify-content: space-between;
-                align-items: flex-start;
-                gap: 18px;
-                margin-top: 12px;
+                align-items: center;
+                gap: 14px;
+                margin-top: 14px;
+                margin-bottom: 4px;
             }
 
             .cust-row {
                 display: flex;
                 align-items: center;
                 gap: 10px;
+                margin-top: 12px;
             }
 
             .cust-row .cust-name {
@@ -481,14 +483,14 @@ if ($action === 'print' && $quotation):
                 justify-content: flex-start;
                 background: #FFF7ED;
                 border: 1px solid #FDE4CC;
-                border-radius: 8px;
+                border-radius: 6px;
                 overflow: hidden;
             }
 
             .meta-box .item {
                 flex: 0 0 auto;
-                padding: 7px 16px;
-                font-size: 10px;
+                padding: 4px 10px;
+                font-size: 8.5px;
                 color: #7C2D12;
                 border-right: 1px solid #FDE4CC;
             }
@@ -499,9 +501,9 @@ if ($action === 'print' && $quotation):
 
             .meta-box .item b {
                 display: block;
-                font-size: 11.5px;
+                font-size: 9.5px;
                 color: #1e293b;
-                margin-top: 2px;
+                margin-top: 1px;
                 font-weight: 700;
             }
 
@@ -517,7 +519,7 @@ if ($action === 'print' && $quotation):
             table {
                 width: 100%;
                 border-collapse: collapse;
-                margin-top: 8px;
+                margin-top: 0;
             }
 
             thead th {
@@ -735,18 +737,19 @@ if ($action === 'print' && $quotation):
             </div>
         </div>
 
-        <div class="head-info-row">
-            <div class="cust-row">
-                <div>
-                    <div class="cust-label">Kepada Yth.</div>
-                    <div class="cust-name"><?php echo htmlspecialchars($quotation['customer_name']); ?></div>
-                    <?php if ($quotation['customer_address'] || $quotation['customer_city']): ?>
-                        <div style="font-size:11px;color:#64748B;"><?php echo htmlspecialchars(trim($quotation['customer_address'] . ' ' . $quotation['customer_city'])); ?></div>
-                    <?php endif; ?>
-                    <?php if ($quotation['customer_phone']): ?><div style="font-size:11px;color:#64748B;">📞 <?php echo htmlspecialchars($quotation['customer_phone']); ?></div><?php endif; ?>
-                </div>
+        <div class="cust-row">
+            <div>
+                <div class="cust-label">Kepada Yth.</div>
+                <div class="cust-name"><?php echo htmlspecialchars($quotation['customer_name']); ?></div>
+                <?php if ($quotation['customer_address'] || $quotation['customer_city']): ?>
+                    <div style="font-size:11px;color:#64748B;"><?php echo htmlspecialchars(trim($quotation['customer_address'] . ' ' . $quotation['customer_city'])); ?></div>
+                <?php endif; ?>
+                <?php if ($quotation['customer_phone']): ?><div style="font-size:11px;color:#64748B;">📞 <?php echo htmlspecialchars($quotation['customer_phone']); ?></div><?php endif; ?>
             </div>
+        </div>
 
+        <div class="section-title-row">
+            <div class="section-title" style="margin:0;">Rincian Penawaran</div>
             <div class="meta-box">
                 <div class="item">Jumlah Peserta<b><?php echo (int)$quotation['pax_count']; ?> orang</b></div>
                 <?php if ($quotation['package_name']): ?><div class="item">Paket<b><?php echo htmlspecialchars($quotation['package_name']); ?></b></div><?php endif; ?>
@@ -755,8 +758,6 @@ if ($action === 'print' && $quotation):
                 <?php endif; ?>
             </div>
         </div>
-
-        <div class="section-title">Rincian Penawaran</div>
         <table>
             <thead>
                 <tr>
