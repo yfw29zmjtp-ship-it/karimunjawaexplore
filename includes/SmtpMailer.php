@@ -67,18 +67,30 @@ class SmtpMailer
         $headers[] = 'Message-ID: <' . bin2hex(random_bytes(16)) . '@' . $domain . '>';
         $headers[] = 'MIME-Version: 1.0';
 
+        // Sending HTML-only (no plain-text alternative) is a common spam-filter red flag,
+        // so always build a multipart/alternative body with a derived plain-text version.
+        $bodyPlain = trim(html_entity_decode(strip_tags(preg_replace('/<br\s*\/?>/i', "\n", $bodyHtml)), ENT_QUOTES, 'UTF-8'));
+        $altBoundary = 'a' . bin2hex(random_bytes(12));
+        $altPart = "--{$altBoundary}\r\n";
+        $altPart .= "Content-Type: text/plain; charset=UTF-8\r\n";
+        $altPart .= "Content-Transfer-Encoding: 8bit\r\n\r\n";
+        $altPart .= $bodyPlain . "\r\n";
+        $altPart .= "--{$altBoundary}\r\n";
+        $altPart .= "Content-Type: text/html; charset=UTF-8\r\n";
+        $altPart .= "Content-Transfer-Encoding: 8bit\r\n\r\n";
+        $altPart .= $bodyHtml . "\r\n";
+        $altPart .= "--{$altBoundary}--";
+
         if (empty($attachments)) {
-            $headers[] = 'Content-Type: text/html; charset=UTF-8';
-            $headers[] = 'Content-Transfer-Encoding: 8bit';
-            $data = implode("\r\n", $headers) . "\r\n\r\n" . $this->dotStuff($bodyHtml) . "\r\n.";
+            $headers[] = 'Content-Type: multipart/alternative; boundary="' . $altBoundary . '"';
+            $data = implode("\r\n", $headers) . "\r\n\r\n" . $this->dotStuff($altPart) . "\r\n.";
         } else {
             $boundary = 'b' . bin2hex(random_bytes(12));
             $headers[] = 'Content-Type: multipart/mixed; boundary="' . $boundary . '"';
 
             $parts = "--{$boundary}\r\n";
-            $parts .= "Content-Type: text/html; charset=UTF-8\r\n";
-            $parts .= "Content-Transfer-Encoding: 8bit\r\n\r\n";
-            $parts .= $bodyHtml . "\r\n";
+            $parts .= "Content-Type: multipart/alternative; boundary=\"{$altBoundary}\"\r\n\r\n";
+            $parts .= $altPart . "\r\n";
 
             foreach ($attachments as $file) {
                 $parts .= "--{$boundary}\r\n";
@@ -92,7 +104,7 @@ class SmtpMailer
             $data = implode("\r\n", $headers) . "\r\n\r\n" . $this->dotStuff($parts) . "\r\n.";
         }
 
-        $rawMessage = implode("\r\n", $headers) . "\r\n\r\n" . ($attachments ? $parts : $bodyHtml);
+        $rawMessage = implode("\r\n", $headers) . "\r\n\r\n" . ($attachments ? $parts : $altPart);
 
         fwrite($sock, $data . "\r\n");
         $this->expect($sock, 250);
