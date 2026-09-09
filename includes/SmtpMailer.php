@@ -39,14 +39,14 @@ class SmtpMailer
         stream_set_timeout($sock, 15);
 
         $this->expect($sock, 220);
-        $this->command($sock, 'EHLO ' . ($_SERVER['SERVER_NAME'] ?? 'localhost'), 250);
+        $this->command($sock, 'EHLO ' . $this->host, 250);
 
         if ($this->encryption === 'tls') {
             $this->command($sock, 'STARTTLS', 220);
             if (!stream_socket_enable_crypto($sock, true, STREAM_CRYPTO_METHOD_TLS_CLIENT)) {
                 throw new RuntimeException('Gagal mengaktifkan TLS ke server SMTP.');
             }
-            $this->command($sock, 'EHLO ' . ($_SERVER['SERVER_NAME'] ?? 'localhost'), 250);
+            $this->command($sock, 'EHLO ' . $this->host, 250);
         }
 
         $this->command($sock, 'AUTH LOGIN', 334);
