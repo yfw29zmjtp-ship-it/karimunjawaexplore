@@ -344,6 +344,7 @@ if ($action === 'print' && $quotation):
     $companyName    = sunseaSetting($pdo, 'company_name', 'Explore Karimunjawa');
     $companyAddress = sunseaSetting($pdo, 'company_address', '');
     $companyPhone   = sunseaSetting($pdo, 'company_phone', '');
+    $companyEmail   = sunseaSetting($pdo, 'company_email', '');
     $printLogoPath  = sunseaSetting($pdo, 'invoice_logo', '') ?: sunseaSetting($pdo, 'company_logo', '');
     $printLogoSrc   = sunseaAssetUrl($printLogoPath);
     $stampPath      = sunseaSetting($pdo, 'invoice_stamp', '');
@@ -644,54 +645,45 @@ if ($action === 'print' && $quotation):
                 margin-bottom: 3px;
             }
 
-            .signature-area {
-                display: flex;
-                justify-content: space-between;
-                margin-top: 16px;
-            }
-
-            .notes-col {
-                flex: 1;
-                font-size: 11px;
-                color: #475569;
-            }
-
-            .sign-col {
-                width: 220px;
+            .thanks-note {
                 text-align: center;
-                font-size: 11.5px;
-                position: relative;
-            }
-
-            .sign-place {
-                margin-bottom: 30px;
-            }
-
-            .stamp-img {
-                position: absolute;
-                top: 20px;
-                left: 50%;
-                transform: translateX(-50%);
-                width: 90px;
-                opacity: .9;
-                mix-blend-mode: multiply;
-            }
-
-            .sign-line {
-                border-top: 1px solid #94a3b8;
-                margin-top: 4px;
-                padding-top: 4px;
+                margin-top: 16px;
+                font-size: 12px;
                 font-weight: 700;
+                color: #7C2D12;
             }
 
             .footer-note {
-                margin-top: 26px;
+                clear: both;
+                margin-top: 18px;
                 padding-top: 12px;
-                border-top: 1px solid #E2E8F0;
+                border-top: 1px dashed #E2E8F0;
                 font-size: 10.5px;
                 color: #94a3b8;
-                text-align: center;
+                text-align: left;
                 font-style: italic;
+            }
+
+            .footer-contact {
+                margin-top: 6px;
+                font-style: normal;
+                font-weight: 700;
+                color: #475569;
+                display: flex;
+                flex-direction: column;
+                gap: 3px;
+            }
+
+            .footer-contact-name {
+                margin-bottom: 2px;
+            }
+
+            .footer-adf-system {
+                margin-top: 14px;
+                font-size: 8px;
+                font-style: normal;
+                color: #cbd5e1;
+                text-align: center;
             }
 
             @media print {
@@ -797,23 +789,23 @@ if ($action === 'print' && $quotation):
 
         <?php if (!empty($quotation['itinerary'])): ?>
             <?php
-                // Group raw itinerary lines by "DAY n"/"Hari n" header so each day
-                // stays together when the box is laid out in print columns.
-                $itineraryGroups = [];
-                foreach (preg_split('/\r\n|\r|\n/', trim($quotation['itinerary'])) as $itLine) {
-                    $itLine = trim($itLine);
-                    if ($itLine === '') continue;
-                    if (preg_match('/^\.?\s*(day|hari)\s*(\d+)/i', $itLine, $dm)) {
-                        $itineraryGroups[] = ['header' => strtoupper($dm[1]) . ' ' . $dm[2], 'items' => []];
-                        continue;
-                    }
-                    if (empty($itineraryGroups)) {
-                        $itineraryGroups[] = ['header' => null, 'items' => []];
-                    }
-                    $lastIdx = count($itineraryGroups) - 1;
-                    $timeMatch = preg_match('/^([\d.:\/]+\s*WIB)\s*:\s*(.+)$/i', $itLine, $tm);
-                    $itineraryGroups[$lastIdx]['items'][] = $timeMatch ? ['time' => $tm[1], 'desc' => $tm[2]] : ['time' => null, 'desc' => $itLine];
+            // Group raw itinerary lines by "DAY n"/"Hari n" header so each day
+            // stays together when the box is laid out in print columns.
+            $itineraryGroups = [];
+            foreach (preg_split('/\r\n|\r|\n/', trim($quotation['itinerary'])) as $itLine) {
+                $itLine = trim($itLine);
+                if ($itLine === '') continue;
+                if (preg_match('/^\.?\s*(day|hari)\s*(\d+)/i', $itLine, $dm)) {
+                    $itineraryGroups[] = ['header' => strtoupper($dm[1]) . ' ' . $dm[2], 'items' => []];
+                    continue;
                 }
+                if (empty($itineraryGroups)) {
+                    $itineraryGroups[] = ['header' => null, 'items' => []];
+                }
+                $lastIdx = count($itineraryGroups) - 1;
+                $timeMatch = preg_match('/^([\d.:\/]+\s*WIB)\s*:\s*(.+)$/i', $itLine, $tm);
+                $itineraryGroups[$lastIdx]['items'][] = $timeMatch ? ['time' => $tm[1], 'desc' => $tm[2]] : ['time' => null, 'desc' => $itLine];
+            }
             ?>
             <div class="section-title">Itinerary (Jadwal Perjalanan)</div>
             <div class="itinerary-box">
@@ -832,17 +824,18 @@ if ($action === 'print' && $quotation):
             </div>
         <?php endif; ?>
 
-        <div class="signature-area">
-            <div class="notes-col"></div>
-            <div class="sign-col">
-                <div class="sign-place"><?php echo date('d M Y'); ?></div>
-                <div>Hormat kami,</div>
-                <?php if ($stampSrc): ?><img class="stamp-img" src="<?php echo htmlspecialchars($stampSrc); ?>" alt="Stempel"><?php endif; ?>
-                <div class="sign-line"><?php echo htmlspecialchars($companyName); ?></div>
-            </div>
-        </div>
+        <div class="thanks-note">Penawaran resmi dari <?php echo htmlspecialchars($companyName); ?></div>
 
-        <?php if ($footer): ?><div class="footer-note"><?php echo nl2br(htmlspecialchars($footer)); ?></div><?php endif; ?>
+        <div class="footer-note">
+            <div>Dokumen ini merupakan penawaran resmi yang dicetak melalui sistem Karimunjawa Explore. Jika Anda mengalami kendala atau membutuhkan bantuan, silakan hubungi:</div>
+            <div class="footer-contact">
+                <div class="footer-contact-name">Karimunjawa Explore</div>
+                <?php if ($companyPhone): ?><div>&#9742; <?php echo htmlspecialchars($companyPhone); ?></div><?php endif; ?>
+                <?php if ($companyEmail): ?><div>&#9993; <?php echo htmlspecialchars($companyEmail); ?></div><?php endif; ?>
+            </div>
+            <?php if ($footer): ?><div style="margin-top:6px;"><?php echo nl2br(htmlspecialchars($footer)); ?></div><?php endif; ?>
+            <div class="footer-adf-system">Powered by &copy; AdFsystem.online 2026</div>
+        </div>
     </body>
 
     </html>
