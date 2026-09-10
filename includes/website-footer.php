@@ -143,10 +143,6 @@
                 var timer = null;
 
                 function updatePerView() {
-                    if (carousel.classList.contains('we-carousel-gallery')) {
-                        perView = 1;
-                        return;
-                    }
                     var w = window.innerWidth;
                     perView = w <= 620 ? 1 : (w <= 860 ? 2 : 3);
                 }

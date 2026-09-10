@@ -1264,16 +1264,15 @@ a {
 }
 
 .we-carousel-gallery .we-carousel-slide {
-  flex: 0 0 100%;
   padding: 0 8px;
 }
 
 .we-gallery-slide-inner {
   position: relative;
-  height: 320px;
-  border-radius: 14px;
+  height: 160px;
+  border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.3);
 }
 
 .we-gallery-slide-inner img {
@@ -1293,11 +1292,11 @@ a {
 
 .we-gallery-caption {
   position: absolute;
-  left: 24px;
-  right: 24px;
-  bottom: 20px;
+  left: 12px;
+  right: 12px;
+  bottom: 10px;
   color: #fff;
-  font-size: 15px;
+  font-size: 12px;
   font-weight: 600;
   z-index: 2;
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
@@ -1325,6 +1324,6 @@ a {
 
 @media (max-width: 620px) {
   .we-gallery-slide-inner {
-    height: 220px;
+    height: 150px;
   }
 }

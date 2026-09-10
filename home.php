@@ -238,7 +238,7 @@ require __DIR__ . '/includes/website-header.php';
 
 <?php if ($weHomeGallery): ?>
 <section class="we-section we-gallery-elegant">
-    <div class="we-container" style="max-width:640px;">
+    <div class="we-container">
         <div class="we-section-title">
             <h2>Galeri Tamu Kami</h2>
             <p>Galeri tamu yang sudah dilayani Karimunjawa Explore — momen bahagia mereka menjelajah Karimunjawa bersama kami</p>
