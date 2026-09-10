@@ -244,7 +244,7 @@ require __DIR__ . '/includes/website-header.php';
             <p>Galeri tamu yang sudah dilayani Karimunjawa Explore — momen bahagia mereka menjelajah Karimunjawa bersama kami</p>
         </div>
 
-        <div class="we-carousel we-carousel-gallery" data-autoplay="3800">
+        <div class="we-carousel we-carousel-gallery" data-autoplay="1000">
             <button type="button" class="we-carousel-arrow we-prev" aria-label="Sebelumnya">&#8249;</button>
             <div class="we-carousel-viewport">
                 <div class="we-carousel-track">
