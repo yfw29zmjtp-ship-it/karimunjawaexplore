@@ -225,7 +225,7 @@ require __DIR__ . '/includes/website-header.php';
 </section>
 
 <section class="we-section we-section-alt">
-    <div class="we-container">
+    <div class="we-container" style="max-width:860px;">
         <div class="we-section-title">
             <h2>Kenapa Pilih Kami?</h2>
         </div>
