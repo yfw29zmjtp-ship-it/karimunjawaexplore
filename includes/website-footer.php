@@ -201,27 +201,40 @@
                 carousel.addEventListener('mouseenter', stopAutoplay);
                 carousel.addEventListener('mouseleave', startAutoplay);
 
-                // Drag / swipe support (mouse + touch) via Pointer Events
+                // Drag / swipe support (mouse + touch) via Pointer Events.
+                // Only treat it as a "drag" once the pointer actually moves past a small
+                // threshold — otherwise a plain click/tap (e.g. on "Lihat Detail") must
+                // pass through untouched, so we don't setPointerCapture / preventDefault
+                // until real dragging is confirmed.
+                var pointerDown = false;
                 var dragging = false;
                 var startX = 0;
                 var startOffset = 0;
+                var moveThreshold = 6;
 
                 track.addEventListener('pointerdown', function(e) {
-                    dragging = true;
+                    if (e.target.closest('a, button')) return;
+                    pointerDown = true;
+                    dragging = false;
                     startX = e.clientX;
                     startOffset = -index * slides[0].getBoundingClientRect().width;
-                    track.classList.add('we-dragging');
-                    stopAutoplay();
-                    track.setPointerCapture(e.pointerId);
                 });
 
                 track.addEventListener('pointermove', function(e) {
-                    if (!dragging) return;
+                    if (!pointerDown) return;
                     var delta = e.clientX - startX;
+                    if (!dragging) {
+                        if (Math.abs(delta) < moveThreshold) return;
+                        dragging = true;
+                        track.classList.add('we-dragging');
+                        stopAutoplay();
+                        track.setPointerCapture(e.pointerId);
+                    }
                     track.style.transform = 'translateX(' + (startOffset + delta) + 'px)';
                 });
 
                 function endDrag(e) {
+                    pointerDown = false;
                     if (!dragging) return;
                     dragging = false;
                     track.classList.remove('we-dragging');
@@ -235,7 +248,7 @@
 
                 track.addEventListener('pointerup', endDrag);
                 track.addEventListener('pointerleave', function(e) {
-                    if (dragging) endDrag(e);
+                    if (pointerDown) endDrag(e);
                 });
 
                 window.addEventListener('resize', function() {
