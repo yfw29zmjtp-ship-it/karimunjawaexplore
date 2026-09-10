@@ -52,28 +52,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $customerId = (int)$pdo->lastInsertId();
             }
 
-            $bookingNo = sunseaNextNumber($pdo, 'booking');
-            $bookingNotes = "[Website] Permintaan booking dari form kontak.\n" . ($message !== '' ? "Pesan: {$message}" : '');
+            $quotationNo = sunseaNextNumber($pdo, 'quotation');
+            $quoteNotes = "[Website] Permintaan booking dari form kontak.\n" . ($message !== '' ? "Pesan: {$message}" : '');
+            $subtotal = $pkg ? (float)$pkg['base_price'] * $pax : 0;
 
-            $pdo->prepare("INSERT INTO booking_orders
-                (booking_no, customer_id, booking_mode, package_id, start_date, end_date, pax_count, status, sell_total, notes, created_by)
+            $pdo->prepare("INSERT INTO quotations
+                (quotation_no, customer_id, package_id, trip_date, trip_end_date, pax_count, status, subtotal, total_amount, notes, created_by)
                 VALUES (?,?,?,?,?,?,?,?,?,?,?)")
                 ->execute([
-                    $bookingNo,
+                    $quotationNo,
                     $customerId,
-                    $pkg ? 'paket' : 'ecer',
                     $pkg ? $packageId : null,
                     $startDate,
                     $endDate,
                     $pax,
                     'draft',
-                    $pkg ? (float)$pkg['base_price'] * $pax : 0,
-                    $bookingNotes,
+                    $subtotal,
+                    $subtotal,
+                    $quoteNotes,
                     'website',
                 ]);
+            $quotationId = (int)$pdo->lastInsertId();
+
+            if ($pkg) {
+                $pdo->prepare("INSERT INTO quotation_items
+                    (quotation_id, item_type, description, qty, unit, unit_price, subtotal)
+                    VALUES (?,?,?,?,?,?,?)")
+                    ->execute([
+                        $quotationId,
+                        'other',
+                        $pkg['name'],
+                        $pax,
+                        'pax',
+                        (float)$pkg['base_price'],
+                        $subtotal,
+                    ]);
+            }
 
             $pdo->commit();
-            $successMsg = "Terima kasih! Permintaan booking Anda telah kami terima dengan No. Reservasi {$bookingNo}. Tim kami akan segera menghubungi Anda.";
+            $successMsg = "Terima kasih! Permintaan booking Anda telah kami terima dengan No. Penawaran {$quotationNo}. Tim kami akan segera menghubungi Anda.";
         } catch (Exception $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
             error_log('kontak.php booking insert error: ' . $e->getMessage());
