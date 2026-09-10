@@ -11,6 +11,9 @@ $weAllPackages = $pdo->query(
     "SELECT id, name, duration_days, duration_nights
      FROM trip_packages WHERE is_active = 1 ORDER BY name ASC"
 )->fetchAll();
+$weHomeGallery = $pdo->query(
+    "SELECT * FROM website_gallery WHERE is_active = 1 ORDER BY sort_order ASC, id DESC LIMIT 10"
+)->fetchAll();
 
 $weHeroTitle = sunseaSetting($pdo, 'website_hero_title', 'Jelajahi Keindahan Karimunjawa Bersama Kami');
 $weHeroSubtitle = sunseaSetting($pdo, 'website_hero_subtitle', 'Paket wisata open trip & private trip, island hopping, penginapan, hingga transport laut/darat — kami urus, Anda tinggal menikmati liburan.');
@@ -232,6 +235,37 @@ require __DIR__ . '/includes/website-header.php';
         <?php endif; ?>
     </div>
 </section>
+
+<?php if ($weHomeGallery): ?>
+<section class="we-section we-gallery-elegant">
+    <div class="we-container">
+        <div class="we-section-title">
+            <h2>Galeri Tamu Kami</h2>
+            <p>Galeri tamu yang sudah dilayani Karimunjawa Explore — momen bahagia mereka menjelajah Karimunjawa bersama kami</p>
+        </div>
+
+        <div class="we-carousel we-carousel-gallery" data-autoplay="3800">
+            <button type="button" class="we-carousel-arrow we-prev" aria-label="Sebelumnya">&#8249;</button>
+            <div class="we-carousel-viewport">
+                <div class="we-carousel-track">
+                    <?php foreach ($weHomeGallery as $photo): ?>
+                        <div class="we-carousel-slide we-gallery-slide">
+                            <div class="we-gallery-slide-inner">
+                                <img src="<?php echo htmlspecialchars(sunseaAssetUrl($photo['image_path'])); ?>" alt="<?php echo htmlspecialchars($photo['caption'] ?: 'Tamu Karimunjawa Explore'); ?>">
+                                <?php if (!empty($photo['caption'])): ?>
+                                    <div class="we-gallery-caption"><?php echo htmlspecialchars($photo['caption']); ?></div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+            <button type="button" class="we-carousel-arrow we-next" aria-label="Berikutnya">&#8250;</button>
+            <div class="we-carousel-dots"></div>
+        </div>
+    </div>
+</section>
+<?php endif; ?>
 
 <section class="we-section we-section-alt">
     <div class="we-container" style="max-width:860px;">
