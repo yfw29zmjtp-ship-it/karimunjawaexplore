@@ -271,7 +271,17 @@ include 'layout-header.php';
 </div>
 
 <?php if ($tab === 'hero'): ?>
-    <div style="background:#fff;border:1px solid #dde5ef;border-radius:8px;padding:20px;max-width:720px;">
+    <div style="display:grid;grid-template-columns:360px 1fr;gap:20px;align-items:start;">
+        <div style="background:#fff;border:1px solid #dde5ef;border-radius:8px;padding:14px;position:sticky;top:16px;">
+            <div style="font-size:13px;font-weight:700;color:#0C4A6E;margin-bottom:10px;">👁️ Preview Beranda</div>
+            <div style="border:1px solid #dde5ef;border-radius:8px;overflow:hidden;background:#f1f5f9;">
+                <iframe src="../../home.php" title="Preview Beranda" style="width:100%;height:500px;border:0;display:block;"></iframe>
+            </div>
+            <div style="font-size:11px;color:#888;margin-top:8px;">Preview otomatis refresh setelah tombol "💾 Simpan" ditekan dan halaman ini reload.</div>
+            <button type="button" onclick="this.previousElementSibling.previousElementSibling.querySelector('iframe').contentWindow.location.reload()"
+                style="margin-top:8px;padding:6px 12px;font-size:12px;border:1px solid #ccc;border-radius:5px;background:#f8fafc;cursor:pointer;">🔄 Refresh Preview</button>
+        </div>
+        <div style="background:#fff;border:1px solid #dde5ef;border-radius:8px;padding:20px;">
         <div style="font-size:16px;font-weight:700;color:#0C4A6E;margin-bottom:16px;">🏠 Hero Beranda</div>
         <form method="POST" enctype="multipart/form-data" style="display:flex;flex-direction:column;gap:14px;">
             <input type="hidden" name="tab" value="hero">
@@ -300,6 +310,7 @@ include 'layout-header.php';
                 <button type="submit" style="padding:10px 24px;background:#0C4A6E;color:white;border:none;border-radius:5px;font-weight:700;cursor:pointer;font-size:14px;">💾 Simpan</button>
             </div>
         </form>
+        </div>
     </div>
 <?php endif; ?>
 
