@@ -14,6 +14,7 @@ $weAllPackages = $pdo->query(
 $weHomeGallery = $pdo->query(
     "SELECT * FROM website_gallery WHERE is_active = 1 ORDER BY sort_order ASC, id DESC LIMIT 10"
 )->fetchAll();
+$weGalleryIntervalMs = (int)round((float)sunseaSetting($pdo, 'website_gallery_interval', 3) * 1000);
 
 $weHeroTitle = sunseaSetting($pdo, 'website_hero_title', 'Jelajahi Keindahan Karimunjawa Bersama Kami');
 $weHeroSubtitle = sunseaSetting($pdo, 'website_hero_subtitle', 'Paket wisata open trip & private trip, island hopping, penginapan, hingga transport laut/darat — kami urus, Anda tinggal menikmati liburan.');
@@ -244,7 +245,7 @@ require __DIR__ . '/includes/website-header.php';
             <p>Galeri tamu yang sudah dilayani Karimunjawa Explore — momen bahagia mereka menjelajah Karimunjawa bersama kami</p>
         </div>
 
-        <div class="we-carousel we-carousel-gallery" data-autoplay="1000">
+        <div class="we-carousel we-carousel-gallery" data-autoplay="<?php echo $weGalleryIntervalMs; ?>">
             <button type="button" class="we-carousel-arrow we-prev" aria-label="Sebelumnya">&#8249;</button>
             <div class="we-carousel-viewport">
                 <div class="we-carousel-track">

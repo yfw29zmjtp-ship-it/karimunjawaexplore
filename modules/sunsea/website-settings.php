@@ -110,6 +110,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $tab = 'gallery';
     }
 
+    if ($postTab === 'gallery_settings') {
+        $interval = (float)($_POST['gallery_interval'] ?? 3);
+        if ($interval < 0.5) $interval = 0.5;
+        if ($interval > 30) $interval = 30;
+        sunseaSetSetting($pdo, 'website_gallery_interval', (string)$interval);
+        $flashMsg = 'Kecepatan slideshow galeri berhasil disimpan.';
+        $flashType = 'success';
+        $tab = 'gallery';
+    }
+
     if ($postTab === 'blog_save') {
         $blogId = (int)($_POST['id'] ?? 0);
         $title = trim($_POST['title'] ?? '');
@@ -189,6 +199,7 @@ $systemFavicon = sunseaSetting($pdo, 'system_favicon', '');
 $websiteFavicon = sunseaSetting($pdo, 'website_favicon', '');
 
 $galleryItems = $pdo->query("SELECT * FROM website_gallery ORDER BY sort_order ASC, id DESC")->fetchAll();
+$galleryIntervalSec = (float)sunseaSetting($pdo, 'website_gallery_interval', 3);
 $blogItems = $pdo->query("SELECT * FROM website_blog ORDER BY created_at DESC")->fetchAll();
 $editBlog = null;
 if (($_GET['edit'] ?? '') !== '' && $tab === 'blog') {
@@ -342,6 +353,23 @@ include 'layout-header.php';
 <?php endif; ?>
 
 <?php if ($tab === 'gallery'): ?>
+    <div style="background:#fff;border:1px solid #dde5ef;border-radius:8px;padding:20px;margin-bottom:18px;max-width:460px;">
+        <div style="font-size:16px;font-weight:700;color:#0C4A6E;margin-bottom:16px;">⏱️ Kecepatan Slideshow Galeri (Homepage)</div>
+        <form method="POST" style="display:flex;align-items:flex-end;gap:12px;">
+            <input type="hidden" name="tab" value="gallery_settings">
+            <div>
+                <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;">Ganti gambar setiap (detik)</label>
+                <select name="gallery_interval" style="padding:9px 12px;border:1px solid #ccc;border-radius:5px;font-family:inherit;font-size:14px;">
+                    <?php foreach ([0.5, 1, 1.5, 2, 3, 4, 5, 6, 8, 10] as $opt): ?>
+                        <option value="<?php echo $opt; ?>" <?php echo abs($galleryIntervalSec - $opt) < 0.01 ? 'selected' : ''; ?>>
+                            <?php echo rtrim(rtrim(number_format($opt, 1), '0'), '.'); ?> detik
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <button type="submit" style="padding:10px 24px;background:#0C4A6E;color:white;border:none;border-radius:5px;font-weight:700;cursor:pointer;font-size:14px;">💾 Simpan</button>
+        </form>
+    </div>
     <div style="display:grid;grid-template-columns:320px 1fr;gap:18px;align-items:start;">
         <div style="background:#fff;border:1px solid #dde5ef;border-radius:8px;padding:20px;">
             <div style="font-size:16px;font-weight:700;color:#0C4A6E;margin-bottom:16px;">➕ Tambah Foto</div>
