@@ -127,6 +127,129 @@
         </script>
     <?php endif; ?>
 
+    <script>
+        (function() {
+            document.querySelectorAll('.we-carousel').forEach(function(carousel) {
+                var track = carousel.querySelector('.we-carousel-track');
+                var slides = Array.prototype.slice.call(carousel.querySelectorAll('.we-carousel-slide'));
+                var dotsWrap = carousel.querySelector('.we-carousel-dots');
+                var prevBtn = carousel.querySelector('.we-prev');
+                var nextBtn = carousel.querySelector('.we-next');
+                if (!track || slides.length === 0) return;
+
+                var perView = 3;
+                var index = 0;
+                var autoplayMs = parseInt(carousel.dataset.autoplay, 10) || 0;
+                var timer = null;
+
+                function updatePerView() {
+                    var w = window.innerWidth;
+                    perView = w <= 620 ? 1 : (w <= 860 ? 2 : 3);
+                }
+
+                function maxIndex() {
+                    return Math.max(0, slides.length - perView);
+                }
+
+                function renderDots() {
+                    if (!dotsWrap) return;
+                    dotsWrap.innerHTML = '';
+                    if (slides.length <= perView) return;
+                    for (var i = 0; i <= maxIndex(); i++) {
+                        var dot = document.createElement('button');
+                        dot.type = 'button';
+                        dot.className = 'we-carousel-dot' + (i === index ? ' we-active' : '');
+                        dot.setAttribute('aria-label', 'Slide ' + (i + 1));
+                        (function(target) {
+                            dot.addEventListener('click', function() {
+                                goTo(target);
+                            });
+                        })(i);
+                        dotsWrap.appendChild(dot);
+                    }
+                }
+
+                function goTo(i) {
+                    index = Math.max(0, Math.min(i, maxIndex()));
+                    var slideWidth = slides[0].getBoundingClientRect().width;
+                    track.style.transform = 'translateX(-' + (index * slideWidth) + 'px)';
+                    renderDots();
+                }
+
+                function next() {
+                    goTo(index >= maxIndex() ? 0 : index + 1);
+                }
+
+                function prev() {
+                    goTo(index <= 0 ? maxIndex() : index - 1);
+                }
+
+                function startAutoplay() {
+                    if (!autoplayMs || slides.length <= perView) return;
+                    stopAutoplay();
+                    timer = setInterval(next, autoplayMs);
+                }
+
+                function stopAutoplay() {
+                    if (timer) clearInterval(timer);
+                    timer = null;
+                }
+
+                if (nextBtn) nextBtn.addEventListener('click', function() { next(); startAutoplay(); });
+                if (prevBtn) prevBtn.addEventListener('click', function() { prev(); startAutoplay(); });
+
+                carousel.addEventListener('mouseenter', stopAutoplay);
+                carousel.addEventListener('mouseleave', startAutoplay);
+
+                // Drag / swipe support (mouse + touch) via Pointer Events
+                var dragging = false;
+                var startX = 0;
+                var startOffset = 0;
+
+                track.addEventListener('pointerdown', function(e) {
+                    dragging = true;
+                    startX = e.clientX;
+                    startOffset = -index * slides[0].getBoundingClientRect().width;
+                    track.classList.add('we-dragging');
+                    stopAutoplay();
+                    track.setPointerCapture(e.pointerId);
+                });
+
+                track.addEventListener('pointermove', function(e) {
+                    if (!dragging) return;
+                    var delta = e.clientX - startX;
+                    track.style.transform = 'translateX(' + (startOffset + delta) + 'px)';
+                });
+
+                function endDrag(e) {
+                    if (!dragging) return;
+                    dragging = false;
+                    track.classList.remove('we-dragging');
+                    var delta = e.clientX - startX;
+                    var threshold = slides[0].getBoundingClientRect().width * 0.2;
+                    if (delta < -threshold) next();
+                    else if (delta > threshold) prev();
+                    else goTo(index);
+                    startAutoplay();
+                }
+
+                track.addEventListener('pointerup', endDrag);
+                track.addEventListener('pointerleave', function(e) {
+                    if (dragging) endDrag(e);
+                });
+
+                window.addEventListener('resize', function() {
+                    updatePerView();
+                    goTo(index);
+                });
+
+                updatePerView();
+                goTo(0);
+                startAutoplay();
+            });
+        })();
+    </script>
+
     </body>
 
     </html>

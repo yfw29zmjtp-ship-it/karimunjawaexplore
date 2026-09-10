@@ -5,7 +5,7 @@ sunseaEnsurePackageItemsSchema($pdo);
 sunseaEnsurePackageMediaSchema($pdo);
 $featuredPackages = $pdo->query(
     "SELECT id, code, name, category, duration_days, duration_nights, base_price, cover_image
-     FROM trip_packages WHERE is_active = 1 ORDER BY id DESC LIMIT 3"
+     FROM trip_packages WHERE is_active = 1 ORDER BY display_order, id DESC"
 )->fetchAll();
 $weAllPackages = $pdo->query(
     "SELECT id, name, duration_days, duration_nights
@@ -196,27 +196,36 @@ require __DIR__ . '/includes/website-header.php';
         </div>
 
         <?php if ($featuredPackages): ?>
-            <div class="we-grid">
-                <?php foreach ($featuredPackages as $pkg): ?>
-                    <div class="we-card">
-                        <?php if (!empty($pkg['cover_image'])): ?>
-                            <img src="<?php echo htmlspecialchars(sunseaAssetUrl($pkg['cover_image'])); ?>" alt="<?php echo htmlspecialchars($pkg['name']); ?>" class="we-card-img" style="width:100%;object-fit:cover;">
-                        <?php else: ?>
-                            <div class="we-card-img">🏝️</div>
-                        <?php endif; ?>
-                        <div class="we-card-body">
-                            <div class="we-card-title"><?php echo htmlspecialchars($pkg['name']); ?></div>
-                            <div class="we-card-meta">
-                                <?php echo (int)$pkg['duration_days']; ?>H<?php echo (int)$pkg['duration_nights']; ?>M
-                                &middot; <?php echo htmlspecialchars(ucwords(str_replace('_', ' ', $pkg['category']))); ?>
+            <div class="we-carousel" id="wePkgCarousel" data-autoplay="4500">
+                <button type="button" class="we-carousel-arrow we-prev" aria-label="Sebelumnya">&#8249;</button>
+                <div class="we-carousel-viewport">
+                    <div class="we-carousel-track">
+                        <?php foreach ($featuredPackages as $pkg): ?>
+                            <div class="we-carousel-slide">
+                                <div class="we-card">
+                                    <?php if (!empty($pkg['cover_image'])): ?>
+                                        <img src="<?php echo htmlspecialchars(sunseaAssetUrl($pkg['cover_image'])); ?>" alt="<?php echo htmlspecialchars($pkg['name']); ?>" class="we-card-img" style="width:100%;object-fit:cover;">
+                                    <?php else: ?>
+                                        <div class="we-card-img">🏝️</div>
+                                    <?php endif; ?>
+                                    <div class="we-card-body">
+                                        <div class="we-card-title"><?php echo htmlspecialchars($pkg['name']); ?></div>
+                                        <div class="we-card-meta">
+                                            <?php echo (int)$pkg['duration_days']; ?>H<?php echo (int)$pkg['duration_nights']; ?>M
+                                            &middot; <?php echo htmlspecialchars(ucwords(str_replace('_', ' ', $pkg['category']))); ?>
+                                        </div>
+                                        <div class="we-card-price"><?php echo sunseaRupiah((float)$pkg['base_price']); ?> <span style="font-size:11px;color:var(--we-muted);font-weight:400;">/ pax</span></div>
+                                    </div>
+                                    <div class="we-card-footer">
+                                        <a href="paket-wisata.php?id=<?php echo (int)$pkg['id']; ?>" class="we-card-btn">Lihat Detail</a>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="we-card-price"><?php echo sunseaRupiah((float)$pkg['base_price']); ?> <span style="font-size:11px;color:var(--we-muted);font-weight:400;">/ pax</span></div>
-                        </div>
-                        <div class="we-card-footer">
-                            <a href="paket-wisata.php?id=<?php echo (int)$pkg['id']; ?>" class="we-card-btn">Lihat Detail</a>
-                        </div>
+                        <?php endforeach; ?>
                     </div>
-                <?php endforeach; ?>
+                </div>
+                <button type="button" class="we-carousel-arrow we-next" aria-label="Berikutnya">&#8250;</button>
+                <div class="we-carousel-dots"></div>
             </div>
         <?php else: ?>
             <div class="we-empty">Paket wisata akan segera hadir. Hubungi kami untuk custom trip.</div>

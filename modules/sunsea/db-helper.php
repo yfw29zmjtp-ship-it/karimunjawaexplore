@@ -568,6 +568,13 @@ function sunseaEnsurePackageMediaSchema(PDO $pdo): void
             $pdo->exec("ALTER TABLE trip_packages ADD COLUMN cover_image VARCHAR(255) NULL AFTER base_price");
         }
 
+        $checkOrder = $pdo->prepare("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'trip_packages' AND COLUMN_NAME = 'display_order'");
+        $checkOrder->execute();
+        if ((int)$checkOrder->fetchColumn() === 0) {
+            $pdo->exec("ALTER TABLE trip_packages ADD COLUMN display_order INT NOT NULL DEFAULT 0 AFTER is_active");
+            $pdo->exec("UPDATE trip_packages SET display_order = id");
+        }
+
         $pdo->exec("CREATE TABLE IF NOT EXISTS `trip_package_gallery` (
             `id`          INT AUTO_INCREMENT PRIMARY KEY,
             `package_id`  INT NOT NULL,

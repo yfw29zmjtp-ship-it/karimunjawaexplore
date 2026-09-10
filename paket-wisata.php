@@ -140,7 +140,7 @@ if ($pkgId > 0) {
 // ---- Daftar semua paket ----
 $packages = $pdo->query(
     "SELECT id, name, category, duration_days, duration_nights, base_price, cover_image
-     FROM trip_packages WHERE is_active = 1 ORDER BY name"
+     FROM trip_packages WHERE is_active = 1 ORDER BY display_order, name"
 )->fetchAll();
 
 $pageTitle = 'Paket Wisata & Harga';

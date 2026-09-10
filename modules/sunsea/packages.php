@@ -113,6 +113,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->prepare("UPDATE trip_packages SET is_active = !is_active WHERE id=?")->execute([$id]);
         header('Location: packages.php');
         exit;
+    } elseif ($postAction === 'move') {
+        $id  = (int)($_POST['id'] ?? 0);
+        $dir = $_POST['dir'] ?? '';
+        $ordered = $pdo->query("SELECT id, display_order FROM trip_packages ORDER BY display_order, name")->fetchAll();
+        $idx = array_search($id, array_column($ordered, 'id'));
+        $swapIdx = $dir === 'up' ? $idx - 1 : $idx + 1;
+        if ($idx !== false && $swapIdx >= 0 && $swapIdx < count($ordered)) {
+            $a = $ordered[$idx];
+            $b = $ordered[$swapIdx];
+            $pdo->prepare("UPDATE trip_packages SET display_order=? WHERE id=?")->execute([$b['display_order'], $a['id']]);
+            $pdo->prepare("UPDATE trip_packages SET display_order=? WHERE id=?")->execute([$a['display_order'], $b['id']]);
+        }
+        header('Location: packages.php');
+        exit;
     } elseif ($postAction === 'delete') {
         $id = (int)($_POST['id'] ?? 0);
         if ($id > 0) {
@@ -317,7 +331,7 @@ $packages = $pdo->query("
     SELECT p.*, 
            (SELECT COUNT(*) FROM quotations WHERE package_id=p.id) as used_count
     FROM trip_packages p
-    ORDER BY p.is_active DESC, p.name
+    ORDER BY p.is_active DESC, p.display_order, p.name
 ")->fetchAll();
 
 $pageTitle  = in_array($action, ['add', 'edit']) ? ($editPkg ? 'Edit Paket' : 'Tambah Paket Baru') : 'Paket Wisata';
@@ -696,7 +710,7 @@ include 'layout-header.php';
         <div class="ss-card-header">
             <div>
                 <div class="ss-card-title">Paket Wisata</div>
-                <div class="ss-card-sub"><?php echo count($packages); ?> paket tersedia</div>
+                <div class="ss-card-sub"><?php echo count($packages); ?> paket tersedia &middot; urutan di sini menentukan urutan tampil di website</div>
             </div>
             <a href="packages.php?action=add" class="ss-btn ss-btn-primary">
                 <i data-feather="plus"></i> Tambah Paket
@@ -744,6 +758,18 @@ include 'layout-header.php';
                         </div>
 
                         <div style="display:flex;gap:8px;">
+                            <form method="POST" style="display:inline;">
+                                <input type="hidden" name="action" value="move">
+                                <input type="hidden" name="id" value="<?php echo $pkg['id']; ?>">
+                                <input type="hidden" name="dir" value="up">
+                                <button type="submit" class="ss-btn ss-btn-outline ss-btn-sm" title="Naikkan urutan"><i data-feather="arrow-up"></i></button>
+                            </form>
+                            <form method="POST" style="display:inline;">
+                                <input type="hidden" name="action" value="move">
+                                <input type="hidden" name="id" value="<?php echo $pkg['id']; ?>">
+                                <input type="hidden" name="dir" value="down">
+                                <button type="submit" class="ss-btn ss-btn-outline ss-btn-sm" title="Turunkan urutan"><i data-feather="arrow-down"></i></button>
+                            </form>
                             <a href="packages.php?action=edit&id=<?php echo $pkg['id']; ?>"
                                 class="ss-btn ss-btn-outline ss-btn-sm"><i data-feather="edit-2"></i> Edit</a>
                             <a href="quotations.php?action=add&package_id=<?php echo $pkg['id']; ?>"
