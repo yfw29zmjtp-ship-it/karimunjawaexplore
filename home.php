@@ -12,7 +12,7 @@ $weAllPackages = $pdo->query(
      FROM trip_packages WHERE is_active = 1 ORDER BY name ASC"
 )->fetchAll();
 $weHomeGallery = $pdo->query(
-    "SELECT * FROM website_gallery WHERE is_active = 1 ORDER BY sort_order ASC, id DESC LIMIT 10"
+    "SELECT * FROM website_gallery WHERE is_active = 1 ORDER BY sort_order ASC, id DESC"
 )->fetchAll();
 $weGalleryIntervalMs = (int)round((float)sunseaSetting($pdo, 'website_gallery_interval', 3) * 1000);
 
