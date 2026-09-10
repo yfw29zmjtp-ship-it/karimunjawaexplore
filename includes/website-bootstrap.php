@@ -24,3 +24,10 @@ $weLogoSetting = sunseaSetting($pdo, 'company_logo', '');
 $weLogoSrc = $weLogoSetting ? sunseaAssetUrl($weLogoSetting) : '';
 
 $weWaAdmins = sunseaWaAdminList($pdo);
+
+$weSocialLinks = [
+    'facebook'  => sunseaSetting($pdo, 'website_social_facebook', ''),
+    'instagram' => sunseaSetting($pdo, 'website_social_instagram', ''),
+    'tiktok'    => sunseaSetting($pdo, 'website_social_tiktok', ''),
+    'youtube'   => sunseaSetting($pdo, 'website_social_youtube', ''),
+];

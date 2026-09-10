@@ -185,6 +185,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $tab = 'branding';
     }
+
+    if ($postTab === 'social') {
+        sunseaSetSetting($pdo, 'website_social_facebook', trim($_POST['social_facebook'] ?? ''));
+        sunseaSetSetting($pdo, 'website_social_instagram', trim($_POST['social_instagram'] ?? ''));
+        sunseaSetSetting($pdo, 'website_social_tiktok', trim($_POST['social_tiktok'] ?? ''));
+        sunseaSetSetting($pdo, 'website_social_youtube', trim($_POST['social_youtube'] ?? ''));
+        $flashMsg = 'Link sosial media berhasil disimpan.';
+        $flashType = 'success';
+        $tab = 'social';
+    }
 }
 
 $heroTitle = sunseaSetting($pdo, 'website_hero_title', 'Jelajahi Keindahan Karimunjawa Bersama Kami');
@@ -197,6 +207,10 @@ $aboutMisi = sunseaSetting($pdo, 'website_about_misi', 'Memberikan pelayanan ama
 $aboutNilai = sunseaSetting($pdo, 'website_about_nilai', 'Kejujuran, keramahan, dan tanggung jawab dalam setiap perjalanan.');
 $systemFavicon = sunseaSetting($pdo, 'system_favicon', '');
 $websiteFavicon = sunseaSetting($pdo, 'website_favicon', '');
+$socialFacebook = sunseaSetting($pdo, 'website_social_facebook', '');
+$socialInstagram = sunseaSetting($pdo, 'website_social_instagram', '');
+$socialTiktok = sunseaSetting($pdo, 'website_social_tiktok', '');
+$socialYoutube = sunseaSetting($pdo, 'website_social_youtube', '');
 
 $galleryItems = $pdo->query("SELECT * FROM website_gallery ORDER BY sort_order ASC, id DESC")->fetchAll();
 $galleryIntervalSec = (float)sunseaSetting($pdo, 'website_gallery_interval', 3);
@@ -242,6 +256,10 @@ include 'layout-header.php';
     <a href="?tab=branding" style="padding:10px 24px;font-weight:600;text-decoration:none;border-bottom:2px solid transparent;margin-bottom:-2px;
         <?php echo $tab === 'branding' ? 'border-bottom-color:#0C4A6E;color:#0C4A6E;' : 'color:#666;'; ?>">
         🎨 Branding &amp; Favicon
+    </a>
+    <a href="?tab=social" style="padding:10px 24px;font-weight:600;text-decoration:none;border-bottom:2px solid transparent;margin-bottom:-2px;
+        <?php echo $tab === 'social' ? 'border-bottom-color:#0C4A6E;color:#0C4A6E;' : 'color:#666;'; ?>">
+        📱 Sosial Media
     </a>
     <a href="settings.php" style="padding:10px 24px;font-weight:600;text-decoration:none;color:#666;">
         ⚙️ Pengaturan Sistem &rarr;
@@ -305,6 +323,39 @@ include 'layout-header.php';
                 <?php endif; ?>
                 <input type="file" name="website_favicon" accept="image/*,.ico" style="width:100%;font-size:13px;">
                 <div style="font-size:11px;color:#888;margin-top:4px;">Tampil di tab browser saat mengakses karimunjawaexplore.com (Beranda, Paket Wisata, Blog, dll).</div>
+            </div>
+            <div>
+                <button type="submit" style="padding:10px 24px;background:#0C4A6E;color:white;border:none;border-radius:5px;font-weight:700;cursor:pointer;font-size:14px;">💾 Simpan</button>
+            </div>
+        </form>
+    </div>
+<?php endif; ?>
+
+<?php if ($tab === 'social'): ?>
+    <div style="background:#fff;border:1px solid #dde5ef;border-radius:8px;padding:20px;max-width:720px;">
+        <div style="font-size:16px;font-weight:700;color:#0C4A6E;margin-bottom:16px;">📱 Link Sosial Media</div>
+        <div style="font-size:12.5px;color:#888;margin-bottom:16px;">Isi link lengkap (contoh: https://instagram.com/namaakun). Kosongkan jika tidak punya — ikon otomatis tidak akan tampil di footer website.</div>
+        <form method="POST" style="display:flex;flex-direction:column;gap:14px;">
+            <input type="hidden" name="tab" value="social">
+            <div>
+                <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;">📘 Facebook</label>
+                <input type="url" name="social_facebook" value="<?php echo htmlspecialchars($socialFacebook); ?>" placeholder="https://facebook.com/namaakun"
+                    style="width:100%;padding:9px 12px;border:1px solid #ccc;border-radius:5px;font-family:inherit;font-size:14px;box-sizing:border-box;">
+            </div>
+            <div>
+                <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;">📸 Instagram</label>
+                <input type="url" name="social_instagram" value="<?php echo htmlspecialchars($socialInstagram); ?>" placeholder="https://instagram.com/namaakun"
+                    style="width:100%;padding:9px 12px;border:1px solid #ccc;border-radius:5px;font-family:inherit;font-size:14px;box-sizing:border-box;">
+            </div>
+            <div>
+                <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;">🎵 TikTok</label>
+                <input type="url" name="social_tiktok" value="<?php echo htmlspecialchars($socialTiktok); ?>" placeholder="https://tiktok.com/@namaakun"
+                    style="width:100%;padding:9px 12px;border:1px solid #ccc;border-radius:5px;font-family:inherit;font-size:14px;box-sizing:border-box;">
+            </div>
+            <div>
+                <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;">▶️ YouTube</label>
+                <input type="url" name="social_youtube" value="<?php echo htmlspecialchars($socialYoutube); ?>" placeholder="https://youtube.com/@namaakun"
+                    style="width:100%;padding:9px 12px;border:1px solid #ccc;border-radius:5px;font-family:inherit;font-size:14px;box-sizing:border-box;">
             </div>
             <div>
                 <button type="submit" style="padding:10px 24px;background:#0C4A6E;color:white;border:none;border-radius:5px;font-weight:700;cursor:pointer;font-size:14px;">💾 Simpan</button>
