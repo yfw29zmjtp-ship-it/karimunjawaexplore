@@ -64,14 +64,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['we_action'] ?? '') === 'qu
                 $qCustomerId = (int)$pdo->lastInsertId();
             }
 
-            $qPackageName = $pdo->prepare("SELECT name FROM trip_packages WHERE id = ?");
-            $qPackageName->execute([$qPackageId]);
-            $qPackageName = $qPackageName->fetchColumn() ?: '-';
+            $qPackageStmt = $pdo->prepare("SELECT name, duration_days FROM trip_packages WHERE id = ?");
+            $qPackageStmt->execute([$qPackageId]);
+            $qPackageRow = $qPackageStmt->fetch();
+            $qPackageName = $qPackageRow['name'] ?? '-';
+
+            // Tanggal selesai dihitung otomatis dari durasi paket (mis. 3H2M -> +2 hari) agar
+            // admin tidak perlu isi manual di menu Penawaran dan nominal langsung terhitung.
+            $qEndDate = $qDate;
+            $qDurationDays = (int)($qPackageRow['duration_days'] ?? 0);
+            if ($qDurationDays > 1) {
+                $qEndDate = date('Y-m-d', strtotime($qDate . ' + ' . ($qDurationDays - 1) . ' days'));
+            }
 
             $qNo = sunseaNextNumber($pdo, 'quotation');
             $qNotes = "[Website] Permintaan penawaran cepat.\nPaket: " . $qPackageName;
-            $pdo->prepare("INSERT INTO quotations (quotation_no, customer_id, package_id, trip_date, pax_count, notes, valid_until, created_by) VALUES (?,?,?,?,?,?,?,?)")
-                ->execute([$qNo, $qCustomerId, $qPackageId, $qDate, $qPax, $qNotes, date('Y-m-d', strtotime('+7 days')), 'website']);
+            $pdo->prepare("INSERT INTO quotations (quotation_no, customer_id, package_id, trip_date, trip_end_date, pax_count, notes, valid_until, created_by) VALUES (?,?,?,?,?,?,?,?,?)")
+                ->execute([$qNo, $qCustomerId, $qPackageId, $qDate, $qEndDate, $qPax, $qNotes, date('Y-m-d', strtotime('+7 days')), 'website']);
 
             $weQuoteSuccessMsg = "Terima kasih, {$qName}! Permintaan penawaran Anda (No. {$qNo}) sudah kami terima. Tim kami akan segera menghubungi Anda via WhatsApp.";
             $weQuoteOld = ['name' => '', 'phone' => '', 'trip_date' => '', 'pax' => 2, 'package_id' => ''];
@@ -238,34 +247,34 @@ require __DIR__ . '/includes/website-header.php';
 </section>
 
 <?php if ($weHomeGallery): ?>
-<section class="we-section we-gallery-elegant">
-    <div class="we-container">
-        <div class="we-section-title">
-            <h2>Galeri Tamu Kami</h2>
-            <p>Galeri tamu yang sudah dilayani Karimunjawa Explore — momen bahagia mereka menjelajah Karimunjawa bersama kami</p>
-        </div>
-
-        <div class="we-carousel we-carousel-gallery" data-autoplay="<?php echo $weGalleryIntervalMs; ?>">
-            <button type="button" class="we-carousel-arrow we-prev" aria-label="Sebelumnya">&#8249;</button>
-            <div class="we-carousel-viewport">
-                <div class="we-carousel-track">
-                    <?php foreach ($weHomeGallery as $photo): ?>
-                        <div class="we-carousel-slide we-gallery-slide">
-                            <div class="we-gallery-slide-inner">
-                                <img src="<?php echo htmlspecialchars(sunseaAssetUrl($photo['image_path'])); ?>" alt="<?php echo htmlspecialchars($photo['caption'] ?: 'Tamu Karimunjawa Explore'); ?>">
-                                <?php if (!empty($photo['caption'])): ?>
-                                    <div class="we-gallery-caption"><?php echo htmlspecialchars($photo['caption']); ?></div>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
-                </div>
+    <section class="we-section we-gallery-elegant">
+        <div class="we-container">
+            <div class="we-section-title">
+                <h2>Galeri Tamu Kami</h2>
+                <p>Galeri tamu yang sudah dilayani Karimunjawa Explore — momen bahagia mereka menjelajah Karimunjawa bersama kami</p>
             </div>
-            <button type="button" class="we-carousel-arrow we-next" aria-label="Berikutnya">&#8250;</button>
-            <div class="we-carousel-dots"></div>
+
+            <div class="we-carousel we-carousel-gallery" data-autoplay="<?php echo $weGalleryIntervalMs; ?>">
+                <button type="button" class="we-carousel-arrow we-prev" aria-label="Sebelumnya">&#8249;</button>
+                <div class="we-carousel-viewport">
+                    <div class="we-carousel-track">
+                        <?php foreach ($weHomeGallery as $photo): ?>
+                            <div class="we-carousel-slide we-gallery-slide">
+                                <div class="we-gallery-slide-inner">
+                                    <img src="<?php echo htmlspecialchars(sunseaAssetUrl($photo['image_path'])); ?>" alt="<?php echo htmlspecialchars($photo['caption'] ?: 'Tamu Karimunjawa Explore'); ?>">
+                                    <?php if (!empty($photo['caption'])): ?>
+                                        <div class="we-gallery-caption"><?php echo htmlspecialchars($photo['caption']); ?></div>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+                <button type="button" class="we-carousel-arrow we-next" aria-label="Berikutnya">&#8250;</button>
+                <div class="we-carousel-dots"></div>
+            </div>
         </div>
-    </div>
-</section>
+    </section>
 <?php endif; ?>
 
 <section class="we-section we-section-alt">
