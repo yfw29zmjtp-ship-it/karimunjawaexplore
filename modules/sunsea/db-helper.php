@@ -477,6 +477,14 @@ function sunseaEnsureFinanceSchema(PDO $pdo): void
                 $pdo->exec($alterSql);
             }
         }
+
+        // Backfill: transaksi pemasukan lama dari pembayaran invoice belum tercatat nama tamunya, jadi tak bisa difilter per tamu.
+        $pdo->exec("
+            UPDATE cash_book cb
+            JOIN invoices i ON i.id = cb.invoice_id
+            SET cb.customer_id = i.customer_id
+            WHERE cb.customer_id IS NULL AND cb.invoice_id IS NOT NULL
+        ");
     } catch (Exception $e) {
         error_log('sunseaEnsureFinanceSchema error: ' . $e->getMessage());
     }

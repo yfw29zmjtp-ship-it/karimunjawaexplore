@@ -54,15 +54,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ->execute([$paid, $remaining, $newStatus, $iId]);
 
             // Add to cashbook automatically
-            $custRow = $pdo->prepare("SELECT c.name FROM invoices i JOIN customers c ON c.id=i.customer_id WHERE i.id=?");
+            $custRow = $pdo->prepare("SELECT c.id AS customer_id, c.name, i.internal_notes FROM invoices i JOIN customers c ON c.id=i.customer_id WHERE i.id=?");
             $custRow->execute([$iId]);
-            $custName = $custRow->fetchColumn();
+            $custInfo = $custRow->fetch();
+            $custId   = $custInfo ? (int)$custInfo['customer_id'] : null;
+            $custName = $custInfo['name'] ?? '';
+
+            // Cari booking terkait (kalau invoice ini berasal dari booking) supaya tercatat & bisa difilter per trip juga.
+            $linkedBookingId = null;
+            if (preg_match('/Generated from Reservasi:\s*(\S+)/', (string)($custInfo['internal_notes'] ?? ''), $mBk)) {
+                $bkStmt = $pdo->prepare("SELECT id FROM booking_orders WHERE booking_no=?");
+                $bkStmt->execute([$mBk[1]]);
+                $linkedBookingId = $bkStmt->fetchColumn() ?: null;
+            } elseif (preg_match('/^booking_id:(\d+)$/', (string)($custInfo['internal_notes'] ?? ''), $mBk)) {
+                $linkedBookingId = (int)$mBk[1];
+            }
+
             $invRow = $pdo->prepare("SELECT invoice_no FROM invoices WHERE id=?");
             $invRow->execute([$iId]);
             $invNo = $invRow->fetchColumn();
             $pdo->prepare("
-                INSERT INTO cash_book (transaction_date, type, category, description, amount, reference, invoice_id, created_by)
-                VALUES (?,?,?,?,?,?,?,?)
+                INSERT INTO cash_book (transaction_date, type, category, description, amount, reference, invoice_id, customer_id, booking_id, created_by)
+                VALUES (?,?,?,?,?,?,?,?,?,?)
             ")->execute([
                 $date,
                 'income',
@@ -71,6 +84,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $amount,
                 $ref ?: $invNo,
                 $iId,
+                $custId,
+                $linkedBookingId,
                 $user
             ]);
 
