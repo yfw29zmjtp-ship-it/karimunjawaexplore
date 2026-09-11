@@ -783,19 +783,130 @@ include 'layout-header.php';
     </div>
 <?php endif; ?>
 
-<?php if ($detail): ?>
+<?php if ($detail):
+    $marginPct = (float)$detail['sell_total'] > 0 ? round((float)$detail['margin_amount'] / (float)$detail['sell_total'] * 100) : 0;
+    $pendingCount = 0;
+    foreach ($detailItems as $it) {
+        if (empty($it['is_done'])) $pendingCount++;
+    }
+    $mitraItems = array_values(array_filter($detailItems, fn($it) => $it['component_code'] !== 'paket'));
+    $mitraUnpaidCount = 0;
+    $mitraPaidTotal = 0;
+    foreach ($mitraItems as $it) {
+        if (empty($it['is_paid_mitra'])) {
+            $mitraUnpaidCount++;
+        } else {
+            $mitraPaidTotal += (float)$it['total_cost'];
+        }
+    }
+?>
     <div style="margin-bottom:14px;"><a class="ss-btn ss-btn-outline ss-btn-sm" href="bookings.php"><i data-feather="arrow-left"></i> Kembali</a></div>
+
+    <!-- 1. Identitas Booking: nama tamu, nomor, tanggal, status, tim lapangan -->
+    <div class="ss-card" style="margin-bottom:14px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;margin-bottom:4px;">
+            <div>
+                <div style="font-size:20px;font-weight:800;color:var(--ss-text);"><?php echo htmlspecialchars($detail['customer_name']); ?></div>
+                <div style="font-size:12px;color:var(--ss-muted);margin-top:2px;">
+                    <?php echo htmlspecialchars($detail['booking_no']); ?> · <?php echo date('d M Y', strtotime($detail['start_date'])); ?> - <?php echo date('d M Y', strtotime($detail['end_date'])); ?> · <?php echo (int)$detail['pax_count']; ?> pax
+                </div>
+            </div>
+            <span class="ss-status ss-status-<?php echo $detail['status'] === 'completed' ? 'approved' : ($detail['status'] === 'cancelled' ? 'rejected' : ($detail['status'] === 'draft' ? 'draft' : 'sent')); ?>" style="font-size:12px;"><?php echo $detail['status'] === 'draft' ? 'Pending' : ucfirst($detail['status']); ?></span>
+        </div>
+        <?php if (!empty($detail['notes'])): ?>
+            <div style="font-size:12.5px;color:var(--ss-muted);margin-top:8px;padding-top:8px;border-top:1px solid var(--ss-gray-2);"><?php echo nl2br(htmlspecialchars($detail['notes'])); ?></div>
+        <?php endif; ?>
+        <div style="display:flex;gap:22px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid var(--ss-gray-2);font-size:12.5px;">
+            <div><span style="color:var(--ss-muted);">Koordinator: </span><strong><?php echo htmlspecialchars($detail['coordinator_name'] ?: '-'); ?></strong></div>
+            <div><span style="color:var(--ss-muted);">Guide Darat: </span><strong><?php echo htmlspecialchars($detail['guide_darat_name'] ?: '-'); ?></strong></div>
+            <div><span style="color:var(--ss-muted);">Guide Laut: </span><strong><?php echo htmlspecialchars($detail['guide_laut_name'] ?: '-'); ?></strong></div>
+        </div>
+    </div>
+
+    <!-- 2. Ringkasan Keuangan: pie chart proporsi modal vs margin, di samping angka besar -->
+    <div class="ss-card" style="margin-bottom:14px;">
+        <div class="ss-card-title" style="margin-bottom:12px;">💰 Ringkasan Keuangan</div>
+        <div style="display:grid;grid-template-columns:150px 1fr;gap:22px;align-items:center;">
+            <div style="position:relative;width:150px;height:150px;">
+                <canvas id="bookingFinancePie" width="150" height="150"></canvas>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;">
+                <div>
+                    <div style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--ss-muted);"><span style="width:9px;height:9px;border-radius:50%;background:#dc2626;display:inline-block;"></span> Total Modal</div>
+                    <div style="font-size:17px;font-weight:800;margin-top:4px;"><?php echo sunseaRupiah((float)$detail['cost_total']); ?></div>
+                </div>
+                <div>
+                    <div style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--ss-muted);"><span style="width:9px;height:9px;border-radius:50%;background:var(--ss-success);display:inline-block;"></span> Margin (<?php echo $marginPct; ?>%)</div>
+                    <div style="font-size:17px;font-weight:800;margin-top:4px;color:var(--ss-success);"><?php echo sunseaRupiah((float)$detail['margin_amount']); ?></div>
+                </div>
+                <div>
+                    <div style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--ss-muted);"><span style="width:9px;height:9px;border-radius:50%;background:var(--ss-ocean);display:inline-block;"></span> Total Jual</div>
+                    <div style="font-size:17px;font-weight:800;margin-top:4px;color:var(--ss-ocean);"><?php echo sunseaRupiah((float)$detail['sell_total']); ?></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Rekap Pengeluaran: khusus biaya ke mitra, terpisah dari ringkasan keuangan -->
+    <div class="ss-card" style="margin-bottom:14px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <div class="ss-card-title" style="margin:0;">📋 Rekap Pengeluaran (Pembayaran ke Mitra)</div>
+            <?php if (!empty($mitraItems)): ?>
+                <?php if ($mitraUnpaidCount > 0): ?>
+                    <span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#dc2626;font-weight:700;"><span style="width:8px;height:8px;border-radius:50%;background:#dc2626;display:inline-block;"></span> <?php echo $mitraUnpaidCount; ?> belum dibayar</span>
+                <?php else: ?>
+                    <span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#16a34a;font-weight:700;"><span style="width:8px;height:8px;border-radius:50%;background:#16a34a;display:inline-block;"></span> Semua lunas</span>
+                <?php endif; ?>
+            <?php endif; ?>
+        </div>
+
+        <?php if (empty($mitraItems)): ?>
+            <div style="font-size:12px;color:var(--ss-muted);">Belum ada detail layanan mitra. Isi "Detail Layanan dalam Paket" di menu Paket Wisata agar tagihan mitra (tiket kapal, penginapan, rental, dll) tampil di sini.</div>
+        <?php else: ?>
+            <form method="POST">
+                <input type="hidden" name="action" value="update_mitra_paid">
+                <input type="hidden" name="booking_id" value="<?php echo (int)$detail['id']; ?>">
+                <div class="ss-table-wrap">
+                    <table class="ss-table">
+                        <thead>
+                            <tr>
+                                <th>Komponen</th>
+                                <th>Pengeluaran</th>
+                                <th>Status Bayar</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($mitraItems as $it): ?>
+                                <tr>
+                                    <td><?php echo htmlspecialchars($it['component_name']); ?></td>
+                                    <td><strong><?php echo sunseaRupiah((float)$it['total_cost']); ?></strong></td>
+                                    <td>
+                                        <label style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;">
+                                            <input type="checkbox" name="paid_items[]" value="<?php echo (int)$it['id']; ?>" <?php echo !empty($it['is_paid_mitra']) ? 'checked' : ''; ?>>
+                                            <span style="<?php echo !empty($it['is_paid_mitra']) ? 'color:#16a34a;font-weight:700;' : 'color:var(--ss-muted);'; ?>"><?php echo !empty($it['is_paid_mitra']) ? 'Lunas' : 'Belum bayar'; ?></span>
+                                        </label>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                        <tfoot>
+                            <tr style="border-top:2px solid var(--ss-gray-2);">
+                                <td><strong>Total Pengeluaran Mitra</strong></td>
+                                <td colspan="2"><strong><?php echo sunseaRupiah((float)$detail['cost_total']); ?></strong></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                <button class="ss-btn ss-btn-primary ss-btn-sm" type="submit" style="margin-top:10px;"><i data-feather="save"></i> Simpan Pembayaran Mitra</button>
+            </form>
+        <?php endif; ?>
+    </div>
+
     <div style="display:grid;grid-template-columns:1fr 320px;gap:18px;">
         <div class="ss-card">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-                <div>
-                    <div class="ss-card-title"><?php echo htmlspecialchars($detail['booking_no']); ?></div>
-                    <div class="ss-card-sub"><?php echo htmlspecialchars($detail['customer_name']); ?> · <?php echo date('d M Y', strtotime($detail['start_date'])); ?> - <?php echo date('d M Y', strtotime($detail['end_date'])); ?></div>
-                </div>
-                <div style="display:flex;align-items:center;gap:8px;">
-                    <span class="ss-status ss-status-<?php echo $detail['status'] === 'completed' ? 'approved' : ($detail['status'] === 'cancelled' ? 'rejected' : ($detail['status'] === 'draft' ? 'draft' : 'sent')); ?>"><?php echo $detail['status'] === 'draft' ? 'Pending' : ucfirst($detail['status']); ?></span>
-                    <button type="button" class="ss-btn ss-btn-outline ss-btn-sm" onclick="var p=document.getElementById('editItemsPanel');p.style.display=(p.style.display==='none'?'block':'none');this.querySelector('span').textContent=(p.style.display==='none'?'Edit':'Tutup Edit');"><i data-feather="edit-2"></i> <span>Edit</span></button>
-                </div>
+                <div class="ss-card-title" style="margin:0;">Rincian Layanan (Harga Jual)</div>
+                <button type="button" class="ss-btn ss-btn-outline ss-btn-sm" onclick="var p=document.getElementById('editItemsPanel');p.style.display=(p.style.display==='none'?'block':'none');this.querySelector('span').textContent=(p.style.display==='none'?'Edit':'Tutup Edit');"><i data-feather="edit-2"></i> <span>Edit</span></button>
             </div>
             <div class="ss-table-wrap">
                 <table class="ss-table">
@@ -903,12 +1014,6 @@ include 'layout-header.php';
             </div>
         </div>
         <div>
-            <?php
-            $pendingCount = 0;
-            foreach ($detailItems as $it) {
-                if (empty($it['is_done'])) $pendingCount++;
-            }
-            ?>
             <div class="ss-card" style="margin-bottom:12px;">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
                     <div class="ss-card-title" style="margin:0;">Koordinator</div>
@@ -941,58 +1046,9 @@ include 'layout-header.php';
                     </div>
                 <?php endif; ?>
             </div>
-            <?php
-            $mitraItems = array_values(array_filter($detailItems, fn($it) => $it['component_code'] !== 'paket'));
-            $mitraUnpaidCount = 0;
-            foreach ($mitraItems as $it) {
-                if (empty($it['is_paid_mitra'])) $mitraUnpaidCount++;
-            }
-            ?>
-            <div class="ss-card" style="margin-bottom:12px;">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-                    <div class="ss-card-title" style="margin:0;">Pembayaran ke Mitra</div>
-                    <?php if (!empty($mitraItems)): ?>
-                        <?php if ($mitraUnpaidCount > 0): ?>
-                            <span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#dc2626;font-weight:700;"><span style="width:8px;height:8px;border-radius:50%;background:#dc2626;display:inline-block;"></span> <?php echo $mitraUnpaidCount; ?> belum dibayar</span>
-                        <?php else: ?>
-                            <span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#16a34a;font-weight:700;"><span style="width:8px;height:8px;border-radius:50%;background:#16a34a;display:inline-block;"></span> Semua lunas</span>
-                        <?php endif; ?>
-                    <?php endif; ?>
-                </div>
-
-                <?php if (empty($mitraItems)): ?>
-                    <div style="font-size:12px;color:var(--ss-muted);">Belum ada detail layanan mitra. Isi "Detail Layanan dalam Paket" di menu Paket Wisata agar tagihan mitra (tiket kapal, penginapan, rental, dll) tampil di sini.</div>
-                <?php else: ?>
-                    <form method="POST">
-                        <input type="hidden" name="action" value="update_mitra_paid">
-                        <input type="hidden" name="booking_id" value="<?php echo (int)$detail['id']; ?>">
-                        <?php foreach ($mitraItems as $it): ?>
-                            <label style="display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12.5px;padding:6px 0;border-bottom:1px solid var(--ss-gray-2);">
-                                <span style="display:flex;align-items:center;gap:8px;">
-                                    <input type="checkbox" name="paid_items[]" value="<?php echo (int)$it['id']; ?>" <?php echo !empty($it['is_paid_mitra']) ? 'checked' : ''; ?>>
-                                    <span style="<?php echo !empty($it['is_paid_mitra']) ? 'text-decoration:line-through;color:var(--ss-muted);' : ''; ?>"><?php echo htmlspecialchars($it['component_name']); ?></span>
-                                </span>
-                                <strong style="white-space:nowrap;"><?php echo sunseaRupiah((float)$it['total_cost']); ?></strong>
-                            </label>
-                        <?php endforeach; ?>
-                        <button class="ss-btn ss-btn-primary ss-btn-sm" type="submit" style="margin-top:10px;"><i data-feather="save"></i> Simpan Pembayaran Mitra</button>
-                    </form>
-                <?php endif; ?>
-            </div>
-            <div class="ss-card" style="margin-bottom:12px;">
-                <div class="ss-card-title" style="margin-bottom:8px;">Ringkasan Biaya</div>
-                <div style="display:flex;justify-content:space-between;padding:6px 0;"><span style="color:var(--ss-muted)">Total Modal</span><strong><?php echo sunseaRupiah((float)$detail['cost_total']); ?></strong></div>
-                <div style="display:flex;justify-content:space-between;padding:6px 0;"><span style="color:var(--ss-muted)">Total Jual</span><strong><?php echo sunseaRupiah((float)$detail['sell_total']); ?></strong></div>
-                <div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid var(--ss-gray-2);font-size:16px;"><span>Margin</span><strong style="color:var(--ss-success)"><?php echo sunseaRupiah((float)$detail['margin_amount']); ?></strong></div>
-            </div>
             <div class="ss-card">
-                <div class="ss-card-title" style="margin-bottom:8px;">Tim Lapangan</div>
-                <div style="font-size:13px;color:var(--ss-muted);line-height:1.8;">
-                    Koordinator: <strong style="color:var(--ss-text)"><?php echo htmlspecialchars($detail['coordinator_name'] ?: '-'); ?></strong><br>
-                    Guide Darat: <strong style="color:var(--ss-text)"><?php echo htmlspecialchars($detail['guide_darat_name'] ?: '-'); ?></strong><br>
-                    Guide Laut: <strong style="color:var(--ss-text)"><?php echo htmlspecialchars($detail['guide_laut_name'] ?: '-'); ?></strong>
-                </div>
-                <form method="POST" style="margin-top:12px;display:flex;gap:8px;align-items:center;">
+                <div class="ss-card-title" style="margin-bottom:8px;">Status &amp; Aksi</div>
+                <form method="POST" style="display:flex;gap:8px;align-items:center;">
                     <input type="hidden" name="action" value="update_status">
                     <input type="hidden" name="booking_id" value="<?php echo (int)$detail['id']; ?>">
                     <input type="hidden" name="return_view" value="1">
@@ -1009,6 +1065,34 @@ include 'layout-header.php';
             </div>
         </div>
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script>
+        (function() {
+            var ctx = document.getElementById('bookingFinancePie');
+            if (!ctx || typeof Chart === 'undefined') return;
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Modal', 'Margin'],
+                    datasets: [{
+                        data: [<?php echo (float)$detail['cost_total']; ?>, <?php echo (float)$detail['margin_amount']; ?>],
+                        backgroundColor: ['#dc2626', '#16a34a'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '65%',
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { callbacks: { label: function(c) { return c.label + ': Rp ' + c.raw.toLocaleString('id-ID'); } } }
+                    }
+                }
+            });
+        })();
+    </script>
 
 <?php elseif ($action === 'add'): ?>
     <div style="margin-bottom:14px;"><a class="ss-btn ss-btn-outline ss-btn-sm" href="bookings.php"><i data-feather="arrow-left"></i> Kembali</a></div>
