@@ -60,6 +60,13 @@ try {
         WHERE YEAR(payment_date)=YEAR(NOW()) AND MONTH(payment_date)=MONTH(NOW())
     ")->fetchColumn();
 
+    // Pengeluaran bulan ini (semua tamu/trip) dari Buku Kas Operasional
+    $monthExpense = (float)$pdo->query("
+        SELECT COALESCE(SUM(amount),0) FROM cash_book
+        WHERE type='expense' AND YEAR(transaction_date)=YEAR(NOW()) AND MONTH(transaction_date)=MONTH(NOW())
+    ")->fetchColumn();
+    $monthProfit = $monthRevenue - $monthExpense;
+
     // Recent quotations (5)
     $recentQuotations = $pdo->query("
         SELECT q.quotation_no, q.status, q.total_amount, q.trip_date, q.created_at,
@@ -124,6 +131,8 @@ try {
     $iStats = ['total' => 0, 'issued' => 0, 'partial' => 0, 'paid' => 0, 'overdue' => 0, 'outstanding' => 0];
     $custCount = $pkgCount = 0;
     $monthRevenue = 0;
+    $monthExpense = 0;
+    $monthProfit = 0;
     $bookingStats = ['total' => 0, 'active' => 0];
     $recentQuotations = $recentInvoices = [];
     $monthLabels = json_encode([]);
@@ -172,7 +181,7 @@ if (isset($dbError)): ?>
 ============================= -->
 <style>
     .ss-stats-grid.compact {
-        grid-template-columns: repeat(7, 1fr);
+        grid-template-columns: repeat(9, 1fr);
         gap: 10px;
         margin-bottom: 20px;
     }
@@ -206,7 +215,7 @@ if (isset($dbError)): ?>
 
     @media (max-width: 1200px) {
         .ss-stats-grid.compact {
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(5, 1fr);
         }
     }
 
@@ -243,6 +252,20 @@ if (isset($dbError)): ?>
         <div>
             <div class="ss-stat-value" style="font-size:16px;"><?php echo sunseaRupiah($monthRevenue, true); ?></div>
             <div class="ss-stat-label">Pendapatan Bulan Ini</div>
+        </div>
+    </div>
+    <div class="ss-stat-card">
+        <div class="ss-stat-icon danger"><i data-feather="trending-down"></i></div>
+        <div>
+            <div class="ss-stat-value" style="font-size:16px;"><?php echo sunseaRupiah($monthExpense, true); ?></div>
+            <div class="ss-stat-label">Pengeluaran Bulan Ini</div>
+        </div>
+    </div>
+    <div class="ss-stat-card">
+        <div class="ss-stat-icon <?php echo $monthProfit >= 0 ? 'success' : 'danger'; ?>"><i data-feather="pie-chart"></i></div>
+        <div>
+            <div class="ss-stat-value" style="font-size:16px;color:<?php echo $monthProfit >= 0 ? 'var(--ss-success)' : 'var(--ss-danger)'; ?>;"><?php echo sunseaRupiah($monthProfit, true); ?></div>
+            <div class="ss-stat-label">Profit Margin Bulan Ini</div>
         </div>
     </div>
     <div class="ss-stat-card">
