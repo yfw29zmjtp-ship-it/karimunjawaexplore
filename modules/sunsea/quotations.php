@@ -364,6 +364,12 @@ if (in_array($action, ['view', 'edit', 'print']) && $qId > 0) {
         exit;
     }
 
+    // Tandai sudah dibuka supaya dot notifikasi "belum dibaca" di daftar hilang.
+    if ($action === 'view' && empty($quotation['viewed_at'])) {
+        $pdo->prepare("UPDATE quotations SET viewed_at = NOW() WHERE id = ?")->execute([$qId]);
+        $quotation['viewed_at'] = date('Y-m-d H:i:s');
+    }
+
     $si = $pdo->prepare("SELECT * FROM quotation_items WHERE quotation_id=? ORDER BY sort_order");
     $si->execute([$qId]);
     $qItems = $si->fetchAll();
@@ -403,7 +409,7 @@ $listParams  = $filter ? [$filter] : [];
 
 $quotations = $pdo->prepare("
     SELECT q.id, q.quotation_no, q.status, q.total_amount, q.trip_date, q.valid_until, q.created_at,
-           q.created_by, q.customer_id, q.package_id, c.name as customer_name, q.pax_count, b.id as booking_id
+           q.created_by, q.customer_id, q.package_id, q.viewed_at, c.name as customer_name, q.pax_count, b.id as booking_id
     FROM quotations q
     JOIN customers c ON c.id = q.customer_id
     LEFT JOIN booking_orders b ON b.quotation_id = q.id
@@ -1232,7 +1238,10 @@ include 'layout-header.php';
                             ];
                             $hasAnyMasterData = false;
                             foreach ($quickAddGroups as $g) {
-                                if (!empty($g['options'])) { $hasAnyMasterData = true; break; }
+                                if (!empty($g['options'])) {
+                                    $hasAnyMasterData = true;
+                                    break;
+                                }
                             }
                             ?>
                             <?php if ($hasAnyMasterData): ?>
@@ -1409,60 +1418,63 @@ include 'layout-header.php';
                             <tr>
                                 <th style="width:32px;"><input type="checkbox" id="checkAll" onchange="toggleAllQuoteRows(this)"></th>
                                 <th>No. Penawaran</th>
-                            <th>Customer</th>
-                            <th>Sumber</th>
-                            <th>Jam Masuk</th>
-                            <th>Tgl Trip</th>
-                            <th>Pax</th>
-                            <th>Total</th>
-                            <th>Status</th>
-                            <th>Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($quotations as $q): ?>
-                            <tr>
-                                <td><input type="checkbox" class="quote-row-check" name="ids[]" value="<?php echo $q['id']; ?>" onchange="updateBulkDeleteBtn()"></td>
-                                <td><a href="quotations.php?action=view&id=<?php echo $q['id']; ?>"
-                                        style="color:var(--ss-ocean);font-weight:600;text-decoration:none;">
-                                        <?php echo htmlspecialchars($q['quotation_no']); ?>
-                                    </a></td>
-                                <td><?php echo htmlspecialchars($q['customer_name']); ?></td>
-                                <td>
-                                    <?php if (($q['created_by'] ?? '') === 'website'): ?>
-                                        <span class="ss-status" style="background:#e0e7ff;color:#3730a3;">🌐 Web</span>
-                                    <?php else: ?>
-                                        <span class="ss-status" style="background:#f1f5f9;color:#475569;">Manual</span>
-                                    <?php endif; ?>
-                                </td>
-                                <td style="font-size:12px;color:var(--ss-muted);">
-                                    <?php echo $q['created_at'] ? date('d M Y H:i', strtotime($q['created_at'])) : '-'; ?>
-                                </td>
-                                <td><?php echo $q['trip_date'] ? date('d M Y', strtotime($q['trip_date'])) : '-'; ?></td>
-                                <td><?php echo $q['pax_count']; ?></td>
-                                <td style="font-weight:600;"><?php echo sunseaRupiah((float)$q['total_amount']); ?></td>
-                                <td><span class="ss-status ss-status-<?php echo $q['status']; ?>"><?php echo ucfirst($q['status']); ?></span></td>
-                                <td>
-                                    <a href="quotations.php?action=view&id=<?php echo $q['id']; ?>" class="ss-btn ss-btn-outline ss-btn-sm">
-                                        <i data-feather="eye"></i>
-                                    </a>
-                                    <a href="quotations.php?action=edit&id=<?php echo $q['id']; ?>" class="ss-btn ss-btn-outline ss-btn-sm">
-                                        <i data-feather="edit-2"></i>
-                                    </a>
-                                    <a href="quotations.php?action=print&id=<?php echo $q['id']; ?>" target="_blank" class="ss-btn ss-btn-outline ss-btn-sm">
-                                        <i data-feather="printer"></i>
-                                    </a>
-                                    <?php if ($q['status'] === 'approved' && !empty($q['booking_id'])): ?>
-                                        <a href="bookings.php?view=<?php echo $q['booking_id']; ?>" class="ss-btn ss-btn-primary ss-btn-sm" title="Lihat Data Booking">
-                                            <i data-feather="calendar-check"></i>
-                                        </a>
-                                    <?php endif; ?>
-                                </td>
+                                <th>Customer</th>
+                                <th>Sumber</th>
+                                <th>Jam Masuk</th>
+                                <th>Tgl Trip</th>
+                                <th>Pax</th>
+                                <th>Total</th>
+                                <th>Status</th>
+                                <th>Aksi</th>
                             </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($quotations as $q): ?>
+                                <tr>
+                                    <td><input type="checkbox" class="quote-row-check" name="ids[]" value="<?php echo $q['id']; ?>" onchange="updateBulkDeleteBtn()"></td>
+                                    <td><a href="quotations.php?action=view&id=<?php echo $q['id']; ?>"
+                                            style="color:var(--ss-ocean);font-weight:600;text-decoration:none;">
+                                            <?php if (empty($q['viewed_at'])): ?>
+                                                <span title="Belum dibuka" style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#dc2626;margin-right:5px;"></span>
+                                            <?php endif; ?>
+                                            <?php echo htmlspecialchars($q['quotation_no']); ?>
+                                        </a></td>
+                                    <td><?php echo htmlspecialchars($q['customer_name']); ?></td>
+                                    <td>
+                                        <?php if (($q['created_by'] ?? '') === 'website'): ?>
+                                            <span class="ss-status" style="background:#e0e7ff;color:#3730a3;">🌐 Web</span>
+                                        <?php else: ?>
+                                            <span class="ss-status" style="background:#f1f5f9;color:#475569;">Manual</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td style="font-size:12px;color:var(--ss-muted);">
+                                        <?php echo $q['created_at'] ? date('d M Y H:i', strtotime($q['created_at'])) : '-'; ?>
+                                    </td>
+                                    <td><?php echo $q['trip_date'] ? date('d M Y', strtotime($q['trip_date'])) : '-'; ?></td>
+                                    <td><?php echo $q['pax_count']; ?></td>
+                                    <td style="font-weight:600;"><?php echo sunseaRupiah((float)$q['total_amount']); ?></td>
+                                    <td><span class="ss-status ss-status-<?php echo $q['status']; ?>"><?php echo ucfirst($q['status']); ?></span></td>
+                                    <td>
+                                        <a href="quotations.php?action=view&id=<?php echo $q['id']; ?>" class="ss-btn ss-btn-outline ss-btn-sm">
+                                            <i data-feather="eye"></i>
+                                        </a>
+                                        <a href="quotations.php?action=edit&id=<?php echo $q['id']; ?>" class="ss-btn ss-btn-outline ss-btn-sm">
+                                            <i data-feather="edit-2"></i>
+                                        </a>
+                                        <a href="quotations.php?action=print&id=<?php echo $q['id']; ?>" target="_blank" class="ss-btn ss-btn-outline ss-btn-sm">
+                                            <i data-feather="printer"></i>
+                                        </a>
+                                        <?php if ($q['status'] === 'approved' && !empty($q['booking_id'])): ?>
+                                            <a href="bookings.php?view=<?php echo $q['booking_id']; ?>" class="ss-btn ss-btn-primary ss-btn-sm" title="Lihat Data Booking">
+                                                <i data-feather="calendar-check"></i>
+                                            </a>
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
             </form>
         <?php endif; ?>
     </div>

@@ -429,6 +429,11 @@ function sunseaEnsureQuotationItinerarySchema(PDO $pdo): void
         if ((int)$check->fetchColumn() === 0) {
             $pdo->exec("ALTER TABLE quotations ADD COLUMN accommodation_manual VARCHAR(200) NULL AFTER trip_end_date");
         }
+        // Kapan penawaran pertama kali dibuka admin, untuk dot notifikasi "belum dibaca".
+        $check->execute(['viewed_at']);
+        if ((int)$check->fetchColumn() === 0) {
+            $pdo->exec("ALTER TABLE quotations ADD COLUMN viewed_at DATETIME NULL DEFAULT NULL AFTER status");
+        }
     } catch (Exception $e) {
         error_log('sunseaEnsureQuotationItinerarySchema error: ' . $e->getMessage());
     }
