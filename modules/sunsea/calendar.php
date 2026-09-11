@@ -73,6 +73,25 @@ if (($_GET['ajax'] ?? '') === 'detail' && (int)($_GET['id'] ?? 0) > 0) {
 
     $mitraItems = array_values(array_filter($items, fn($it) => $it['component_code'] !== 'paket'));
 
+    // Riwayat pembayaran/DP: invoice booking ini bisa dibayar bertahap (DP 1, DP 2, pelunasan, dst) di tabel payments.
+    $invStmt = $pdo->prepare("SELECT id, invoice_no, total_amount FROM invoices WHERE internal_notes = ? OR internal_notes = ?");
+    $invStmt->execute(['booking_id:' . $bId, 'Generated from Reservasi: ' . $booking['booking_no']]);
+    $bookingInvoices = $invStmt->fetchAll();
+
+    $payments = [];
+    $totalInvoiceAmount = 0;
+    foreach ($bookingInvoices as $bi) $totalInvoiceAmount += (float)$bi['total_amount'];
+    if ($bookingInvoices) {
+        $invIds = array_column($bookingInvoices, 'id');
+        $ph = implode(',', array_fill(0, count($invIds), '?'));
+        $payStmt = $pdo->prepare("SELECT payment_date, amount, method, reference FROM payments WHERE invoice_id IN ($ph) ORDER BY payment_date, id");
+        $payStmt->execute($invIds);
+        $payments = $payStmt->fetchAll();
+    }
+    $totalPaid = 0;
+    foreach ($payments as $py) $totalPaid += (float)$py['amount'];
+    $remainingPayment = max(0, $totalInvoiceAmount - $totalPaid);
+
     echo json_encode([
         'booking'      => $booking,
         'items'        => $items,
@@ -83,6 +102,10 @@ if (($_GET['ajax'] ?? '') === 'detail' && (int)($_GET['id'] ?? 0) > 0) {
         'margin'       => $totalRab - $totalExpense,
         'accommodationInfo' => $accommodationInfo,
         'durationLabel'     => $durationLabel,
+        'payments'           => $payments,
+        'totalInvoiceAmount' => $totalInvoiceAmount,
+        'totalPaid'          => $totalPaid,
+        'remainingPayment'   => $remainingPayment,
     ]);
     exit;
 }
@@ -856,6 +879,27 @@ include 'layout-header.php';
                             '<td style="font-weight:600;white-space:nowrap;">' + fmt(it.total_sell) + '</td></tr>';
                     });
                     html += '</tbody></table>';
+                }
+                html += '</div>';
+
+                // Riwayat DP/pembayaran: kalau tamu bayar bertahap (DP 1, DP 2, dst) semua baris tampil di sini.
+                var paidColor = data.remainingPayment <= 0 && data.totalInvoiceAmount > 0 ? 'var(--ss-success)' : 'var(--ss-warning, #d97706)';
+                html += '<div class="bd-section-title">Riwayat Pembayaran (DP)</div>';
+                if (!data.payments || data.payments.length === 0) {
+                    html += '<div style="font-size:12px;color:var(--ss-muted);">Belum ada pembayaran/DP tercatat untuk booking ini.</div>';
+                } else {
+                    html += '<table class="ss-table"><thead><tr><th style="white-space:nowrap;">Tanggal</th><th>Metode</th><th style="width:115px;white-space:nowrap;">Jumlah</th></tr></thead><tbody>';
+                    data.payments.forEach(function(py, idx) {
+                        var payLabel = (idx === 0 ? 'DP 1' : (idx === data.payments.length - 1 && data.remainingPayment <= 0 ? 'Pelunasan' : 'DP ' + (idx + 1)));
+                        html += '<tr><td style="white-space:nowrap;">' + py.payment_date + '</td>' +
+                            '<td>' + payLabel + (py.method ? ' <small style="color:var(--ss-muted);">(' + py.method + ')</small>' : '') + '</td>' +
+                            '<td style="font-weight:600;color:var(--ss-success);white-space:nowrap;">' + fmt(py.amount) + '</td></tr>';
+                    });
+                    html += '<tfoot><tr><td colspan="2" style="text-align:right;font-weight:700;">Total Dibayar</td>' +
+                        '<td style="font-weight:700;color:var(--ss-success);white-space:nowrap;">' + fmt(data.totalPaid) + '</td></tr>';
+                    html += '<tr><td colspan="2" style="text-align:right;font-weight:700;">Sisa Tagihan</td>' +
+                        '<td style="font-weight:700;color:' + paidColor + ';white-space:nowrap;">' + fmt(data.remainingPayment) + '</td></tr></tfoot>';
+                    html += '</table>';
                 }
                 html += '</div>';
 
