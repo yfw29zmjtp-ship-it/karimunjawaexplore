@@ -1165,7 +1165,7 @@ include 'layout-header.php';
                                     </div>
                                     <div style="width:70px;">
                                         <label class="ss-label" style="font-size:11px;margin-bottom:3px;">Qty</label>
-                                        <input type="number" class="ss-input" id="<?php echo $g['id']; ?>Qty" value="1" min="0" step="0.5" style="font-size:12px;padding:6px 8px;">
+                                        <input type="number" class="ss-input" id="<?php echo $g['id']; ?>Qty" value="1" min="0" step="1" style="font-size:12px;padding:6px 8px;">
                                     </div>
                                     <button type="button" class="ss-btn ss-btn-primary ss-btn-sm" onclick="quickAddItem('<?php echo $g['id']; ?>','<?php echo $g['type']; ?>')">
                                         <i data-feather="plus"></i> Tambah
@@ -1183,8 +1183,8 @@ include 'layout-header.php';
                                     <tr>
                                         <th style="width:130px;">Kategori</th>
                                         <th>Keterangan</th>
-                                        <th style="width:60px;">Qty</th>
-                                        <th style="width:60px;">Sat.</th>
+                                        <th style="width:80px;">Qty</th>
+                                        <th style="width:80px;">Sat.</th>
                                         <th style="width:130px;">Harga</th>
                                         <th style="width:130px;">Subtotal</th>
                                         <th style="width:40px;"></th>
@@ -1380,8 +1380,8 @@ function itemRowHtml($type = '', $desc = '', $qty = 1, $unit = 'pax', $price = 0
     return <<<HTML
         <td><select name="item_type[]" class="ss-select" style="font-size:12px;padding:6px 8px;">$sel</select></td>
         <td><input type="text" name="item_description[]" class="ss-input" style="font-size:12px;padding:6px 8px;" value="$desc" placeholder="Keterangan..."></td>
-        <td><input type="number" name="item_qty[]" class="ss-input item-qty" style="font-size:12px;padding:6px 8px;" value="$qty" min="0" step="0.5"></td>
-        <td><input type="text" name="item_unit[]" class="ss-input" style="font-size:12px;padding:6px 8px;" value="$unit"></td>
+        <td><input type="number" name="item_qty[]" class="ss-input item-qty" style="font-size:12px;padding:6px 4px;min-width:60px;" value="$qty" min="0" step="1"></td>
+        <td><input type="text" name="item_unit[]" class="ss-input" style="font-size:12px;padding:6px 4px;min-width:60px;" value="$unit"></td>
         <td><input type="text" name="item_price[]" class="ss-input item-price" style="font-size:12px;padding:6px 8px;" value="$priceNum" placeholder="0"></td>
         <td><input type="text" class="ss-input item-sub" style="font-size:12px;padding:6px 8px;font-weight:600;" readonly placeholder="0"></td>
         <td><button type="button" onclick="removeRow(this)" style="background:none;border:none;cursor:pointer;color:var(--ss-danger);"><i data-feather="x" style="width:14px;height:14px;"></i></button></td>
@@ -1462,8 +1462,8 @@ HTML;
     function packageRowHtml(name, qty, price) {
         return `<td><select name="item_type[]" class="ss-select" style="font-size:12px;padding:6px 8px;"><option value="other" selected>Paket</option></select></td>
         <td><input type="text" name="item_description[]" class="ss-input" style="font-size:12px;padding:6px 8px;" value="${name.replace(/"/g, '&quot;')}" readonly></td>
-        <td><input type="number" name="item_qty[]" class="ss-input item-qty" style="font-size:12px;padding:6px 8px;" value="${qty}" min="1" step="1" readonly></td>
-        <td><input type="text" name="item_unit[]" class="ss-input" style="font-size:12px;padding:6px 8px;" value="org" readonly></td>
+        <td><input type="number" name="item_qty[]" class="ss-input item-qty" style="font-size:12px;padding:6px 4px;min-width:60px;" value="${qty}" min="1" step="1" readonly></td>
+        <td><input type="text" name="item_unit[]" class="ss-input" style="font-size:12px;padding:6px 4px;min-width:60px;" value="org" readonly></td>
         <td><input type="text" name="item_price[]" class="ss-input item-price" style="font-size:12px;padding:6px 8px;" value="${Math.round(price).toLocaleString('id-ID')}" readonly></td>
         <td><input type="text" class="ss-input item-sub" style="font-size:12px;padding:6px 8px;font-weight:600;" readonly placeholder="0"></td>
         <td></td>`;
@@ -1557,8 +1557,8 @@ HTML;
         var tr = document.createElement('tr');
         tr.innerHTML = `<td><select name="item_type[]" class="ss-select" style="font-size:12px;padding:6px 8px;">${selHtml}</select></td>
         <td><input type="text" name="item_description[]" class="ss-input" style="font-size:12px;padding:6px 8px;" value="${name.replace(/"/g, '&quot;')}"></td>
-        <td><input type="number" name="item_qty[]" class="ss-input item-qty" style="font-size:12px;padding:6px 8px;" value="${qty}" min="0" step="0.5"></td>
-        <td><input type="text" name="item_unit[]" class="ss-input" style="font-size:12px;padding:6px 8px;" value="${unit}"></td>
+        <td><input type="number" name="item_qty[]" class="ss-input item-qty" style="font-size:12px;padding:6px 4px;min-width:60px;" value="${qty}" min="0" step="1"></td>
+        <td><input type="text" name="item_unit[]" class="ss-input" style="font-size:12px;padding:6px 4px;min-width:60px;" value="${unit}"></td>
         <td><input type="text" name="item_price[]" class="ss-input item-price" style="font-size:12px;padding:6px 8px;" value="${Math.round(price).toLocaleString('id-ID')}"></td>
         <td><input type="text" class="ss-input item-sub" style="font-size:12px;padding:6px 8px;font-weight:600;" readonly placeholder="0"></td>
         <td><button type="button" onclick="removeRow(this)" style="background:none;border:none;cursor:pointer;color:var(--ss-danger);"><i data-feather="x" style="width:14px;height:14px;"></i></button></td>`;
@@ -1600,8 +1600,8 @@ HTML;
         <option value="guide">Guide</option><option value="equipment">Perlengkapan</option>
         <option value="other" selected>Lainnya</option></select></td>
         <td><input type="text" name="item_description[]" class="ss-input" style="font-size:12px;padding:6px 8px;" placeholder="Keterangan..."></td>
-        <td><input type="number" name="item_qty[]" class="ss-input item-qty" style="font-size:12px;padding:6px 8px;" value="1" min="0" step="0.5"></td>
-        <td><input type="text" name="item_unit[]" class="ss-input" style="font-size:12px;padding:6px 8px;" value="pax"></td>
+        <td><input type="number" name="item_qty[]" class="ss-input item-qty" style="font-size:12px;padding:6px 4px;min-width:60px;" value="1" min="0" step="1"></td>
+        <td><input type="text" name="item_unit[]" class="ss-input" style="font-size:12px;padding:6px 4px;min-width:60px;" value="pax"></td>
         <td><input type="text" name="item_price[]" class="ss-input item-price" style="font-size:12px;padding:6px 8px;" placeholder="0"></td>
         <td><input type="text" class="ss-input item-sub" style="font-size:12px;padding:6px 8px;font-weight:600;" readonly placeholder="0"></td>
         <td><button type="button" onclick="removeRow(this)" style="background:none;border:none;cursor:pointer;color:var(--ss-danger);"><i data-feather="x" style="width:14px;height:14px;"></i></button></td>`;
