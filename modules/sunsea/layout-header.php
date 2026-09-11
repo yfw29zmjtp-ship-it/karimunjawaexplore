@@ -23,6 +23,7 @@ $sunseaNavItems = [
     'quotations'    => ['icon' => 'file-text',  'label' => 'Penawaran',         'url' => BASE_URL . '/modules/sunsea/quotations.php'],
     'invoices'      => ['icon' => 'credit-card', 'label' => 'Invoice',          'url' => BASE_URL . '/modules/sunsea/invoices.php'],
     'finance'       => ['icon' => 'dollar-sign', 'label' => 'Finance',          'url' => BASE_URL . '/modules/sunsea/finance.php'],
+    'laporan'       => ['icon' => 'bar-chart-2', 'label' => 'Laporan',          'url' => BASE_URL . '/modules/sunsea/laporan.php'],
     'email'         => ['icon' => 'mail',        'label' => 'Email Kantor',     'url' => BASE_URL . '/modules/email/index.php'],
     'settings'      => ['icon' => 'settings',   'label' => 'Pengaturan',        'url' => BASE_URL . '/modules/sunsea/settings.php'],
     'website_settings' => ['icon' => 'globe',   'label' => 'Setting Website',   'url' => BASE_URL . '/modules/sunsea/website-settings.php'],
