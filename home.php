@@ -90,6 +90,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['we_action'] ?? '') === 'qu
             $qNotes = "[Website] Permintaan penawaran cepat.\nPaket: " . $qPackageName;
             $pdo->prepare("INSERT INTO quotations (quotation_no, customer_id, package_id, trip_date, trip_end_date, pax_count, subtotal, total_amount, notes, valid_until, created_by) VALUES (?,?,?,?,?,?,?,?,?,?,?)")
                 ->execute([$qNo, $qCustomerId, $qPackageId, $qDate, $qEndDate, $qPax, $qSubtotal, $qSubtotal, $qNotes, date('Y-m-d', strtotime('+7 days')), 'website']);
+            $qId = (int)$pdo->lastInsertId();
+
+            // Simpan baris item paketnya juga, supaya detail penawaran langsung tampil
+            // di menu admin tanpa perlu buka & simpan ulang form edit dulu.
+            $pdo->prepare("INSERT INTO quotation_items (quotation_id, item_type, description, qty, unit, unit_price, subtotal, sort_order) VALUES (?,?,?,?,?,?,?,0)")
+                ->execute([$qId, 'other', $qPackageName, $qPax, 'org', $qPackageRow['base_price'] ?? 0, $qSubtotal]);
 
             $weQuoteSuccessMsg = "Terima kasih, {$qName}! Permintaan penawaran Anda (No. {$qNo}) sudah kami terima. Tim kami akan segera menghubungi Anda via WhatsApp.";
             $weQuoteOld = ['name' => '', 'phone' => '', 'trip_date' => '', 'pax' => 2, 'package_id' => ''];
@@ -118,12 +124,6 @@ require __DIR__ . '/includes/website-header.php';
 
 <div class="we-quotebar-wrap">
     <div class="we-container">
-        <?php if ($weQuoteSuccessMsg): ?>
-            <div class="we-quote-alert success"><?php echo htmlspecialchars($weQuoteSuccessMsg); ?></div>
-        <?php elseif ($weQuoteErrorMsg): ?>
-            <div class="we-quote-alert error"><?php echo htmlspecialchars($weQuoteErrorMsg); ?></div>
-        <?php endif; ?>
-
         <form method="POST" action="home.php#weQuoteForm" class="we-quotebar" id="weQuoteForm">
             <input type="hidden" name="we_action" value="quick_quote">
             <div class="we-quotebar-field we-quotebar-field-date">
@@ -168,6 +168,16 @@ require __DIR__ . '/includes/website-header.php';
     </div>
 </div>
 
+<?php if ($weQuoteSuccessMsg || $weQuoteErrorMsg): ?>
+    <div class="we-toast-wrap" id="weToast">
+        <div class="we-toast <?php echo $weQuoteSuccessMsg ? 'success' : 'error'; ?>">
+            <div class="we-toast-icon"><?php echo $weQuoteSuccessMsg ? '✓' : '!'; ?></div>
+            <div class="we-toast-text"><?php echo htmlspecialchars($weQuoteSuccessMsg ?: $weQuoteErrorMsg); ?></div>
+            <button type="button" class="we-toast-close" onclick="weCloseToast()">&times;</button>
+        </div>
+    </div>
+<?php endif; ?>
+
 <script>
     function weOpenQuoteModal() {
         // Only validate the fields visible in the bar itself — q_name/q_phone live
@@ -184,6 +194,20 @@ require __DIR__ . '/includes/website-header.php';
     function weCloseQuoteModal() {
         document.getElementById('weQuoteModalOverlay').classList.remove('open');
     }
+
+    function weCloseToast() {
+        var toast = document.getElementById('weToast');
+        if (!toast) return;
+        toast.classList.add('we-toast-hide');
+        setTimeout(function() { toast.remove(); }, 300);
+    }
+    (function() {
+        var toast = document.getElementById('weToast');
+        if (!toast) return;
+        requestAnimationFrame(function() { toast.classList.add('we-toast-show'); });
+        setTimeout(weCloseToast, 4500);
+    })();
+
     <?php if ($weQuoteErrorMsg): ?>
         document.addEventListener('DOMContentLoaded', weOpenQuoteModal);
     <?php endif; ?>

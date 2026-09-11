@@ -900,7 +900,7 @@ include 'layout-header.php';
                 <i data-feather="message-circle"></i> WA Customer
             </a>
         <?php endif; ?>
-        <?php if ($quotation['status'] === 'draft'): ?>
+        <?php if ($quotation['status'] !== 'converted'): ?>
             <a href="quotations.php?action=edit&id=<?php echo $quotation['id']; ?>" class="ss-btn ss-btn-outline ss-btn-sm">
                 <i data-feather="edit-2"></i> Edit
             </a>
@@ -1117,7 +1117,7 @@ include 'layout-header.php';
                     <!-- Info: paket dipilih, item otomatis dari harga paket x jumlah peserta -->
                     <div class="ss-card" id="packageModeNote" style="margin-bottom:16px;display:none;background:var(--ss-gray-1);">
                         <div style="font-size:13px;color:var(--ss-text);">
-                            <strong>Mode Paket aktif.</strong> Tidak perlu input item satu-satu — subtotal otomatis dihitung dari harga paket × jumlah peserta. Ubah "Jumlah Peserta" di atas untuk update subtotal, atau pilih "Custom / Tidak pakai paket" untuk input item manual.
+                            <strong>Mode Paket aktif.</strong> Baris harga paket sudah otomatis terisi dan mengikuti "Jumlah Peserta" di atas. Butuh tambahan fasilitas sesuai permintaan customer (mis. extra bed, guide privat, dokumentasi)? Tambahkan lewat "Tambah dari Database" atau "Tambah Baris Manual" di bawah — baris paket tidak akan terhapus.
                         </div>
                     </div>
 
@@ -1469,8 +1469,9 @@ HTML;
         <td></td>`;
     }
 
-    // Called when the package dropdown changes: switches between "package mode"
-    // (single auto row, no manual input needed) and "custom mode" (manual items).
+    // Called when the package dropdown changes: pre-fills an auto row for the
+    // package price, but keeps the items table visible/editable so admin can still
+    // add extra fasilitas tambahan (requested during komunikasi) alongside it.
     function applyPackageMode() {
         var sel = document.getElementById('pkgSelect');
         var itemsCard = document.getElementById('itemsCard');
@@ -1480,19 +1481,20 @@ HTML;
         var opt = sel.options[sel.selectedIndex];
 
         if (sel.value) {
-            itemsCard.style.display = 'none';
             if (note) note.style.display = '';
+            var existingPkgRow = tbody.querySelector('tr[data-pkg-row]');
             var price = parseFloat(opt.getAttribute('data-price')) || 0;
             var name = opt.getAttribute('data-name') || '';
             var qty = parseFloat(document.getElementById('paxInput')?.value) || 1;
-            tbody.innerHTML = '';
+            if (existingPkgRow) {
+                existingPkgRow.remove();
+            }
             var tr = document.createElement('tr');
             tr.setAttribute('data-pkg-row', '1');
             tr.innerHTML = packageRowHtml(name, qty, price);
-            tbody.appendChild(tr);
+            tbody.insertBefore(tr, tbody.firstChild);
             setupRowListeners(tr);
         } else {
-            itemsCard.style.display = '';
             if (note) note.style.display = 'none';
             tbody.querySelectorAll('tr[data-pkg-row]').forEach(function(r) {
                 r.remove();
