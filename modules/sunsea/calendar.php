@@ -91,10 +91,11 @@ $errorMsg = '';
 
 try {
     $rows = $pdo->prepare("SELECT b.id, b.booking_no, b.start_date, b.end_date, b.pax_count, b.status,
-        c.name as customer_name,
+        c.name as customer_name, p.name as package_name,
         (SELECT COUNT(*) FROM booking_order_items i WHERE i.booking_id=b.id AND i.is_done=0) as pending_count
         FROM booking_orders b
         JOIN customers c ON c.id=b.customer_id
+        LEFT JOIN trip_packages p ON p.id = b.package_id
         WHERE b.end_date >= ? AND b.start_date <= ?
           AND b.status = 'confirmed'
         ORDER BY b.start_date, b.id");
@@ -107,7 +108,25 @@ try {
 $daysInMonth = (int)date('t', strtotime($startMonth));
 $todayIsInMonth = (date('Y-m') === $month);
 $todayDay = $todayIsInMonth ? (int)date('j') : 0;
-$calPalette = ['#C2410C', '#0369A1', '#0F766E', '#B45309', '#7C3AED', '#BE123C'];
+
+// Warna balok reservasi jadi penanda durasi/tipe trip (bukan acak per-tamu lagi).
+$calDurationColors = [
+    '2H1M' => '#EAB308',
+    '3H2M' => '#EA580C',
+    '4H1M' => '#2563EB',
+    '4H3M' => '#0D9488',
+    '5H4M' => '#7C3AED',
+];
+$calHoneymoonColor = '#DB2777';
+$calDefaultColor = '#64748B';
+
+function calBarColor(string $durationLabel, ?string $packageName, array $durationColors, string $honeymoonColor, string $defaultColor): string
+{
+    if ($packageName && stripos($packageName, 'honeymoon') !== false) {
+        return $honeymoonColor;
+    }
+    return $durationColors[$durationLabel] ?? $defaultColor;
+}
 $pageTitle = 'Kalender Booking';
 $activePage = 'calendar';
 include 'layout-header.php';
@@ -294,7 +313,26 @@ include 'layout-header.php';
 </div>
 
 <div class="ss-card cal-card" style="margin-bottom:10px;">
-    <div class="ss-card-title" style="margin-bottom:8px;font-size:13px;">Timeline Reservasi Confirmed - <?php echo date('F Y', strtotime($startMonth)); ?></div>
+    <div class="ss-card-title" style="margin-bottom:6px;font-size:13px;">Timeline Reservasi Confirmed - <?php echo date('F Y', strtotime($startMonth)); ?></div>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px;font-size:10.5px;color:var(--ss-muted);">
+        <?php
+        $calLegend = [
+            'Honeymoon' => $calHoneymoonColor,
+            '2H1M'      => $calDurationColors['2H1M'],
+            '3H2M'      => $calDurationColors['3H2M'],
+            '4H1M'      => $calDurationColors['4H1M'],
+            '4H3M'      => $calDurationColors['4H3M'],
+            '5H4M'      => $calDurationColors['5H4M'],
+            'Lainnya'   => $calDefaultColor,
+        ];
+        foreach ($calLegend as $label => $color):
+        ?>
+            <span style="display:inline-flex;align-items:center;gap:4px;">
+                <span style="width:9px;height:9px;border-radius:50%;background:<?php echo $color; ?>;display:inline-block;"></span>
+                <?php echo htmlspecialchars($label); ?>
+            </span>
+        <?php endforeach; ?>
+    </div>
     <div class="cal-timeline-scroll">
         <div class="cal-timeline" style="--cal-days:<?php echo $daysInMonth; ?>;">
             <div class="cal-day-row">
@@ -311,7 +349,9 @@ include 'layout-header.php';
             <?php foreach ($bookings as $bi => $b):
                 $s = max(1, (int)date('j', strtotime(max($b['start_date'], $startMonth))));
                 $e = min($daysInMonth, (int)date('j', strtotime(min($b['end_date'], $endMonth))));
-                $barColor = $calPalette[$bi % count($calPalette)];
+                $nights = max(0, (int)round((strtotime($b['end_date']) - strtotime($b['start_date'])) / 86400));
+                $durationLabel = ($nights + 1) . 'H' . $nights . 'M';
+                $barColor = calBarColor($durationLabel, $b['package_name'], $calDurationColors, $calHoneymoonColor, $calDefaultColor);
                 $initial = mb_strtoupper(mb_substr($b['customer_name'], 0, 1));
             ?>
                 <div class="cal-row" onclick="openBookingDetail(<?php echo $b['id']; ?>)">
