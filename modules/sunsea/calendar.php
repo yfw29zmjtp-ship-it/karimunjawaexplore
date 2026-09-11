@@ -105,6 +105,9 @@ try {
 }
 
 $daysInMonth = (int)date('t', strtotime($startMonth));
+$todayIsInMonth = (date('Y-m') === $month);
+$todayDay = $todayIsInMonth ? (int)date('j') : 0;
+$calPalette = ['#C2410C', '#0369A1', '#0F766E', '#B45309', '#7C3AED', '#BE123C'];
 $pageTitle = 'Kalender Booking';
 $activePage = 'calendar';
 include 'layout-header.php';
@@ -130,6 +133,153 @@ include 'layout-header.php';
         padding: 6px 10px !important;
         font-size: 12px !important;
     }
+
+    /* Hotel-style timeline: sticky guest column + scrollable day grid with bar-shaped reservations */
+    .cal-timeline-scroll {
+        overflow-x: auto;
+        border-radius: 10px;
+        border: 1px solid var(--ss-gray-2);
+    }
+
+    .cal-timeline {
+        min-width: max-content;
+        background: #fff;
+    }
+
+    .cal-day-row {
+        display: grid;
+        grid-template-columns: 190px repeat(var(--cal-days), 28px);
+    }
+
+    .cal-name-col {
+        position: sticky;
+        left: 0;
+        z-index: 2;
+        background: var(--ss-sky);
+        border-right: 1px solid var(--ss-gray-2);
+        padding: 8px 10px;
+        font-size: 10px;
+        font-weight: 800;
+        color: var(--ss-deep);
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        display: flex;
+        align-items: center;
+    }
+
+    .cal-day-col {
+        text-align: center;
+        padding: 8px 2px;
+        font-size: 10px;
+        font-weight: 700;
+        color: var(--ss-muted);
+        background: var(--ss-sky);
+        border-left: 1px solid rgba(194, 65, 12, .06);
+    }
+
+    .cal-day-col.is-weekend {
+        color: var(--ss-ocean);
+        background: #FFECE0;
+    }
+
+    .cal-day-col.is-today {
+        background: var(--ss-ocean);
+        color: #fff;
+        border-radius: 6px 6px 0 0;
+    }
+
+    .cal-row {
+        display: grid;
+        grid-template-columns: 190px repeat(var(--cal-days), 28px);
+        align-items: center;
+        cursor: pointer;
+        transition: background .15s ease;
+    }
+
+    .cal-row:hover {
+        background: var(--ss-sky);
+    }
+
+    .cal-row:hover .cal-guest {
+        background: var(--ss-sky);
+    }
+
+    .cal-guest {
+        position: sticky;
+        left: 0;
+        z-index: 1;
+        background: #fff;
+        border-right: 1px solid var(--ss-gray-2);
+        padding: 7px 10px;
+        overflow: hidden;
+    }
+
+    .cal-guest-avatar {
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--ss-ocean), var(--ss-cyan));
+        color: #fff;
+        font-size: 10px;
+        font-weight: 800;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        margin-right: 6px;
+    }
+
+    .cal-guest-name {
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--ss-text);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .cal-guest-meta {
+        font-size: 9.5px;
+        font-weight: 500;
+        color: var(--ss-muted);
+        white-space: nowrap;
+    }
+
+    .cal-cell {
+        height: 26px;
+        border-left: 1px solid rgba(15, 23, 42, .03);
+        border-bottom: 1px solid rgba(15, 23, 42, .03);
+    }
+
+    .cal-cell.is-weekend {
+        background: #FFF7F0;
+    }
+
+    .cal-bar {
+        height: 18px;
+        margin: 0 1px;
+        border-radius: 999px;
+        background: linear-gradient(90deg, var(--ss-ocean), #E85D2C);
+        box-shadow: 0 2px 6px rgba(194, 65, 12, .28);
+        display: flex;
+        align-items: center;
+        transition: transform .12s ease, box-shadow .12s ease;
+    }
+
+    .cal-row:hover .cal-bar {
+        transform: scaleY(1.15);
+        box-shadow: 0 3px 10px rgba(194, 65, 12, .4);
+    }
+
+    .cal-bar-label {
+        font-size: 9px;
+        font-weight: 700;
+        color: #fff;
+        white-space: nowrap;
+        overflow: hidden;
+        padding-left: 8px;
+        letter-spacing: .01em;
+    }
 </style>
 
 <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
@@ -145,44 +295,59 @@ include 'layout-header.php';
 
 <div class="ss-card cal-card" style="margin-bottom:10px;">
     <div class="ss-card-title" style="margin-bottom:8px;font-size:13px;">Timeline Reservasi Confirmed - <?php echo date('F Y', strtotime($startMonth)); ?></div>
-    <div style="overflow:auto;">
-        <div style="min-width:<?php echo 160 + $daysInMonth * 18; ?>px;">
-            <div style="display:grid;grid-template-columns:160px repeat(<?php echo $daysInMonth; ?>, 18px);gap:1px;align-items:center;margin-bottom:6px;">
-                <div style="font-size:10px;color:var(--ss-muted);font-weight:700;">Booking</div>
-                <?php for ($d = 1; $d <= $daysInMonth; $d++): ?>
-                    <div style="font-size:9px;color:var(--ss-muted);text-align:center;"><?php echo $d; ?></div>
+    <div class="cal-timeline-scroll">
+        <div class="cal-timeline" style="--cal-days:<?php echo $daysInMonth; ?>;">
+            <div class="cal-day-row">
+                <div class="cal-name-col">Tamu</div>
+                <?php for ($d = 1; $d <= $daysInMonth; $d++):
+                    $dow = (int)date('N', strtotime("$month-" . str_pad($d, 2, '0', STR_PAD_LEFT)));
+                    $isWeekend = $dow >= 6;
+                    $isToday = $d === $todayDay;
+                ?>
+                    <div class="cal-day-col<?php echo $isWeekend ? ' is-weekend' : ''; ?><?php echo $isToday ? ' is-today' : ''; ?>"><?php echo $d; ?></div>
                 <?php endfor; ?>
             </div>
 
-            <?php foreach ($bookings as $b):
+            <?php foreach ($bookings as $bi => $b):
                 $s = max(1, (int)date('j', strtotime(max($b['start_date'], $startMonth))));
                 $e = min($daysInMonth, (int)date('j', strtotime(min($b['end_date'], $endMonth))));
-                $span = max(1, $e - $s + 1);
-                $statusColor = '#3b82f6';
+                $barColor = $calPalette[$bi % count($calPalette)];
+                $initial = mb_strtoupper(mb_substr($b['customer_name'], 0, 1));
             ?>
-                <div style="display:grid;grid-template-columns:160px repeat(<?php echo $daysInMonth; ?>, 18px);gap:1px;align-items:center;margin-bottom:3px;cursor:pointer;" onclick="openBookingDetail(<?php echo $b['id']; ?>)">
-                    <div style="font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-                        <?php if ((int)$b['pending_count'] > 0): ?>
-                            <span title="Ada layanan belum selesai" style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#dc2626;margin-right:3px;"></span>
-                        <?php endif; ?>
-                        <a href="javascript:void(0)" onclick="event.stopPropagation();openBookingDetail(<?php echo $b['id']; ?>)" style="color:var(--ss-text);text-decoration:none;"><?php echo htmlspecialchars($b['customer_name']); ?></a>
-                        <div style="font-size:9px;font-weight:400;color:var(--ss-muted);">
-                            <a href="javascript:void(0)" onclick="event.stopPropagation();openBookingDetail(<?php echo $b['id']; ?>)" style="color:var(--ss-ocean);text-decoration:none;"><?php echo htmlspecialchars($b['booking_no']); ?></a>
-                            · <?php echo (int)$b['pax_count']; ?> pax
+                <div class="cal-row" onclick="openBookingDetail(<?php echo $b['id']; ?>)">
+                    <div class="cal-guest">
+                        <div style="display:flex;align-items:center;">
+                            <span class="cal-guest-avatar" style="background:linear-gradient(135deg,<?php echo $barColor; ?>,var(--ss-cyan));"><?php echo htmlspecialchars($initial); ?></span>
+                            <div style="min-width:0;">
+                                <div class="cal-guest-name">
+                                    <?php if ((int)$b['pending_count'] > 0): ?>
+                                        <span title="Ada layanan belum selesai" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#dc2626;margin-right:3px;"></span>
+                                    <?php endif; ?>
+                                    <?php echo htmlspecialchars($b['customer_name']); ?>
+                                </div>
+                                <div class="cal-guest-meta"><?php echo htmlspecialchars($b['booking_no']); ?> · <?php echo (int)$b['pax_count']; ?> pax</div>
+                            </div>
                         </div>
                     </div>
-                    <?php for ($d = 1; $d <= $daysInMonth; $d++): ?>
+                    <?php for ($d = 1; $d <= $daysInMonth; $d++):
+                        $dow = (int)date('N', strtotime("$month-" . str_pad($d, 2, '0', STR_PAD_LEFT)));
+                        $isWeekend = $dow >= 6;
+                    ?>
                         <?php if ($d >= $s && $d <= $e): ?>
-                            <div style="height:12px;background:<?php echo $statusColor; ?>;border-radius:2px;"></div>
+                            <div class="cal-cell" style="padding:4px 0;">
+                                <div class="cal-bar" style="background:linear-gradient(90deg,<?php echo $barColor; ?>,<?php echo $barColor; ?>cc);<?php echo $d > $s ? 'margin-left:-1px;border-radius:0 999px 999px 0;' : ''; ?><?php echo $d < $e ? 'margin-right:-1px;border-radius:' . ($d > $s ? '0' : '999px 0 0 999px') . ';' : ''; ?>">
+                                    <?php if ($d === $s): ?><span class="cal-bar-label"><?php echo (int)$b['pax_count']; ?> pax</span><?php endif; ?>
+                                </div>
+                            </div>
                         <?php else: ?>
-                            <div style="height:12px;background:#F1F5F9;border-radius:2px;"></div>
+                            <div class="cal-cell<?php echo $isWeekend ? ' is-weekend' : ''; ?>"></div>
                         <?php endif; ?>
                     <?php endfor; ?>
                 </div>
             <?php endforeach; ?>
 
             <?php if (empty($bookings)): ?>
-                <div style="padding:10px;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:8px;color:#64748b;font-size:12px;">
+                <div style="padding:14px;color:#64748b;font-size:12px;">
                     Tidak ada reservasi confirmed pada bulan ini.
                 </div>
             <?php endif; ?>
