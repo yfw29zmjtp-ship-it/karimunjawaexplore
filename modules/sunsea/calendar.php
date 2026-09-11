@@ -181,7 +181,7 @@ include 'layout-header.php';
 
     .cal-day-row {
         display: grid;
-        grid-template-columns: 210px repeat(var(--cal-days), minmax(34px, 1fr));
+        grid-template-columns: 210px repeat(var(--cal-days), 42px);
     }
 
     .cal-name-col {
@@ -223,7 +223,7 @@ include 'layout-header.php';
 
     .cal-row {
         display: grid;
-        grid-template-columns: 210px repeat(var(--cal-days), minmax(34px, 1fr));
+        grid-template-columns: 210px repeat(var(--cal-days), 42px);
         align-items: center;
         cursor: pointer;
         transition: background .15s ease;
@@ -904,30 +904,33 @@ include 'layout-header.php';
         document.body.style.overflow = '';
     }
 
-    // Geser timeline dengan klik-tahan lalu tarik (drag to scroll), termasuk mouse & touch.
+    // Geser timeline dengan klik-tahan lalu tarik (drag to scroll), pakai Pointer Events (mouse & touch).
     (function() {
         var scroller = document.querySelector('.cal-timeline-scroll');
         if (!scroller) return;
         var isDown = false, startX = 0, startScroll = 0, dragged = false;
 
-        scroller.addEventListener('mousedown', function(e) {
+        scroller.addEventListener('pointerdown', function(e) {
+            if (e.pointerType === 'mouse' && e.button !== 0) return;
             isDown = true;
             dragged = false;
-            scroller.classList.add('is-dragging');
-            startX = e.pageX;
+            startX = e.clientX;
             startScroll = scroller.scrollLeft;
+            scroller.classList.add('is-dragging');
+            scroller.setPointerCapture(e.pointerId);
         });
-        window.addEventListener('mouseup', function() {
-            isDown = false;
-            scroller.classList.remove('is-dragging');
-        });
-        window.addEventListener('mousemove', function(e) {
+        scroller.addEventListener('pointermove', function(e) {
             if (!isDown) return;
-            e.preventDefault();
-            var delta = e.pageX - startX;
+            var delta = e.clientX - startX;
             if (Math.abs(delta) > 4) dragged = true;
             scroller.scrollLeft = startScroll - delta;
         });
+        function endDrag() {
+            isDown = false;
+            scroller.classList.remove('is-dragging');
+        }
+        scroller.addEventListener('pointerup', endDrag);
+        scroller.addEventListener('pointercancel', endDrag);
         // Cegah klik baris terbuka modal detail kalau baru saja dipakai untuk drag.
         scroller.addEventListener('click', function(e) {
             if (dragged) {
