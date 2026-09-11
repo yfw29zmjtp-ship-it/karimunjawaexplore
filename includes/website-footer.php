@@ -50,7 +50,9 @@
                 </div>
                 <div>
                     <h4>Kontak</h4>
-                    <?php if ($weCompanyPhone): ?><a href="tel:<?php echo htmlspecialchars($weCompanyPhone); ?>">&#9742; <?php echo htmlspecialchars($weCompanyPhone); ?></a><?php endif; ?>
+                    <?php foreach ($weCompanyPhones as $weFooterPhone): ?>
+                        <a href="tel:<?php echo htmlspecialchars($weFooterPhone); ?>">&#9742; <?php echo htmlspecialchars($weFooterPhone); ?></a>
+                    <?php endforeach; ?>
                     <?php if ($weCompanyEmail): ?><a href="mailto:<?php echo htmlspecialchars($weCompanyEmail); ?>">&#9993; <?php echo htmlspecialchars($weCompanyEmail); ?></a><?php endif; ?>
                     <a href="kontak.php">&#128205; <?php echo htmlspecialchars($weCompanyAddr); ?></a>
                 </div>

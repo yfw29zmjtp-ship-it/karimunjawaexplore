@@ -725,3 +725,24 @@ function sunseaWaAdminList(PDO $pdo): array
 
     return $admins;
 }
+
+/**
+ * List of all company contact phone numbers: primary "company_phone" plus any lines in the
+ * "company_phone_extra" setting (one number per line). Used everywhere contact info is shown
+ * (invoice/quotation print header, website footer, kontak page) so adding a number in Pengaturan
+ * updates all of them at once.
+ */
+function sunseaCompanyPhones(PDO $pdo): array
+{
+    $phones = [];
+    $primary = trim(sunseaSetting($pdo, 'company_phone', ''));
+    if ($primary !== '') $phones[] = $primary;
+
+    $extraRaw = sunseaSetting($pdo, 'company_phone_extra', '');
+    foreach (preg_split('/\r\n|\r|\n/', trim($extraRaw)) as $line) {
+        $line = trim($line);
+        if ($line !== '' && !in_array($line, $phones, true)) $phones[] = $line;
+    }
+
+    return $phones;
+}

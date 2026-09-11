@@ -17,6 +17,7 @@ sunseaEnsureWebsiteContentSchema($pdo);
 
 $weCompanyName  = sunseaSetting($pdo, 'company_name', 'Karimunjawa Explore');
 $weCompanyPhone = sunseaSetting($pdo, 'company_phone', '');
+$weCompanyPhones = sunseaCompanyPhones($pdo);
 $weCompanyEmail = sunseaSetting($pdo, 'company_email', '');
 $weCompanyAddr  = sunseaSetting($pdo, 'company_address', 'Karimunjawa, Jepara, Jawa Tengah');
 

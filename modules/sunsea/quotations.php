@@ -433,7 +433,7 @@ $activePage = 'quotations';
 if ($action === 'print' && $quotation):
     $companyName    = sunseaSetting($pdo, 'company_name', 'Explore Karimunjawa');
     $companyAddress = sunseaSetting($pdo, 'company_address', '');
-    $companyPhone   = sunseaSetting($pdo, 'company_phone', '');
+    $companyPhone   = implode(' / ', sunseaCompanyPhones($pdo));
     $companyEmail   = sunseaSetting($pdo, 'company_email', '');
     $printLogoPath  = sunseaSetting($pdo, 'invoice_logo', '') ?: sunseaSetting($pdo, 'company_logo', '');
     $printLogoSrc   = sunseaAssetUrl($printLogoPath);

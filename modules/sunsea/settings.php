@@ -89,6 +89,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             setSetting($pdo, $f, trim($_POST[$f] ?? ''));
         }
 
+        // Nomor telepon tambahan (satu per baris) - dipakai bersama company_phone di semua tempat kontak.
+        $extraPhoneLines = preg_split('/\r\n|\r|\n/', trim($_POST['company_phone_extra'] ?? ''));
+        $extraPhoneLines = array_values(array_filter(array_map('trim', $extraPhoneLines), fn($l) => $l !== ''));
+        setSetting($pdo, 'company_phone_extra', implode("\n", $extraPhoneLines));
+
         // Multi-admin WhatsApp numbers for the website chat widget (one "Nama|No.WA" per line).
         $waAdminLines = preg_split('/\r\n|\r|\n/', trim($_POST['company_whatsapp_admins'] ?? ''));
         $waAdminLines = array_values(array_filter(array_map('trim', $waAdminLines), fn($l) => $l !== ''));
@@ -421,6 +426,7 @@ $keys = [
     'company_tagline',
     'company_address',
     'company_phone',
+    'company_phone_extra',
     'company_email',
     'company_website',
     'company_npwp',
@@ -560,6 +566,13 @@ $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : '
                     </div>
                 </div>
 
+                <div>
+                    <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;">Nomor Telepon Lain (opsional, bisa lebih dari 1)</label>
+                    <textarea name="company_phone_extra" rows="3" placeholder="08123456789&#10;08129876543"
+                        style="width:100%;padding:9px 12px;border:1px solid #ccc;border-radius:5px;font-family:inherit;font-size:14px;box-sizing:border-box;resize:vertical;"><?php echo htmlspecialchars($cfg['company_phone_extra']); ?></textarea>
+                    <small style="color:#888;">1 baris = 1 nomor tambahan. Semua nomor di sini + "Telepon / WA" di atas otomatis muncul di Invoice, Penawaran, dan Kontak Website.</small>
+                </div>
+
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
                     <div>
                         <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;">Website</label>
@@ -618,6 +631,10 @@ $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : '
             <?php if ($cfg['company_phone']): ?>
                 <div style="font-size:12px;color:#888;margin-top:4px;">📞 <?php echo htmlspecialchars($cfg['company_phone']); ?></div>
             <?php endif; ?>
+            <?php if (trim($cfg['company_phone_extra'])): foreach (preg_split('/\r\n|\r|\n/', trim($cfg['company_phone_extra'])) as $extraPhoneLine): if (trim($extraPhoneLine) === '') continue; ?>
+                <div style="font-size:12px;color:#888;margin-top:2px;">📞 <?php echo htmlspecialchars(trim($extraPhoneLine)); ?></div>
+            <?php endforeach;
+            endif; ?>
             <?php if ($cfg['company_email']): ?>
                 <div style="font-size:12px;color:#888;margin-top:2px;">✉️ <?php echo htmlspecialchars($cfg['company_email']); ?></div>
             <?php endif; ?>

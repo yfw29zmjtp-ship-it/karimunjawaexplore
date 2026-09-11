@@ -105,7 +105,7 @@ $lapCustomerTotalMargin = $lapCustomerTotalIn - $lapCustomerTotalOut;
 if (($_GET['print'] ?? '') === '1') {
     $companyName = sunseaSetting($pdo, 'company_name', 'Karimunjawa Explore');
     $companyAddress = sunseaSetting($pdo, 'company_address', '');
-    $companyPhone = sunseaSetting($pdo, 'company_phone', '');
+    $companyPhone = implode(' / ', sunseaCompanyPhones($pdo));
     $printLogoSrc = sunseaAssetUrl(sunseaSetting($pdo, 'company_logo', ''));
 
     $printTitle = 'Laporan';

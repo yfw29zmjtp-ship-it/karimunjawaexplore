@@ -555,6 +555,7 @@ a {
   margin-bottom: 4px;
 }
 .we-contact-info span {
+  display: block;
   font-size: 13px;
   color: var(--we-muted);
 }

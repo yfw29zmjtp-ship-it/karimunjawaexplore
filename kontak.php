@@ -117,7 +117,13 @@ require __DIR__ . '/includes/website-header.php';
             <div>
                 <div class="we-ci-icon">&#9742;</div>
                 <b>Telepon / WhatsApp</b>
-                <span><?php echo htmlspecialchars($weCompanyPhone ?: '-'); ?></span>
+                <?php if ($weCompanyPhones): ?>
+                    <?php foreach ($weCompanyPhones as $weKontakPhone): ?>
+                        <span><?php echo htmlspecialchars($weKontakPhone); ?></span>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <span>-</span>
+                <?php endif; ?>
             </div>
             <div>
                 <div class="we-ci-icon">&#9993;</div>
