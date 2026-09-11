@@ -515,7 +515,7 @@ include 'layout-header.php';
 
     #bookingDetailBody .bd-cols {
         display: grid;
-        grid-template-columns: 1fr 300px;
+        grid-template-columns: 1fr 440px;
         gap: 0 18px;
         align-items: start;
     }
@@ -530,13 +530,32 @@ include 'layout-header.php';
         background: #fff;
         border: 1px solid var(--ss-ocean);
         border-radius: 8px;
-        padding: 12px 14px;
+        padding: 16px 18px;
+        min-width: 0;
     }
 
     #bookingDetailBody .bd-col-expense .bd-section-title {
         margin-top: 0;
         padding-top: 0;
         border-top: none;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    #bookingDetailBody .bd-col-expense table.ss-table {
+        font-size: 13px;
+    }
+
+    #bookingDetailBody .bd-col-expense table.ss-table th {
+        font-size: 11px;
+        padding: 7px 9px;
+    }
+
+    #bookingDetailBody .bd-col-expense table.ss-table td {
+        padding: 8px 9px;
     }
 
     #bookingDetailBody table.ss-table {
@@ -795,7 +814,11 @@ include 'layout-header.php';
                 html += '</div>';
 
                 html += '<div class="bd-col bd-col-expense">';
-                html += '<div class="bd-section-title">Pengeluaran Trip Ini (dari Finance)</div>';
+                html += '<div class="bd-section-title"><span>Pengeluaran Trip Ini (dari Finance)</span>';
+                if (data.expenses.length > 0) {
+                    html += '<button type="button" class="ss-btn ss-btn-outline ss-btn-sm" onclick="printBookingExpenses()">Cetak / Simpan PDF</button>';
+                }
+                html += '</div>';
                 if (data.expenses.length === 0) {
                     html += '<div style="font-size:12px;color:var(--ss-muted);">Belum ada pengeluaran dicatat di Finance untuk trip ini.</div>';
                 } else {
@@ -805,11 +828,21 @@ include 'layout-header.php';
                             '<td>' + ex.description + (ex.category ? '<br><small style="color:var(--ss-muted);">' + ex.category + '</small>' : '') + '</td>' +
                             '<td style="font-weight:600;color:var(--ss-danger);white-space:nowrap;">' + fmt(ex.amount) + '</td></tr>';
                     });
-                    html += '</tbody></table>';
+                    html += '<tfoot><tr><td colspan="2" style="text-align:right;font-weight:700;">Total Pengeluaran</td>' +
+                        '<td style="font-weight:700;color:var(--ss-danger);white-space:nowrap;">' + fmt(expenseVal) + '</td></tr></tfoot>';
+                    html += '</table>';
                 }
                 html += '</div>';
 
                 html += '</div>';
+
+                // Simpan konteks untuk tombol Cetak/Simpan PDF (hindari embed JSON di atribut onclick).
+                window.__bookingDetailPrintCtx = {
+                    booking: b,
+                    expenses: data.expenses,
+                    totalExpense: expenseVal
+                };
+
 
 
                 // Checklist layanan mitra: pakai data terstruktur dari detail layanan paket
@@ -846,6 +879,39 @@ include 'layout-header.php';
     function closeBookingDetail() {
         document.getElementById('bookingDetailOverlay').style.display = 'none';
         document.body.style.overflow = '';
+    }
+
+    function printBookingExpenses() {
+        var ctx = window.__bookingDetailPrintCtx;
+        if (!ctx) return;
+        var fmt = function(n) {
+            return 'Rp ' + Math.round(parseFloat(n) || 0).toLocaleString('id-ID');
+        };
+        var rows = ctx.expenses.map(function(ex) {
+            return '<tr><td>' + ex.transaction_date + '</td><td>' + ex.description +
+                (ex.category ? ' <small style="color:#64748b;">(' + ex.category + ')</small>' : '') +
+                '</td><td style="text-align:right;">' + fmt(ex.amount) + '</td></tr>';
+        }).join('');
+        var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Pengeluaran ' + ctx.booking.booking_no + '</title>' +
+            '<style>' +
+            'body{font-family:Arial,Helvetica,sans-serif;padding:24px;color:#0f172a;}' +
+            'h1{font-size:16px;margin:0 0 2px;}' +
+            'p{margin:0 0 14px;color:#475569;font-size:12.5px;}' +
+            'table{width:100%;border-collapse:collapse;font-size:12.5px;}' +
+            'th,td{border:1px solid #cbd5e1;padding:7px 9px;text-align:left;}' +
+            'th{background:#f1f5f9;}' +
+            'tfoot td{font-weight:700;}' +
+            '</style></head><body onload="window.print()">' +
+            '<h1>Pengeluaran Trip &mdash; ' + ctx.booking.booking_no + '</h1>' +
+            '<p>' + ctx.booking.customer_name + '</p>' +
+            '<table><thead><tr><th style="width:100px;">Tanggal</th><th>Keterangan</th><th style="width:140px;text-align:right;">Jumlah</th></tr></thead>' +
+            '<tbody>' + rows + '</tbody>' +
+            '<tfoot><tr><td colspan="2" style="text-align:right;">Total Pengeluaran</td><td style="text-align:right;">' + fmt(ctx.totalExpense) + '</td></tr></tfoot>' +
+            '</table></body></html>';
+        var win = window.open('', '_blank');
+        win.document.open();
+        win.document.write(html);
+        win.document.close();
     }
 </script>
 
