@@ -1136,43 +1136,53 @@ include 'layout-header.php';
 
                             <?php
                             $quickAddGroups = [
-                                ['id' => 'qaTicket', 'type' => 'other', 'label' => '1. Tiket &amp; Retribusi (kapal/ferry/tiket masuk destinasi/BTN)', 'options' => $mdTickets, 'nameField' => 'ticket_name', 'extra' => 'ticket_type', 'unitField' => 'unit'],
-                                ['id' => 'qaTransport', 'type' => 'transport', 'label' => '2. Transportasi Karimunjawa (jemput/antar pelabuhan, trip darat/laut)', 'options' => $mdTransport, 'nameField' => 'name', 'extra' => 'transport_type', 'unitField' => 'unit'],
-                                ['id' => 'qaRoom', 'type' => 'accommodation', 'label' => '3. Penginapan', 'options' => $mdRooms, 'nameField' => 'room_type', 'extra' => 'partner_name', 'unitField' => null],
-                                ['id' => 'qaCatering', 'type' => 'meal', 'label' => '4. Makanan / Catering', 'options' => $mdCaterings, 'nameField' => 'menu_name', 'extra' => 'vendor_name', 'unitField' => 'portion_unit'],
-                                ['id' => 'qaFacility', 'type' => 'equipment', 'label' => '5. Fasilitas Tambahan (open trip/private trip/dll)', 'options' => $mdFacilities, 'nameField' => 'name', 'extra' => null, 'unitField' => 'unit'],
+                                ['label' => 'Tiket &amp; Retribusi (kapal/ferry/tiket masuk destinasi/BTN)', 'type' => 'other', 'options' => $mdTickets, 'nameField' => 'ticket_name', 'extra' => 'ticket_type', 'unitField' => 'unit'],
+                                ['label' => 'Transportasi Karimunjawa (jemput/antar pelabuhan, trip darat/laut)', 'type' => 'transport', 'options' => $mdTransport, 'nameField' => 'name', 'extra' => 'transport_type', 'unitField' => 'unit'],
+                                ['label' => 'Penginapan', 'type' => 'accommodation', 'options' => $mdRooms, 'nameField' => 'room_type', 'extra' => 'partner_name', 'unitField' => null],
+                                ['label' => 'Makanan / Catering', 'type' => 'meal', 'options' => $mdCaterings, 'nameField' => 'menu_name', 'extra' => 'vendor_name', 'unitField' => 'portion_unit'],
+                                ['label' => 'Fasilitas Tambahan (open trip/private trip/dll)', 'type' => 'equipment', 'options' => $mdFacilities, 'nameField' => 'name', 'extra' => null, 'unitField' => 'unit'],
                             ];
-                            foreach ($quickAddGroups as $g):
+                            $hasAnyMasterData = false;
+                            foreach ($quickAddGroups as $g) {
+                                if (!empty($g['options'])) { $hasAnyMasterData = true; break; }
+                            }
                             ?>
-                                <div style="display:flex;gap:8px;align-items:flex-end;margin-bottom:8px;flex-wrap:wrap;">
-                                    <div style="flex:1;min-width:220px;">
-                                        <label class="ss-label" style="font-size:11px;margin-bottom:3px;"><?php echo $g['label']; ?></label>
-                                        <select class="ss-select" id="<?php echo $g['id']; ?>" style="font-size:12px;padding:6px 8px;">
+                            <?php if ($hasAnyMasterData): ?>
+                                <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
+                                    <div style="flex:1;min-width:260px;">
+                                        <label class="ss-label" style="font-size:11px;margin-bottom:3px;">Pilih item</label>
+                                        <select class="ss-select" id="qaCombined" style="font-size:12px;padding:6px 8px;">
                                             <option value="">-- Pilih dari database --</option>
-                                            <?php foreach ($g['options'] as $o):
-                                                $name  = $o[$g['nameField']];
-                                                $extra = $g['extra'] ? ' — ' . $o[$g['extra']] : '';
-                                                $unit  = $g['unitField'] ? ($o[$g['unitField']] ?: 'pax') : 'pax';
+                                            <?php foreach ($quickAddGroups as $g):
+                                                if (empty($g['options'])) continue;
                                             ?>
-                                                <option value="<?php echo $o['id']; ?>"
-                                                    data-name="<?php echo htmlspecialchars($name . $extra); ?>"
-                                                    data-price="<?php echo (float)$o['price_sell']; ?>"
-                                                    data-unit="<?php echo htmlspecialchars($unit); ?>">
-                                                    <?php echo htmlspecialchars($name . $extra); ?> (<?php echo sunseaRupiah((float)$o['price_sell']); ?>)
-                                                </option>
+                                                <optgroup label="<?php echo html_entity_decode(strip_tags($g['label'])); ?>">
+                                                    <?php foreach ($g['options'] as $o):
+                                                        $name  = $o[$g['nameField']];
+                                                        $extra = $g['extra'] ? ' — ' . $o[$g['extra']] : '';
+                                                        $unit  = $g['unitField'] ? ($o[$g['unitField']] ?: 'pax') : 'pax';
+                                                    ?>
+                                                        <option value="<?php echo $o['id']; ?>"
+                                                            data-type="<?php echo $g['type']; ?>"
+                                                            data-name="<?php echo htmlspecialchars($name . $extra); ?>"
+                                                            data-price="<?php echo (float)$o['price_sell']; ?>"
+                                                            data-unit="<?php echo htmlspecialchars($unit); ?>">
+                                                            <?php echo htmlspecialchars($name . $extra); ?> (<?php echo sunseaRupiah((float)$o['price_sell']); ?>)
+                                                        </option>
+                                                    <?php endforeach; ?>
+                                                </optgroup>
                                             <?php endforeach; ?>
                                         </select>
                                     </div>
                                     <div style="width:70px;">
                                         <label class="ss-label" style="font-size:11px;margin-bottom:3px;">Qty</label>
-                                        <input type="number" class="ss-input" id="<?php echo $g['id']; ?>Qty" value="1" min="0" step="1" style="font-size:12px;padding:6px 8px;">
+                                        <input type="number" class="ss-input" id="qaCombinedQty" value="1" min="0" step="1" style="font-size:12px;padding:6px 8px;">
                                     </div>
-                                    <button type="button" class="ss-btn ss-btn-primary ss-btn-sm" onclick="quickAddItem('<?php echo $g['id']; ?>','<?php echo $g['type']; ?>')">
+                                    <button type="button" class="ss-btn ss-btn-primary ss-btn-sm" onclick="quickAddItem('qaCombined')">
                                         <i data-feather="plus"></i> Tambah
                                     </button>
                                 </div>
-                            <?php endforeach; ?>
-                            <?php if (empty($mdTickets) && empty($mdTransport) && empty($mdRooms) && empty($mdCaterings) && empty($mdFacilities)): ?>
+                            <?php else: ?>
                                 <div style="font-size:12px;color:var(--ss-muted);">Belum ada data master. Isi dulu di menu <a href="database.php" style="color:var(--ss-ocean);">Database</a> (Tiket, Transportasi, Hotel/Homestay, Catering, Fasilitas).</div>
                             <?php endif; ?>
                         </div>
@@ -1527,7 +1537,7 @@ HTML;
         return parseFloat(String(s).replace(/\./g, '').replace(',', '.')) || 0;
     }
 
-    function quickAddItem(selectId, itemType) {
+    function quickAddItem(selectId) {
         var sel = document.getElementById(selectId);
         var opt = sel.options[sel.selectedIndex];
         if (!sel.value) {
@@ -1539,6 +1549,7 @@ HTML;
         var name = opt.getAttribute('data-name') || '';
         var price = parseFloat(opt.getAttribute('data-price')) || 0;
         var unit = opt.getAttribute('data-unit') || 'pax';
+        var itemType = opt.getAttribute('data-type') || 'other';
 
         var typeOpts = [
             ['accommodation', 'Penginapan'],
