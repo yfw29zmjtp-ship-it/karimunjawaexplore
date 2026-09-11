@@ -65,6 +65,7 @@ $sidebarMenuOptions = [
     'quotations'   => 'Penawaran',
     'invoices'     => 'Invoice',
     'finance'      => 'Finance (Kas Operasional)',
+    'laporan'      => 'Laporan',
     'email'        => 'Email Kantor',
     'settings'     => 'Pengaturan',
     'website_settings' => 'Setting Website',
