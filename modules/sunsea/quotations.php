@@ -19,6 +19,7 @@ sunseaEnsureMasterDataSchema($pdo);
 sunseaEnsureAccommodationSchema($pdo);
 sunseaEnsureQuotationItinerarySchema($pdo);
 sunseaEnsurePackageItemsSchema($pdo);
+sunseaEnsureBookingSchema($pdo);
 $action = $_GET['action'] ?? 'list';
 $qId    = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
@@ -188,6 +189,64 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($id > 0 && in_array($status, $allowed)) {
             $extra = $status === 'sent' ? ', sent_at=NOW()' : ($status === 'approved' ? ', approved_at=NOW()' : '');
             $pdo->prepare("UPDATE quotations SET status=? $extra WHERE id=?")->execute([$status, $id]);
+
+            // Approve langsung masuk ke Data Tamu Booking, admin tidak perlu buat manual lagi.
+            if ($status === 'approved') {
+                $already = $pdo->prepare("SELECT id FROM booking_orders WHERE quotation_id = ?");
+                $already->execute([$id]);
+                if (!$already->fetchColumn()) {
+                    $q = $pdo->prepare("SELECT * FROM quotations WHERE id = ?");
+                    $q->execute([$id]);
+                    $quote = $q->fetch();
+                    if ($quote) {
+                        $bookingNo = sunseaNextNumber($pdo, 'booking');
+                        $startDate = $quote['trip_date'] ?: date('Y-m-d');
+                        $endDate   = $quote['trip_end_date'] ?: $startDate;
+                        $pdo->prepare("
+                            INSERT INTO booking_orders
+                            (quotation_id, booking_no, customer_id, booking_mode, package_id, start_date, end_date,
+                             pax_count, status, cost_total, sell_total, margin_amount, notes, created_by)
+                            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                        ")->execute([
+                            $id,
+                            $bookingNo,
+                            $quote['customer_id'],
+                            $quote['package_id'] ? 'paket' : 'ecer',
+                            $quote['package_id'],
+                            $startDate,
+                            $endDate,
+                            $quote['pax_count'],
+                            'confirmed',
+                            0,
+                            $quote['total_amount'],
+                            $quote['total_amount'],
+                            "Dari Penawaran {$quote['quotation_no']}",
+                            'system',
+                        ]);
+                        $newBookingId = (int)$pdo->lastInsertId();
+
+                        $qItems = $pdo->prepare("SELECT * FROM quotation_items WHERE quotation_id = ?");
+                        $qItems->execute([$id]);
+                        $insBookingItem = $pdo->prepare("
+                            INSERT INTO booking_order_items
+                            (booking_id, component_code, component_name, qty, unit, price_cost, price_sell, total_cost, total_sell, sort_order)
+                            VALUES (?,?,?,?,?,0,?,0,?,?)
+                        ");
+                        foreach ($qItems->fetchAll() as $idx => $qi) {
+                            $insBookingItem->execute([
+                                $newBookingId,
+                                $qi['item_type'],
+                                $qi['description'],
+                                $qi['qty'],
+                                $qi['unit'],
+                                $qi['unit_price'],
+                                $qi['subtotal'],
+                                $idx,
+                            ]);
+                        }
+                    }
+                }
+            }
         }
         header('Location: quotations.php?action=view&id=' . $id);
         exit;
@@ -306,6 +365,8 @@ if (in_array($action, ['view', 'edit', 'print']) && $qId > 0) {
         $pi->execute([(int)$quotation['package_id']]);
         $qPackageItems = $pi->fetchAll();
     }
+
+    $linkedBookingId = (int)($pdo->query("SELECT id FROM booking_orders WHERE quotation_id = " . (int)$qId)->fetchColumn() ?: 0);
 }
 
 // Customers & packages for form
@@ -334,9 +395,10 @@ $listParams  = $filter ? [$filter] : [];
 
 $quotations = $pdo->prepare("
     SELECT q.id, q.quotation_no, q.status, q.total_amount, q.trip_date, q.valid_until, q.created_at,
-           q.created_by, q.customer_id, q.package_id, c.name as customer_name, q.pax_count
+           q.created_by, q.customer_id, q.package_id, c.name as customer_name, q.pax_count, b.id as booking_id
     FROM quotations q
     JOIN customers c ON c.id = q.customer_id
+    LEFT JOIN booking_orders b ON b.quotation_id = q.id
     $whereClause
     ORDER BY q.created_at DESC
     LIMIT 100
@@ -918,18 +980,11 @@ include 'layout-header.php';
             <?php endif; ?>
         <?php endforeach; ?>
         <?php if ($quotation['status'] === 'approved'): ?>
-            <?php
-            $bookingUrl = 'bookings-new.php?' . http_build_query([
-                'customer_id' => $quotation['customer_id'],
-                'package_id'  => $quotation['package_id'],
-                'pax_count'   => $quotation['pax_count'],
-                'start_date'  => $quotation['trip_date'],
-                'quotation_no' => $quotation['quotation_no'],
-            ]);
-            ?>
-            <a href="<?php echo htmlspecialchars($bookingUrl); ?>" class="ss-btn ss-btn-primary ss-btn-sm">
-                <i data-feather="calendar-check"></i> Buat Booking
-            </a>
+            <?php if (!empty($linkedBookingId)): ?>
+                <a href="bookings.php?view=<?php echo $linkedBookingId; ?>" class="ss-btn ss-btn-primary ss-btn-sm">
+                    <i data-feather="calendar-check"></i> Lihat Data Booking
+                </a>
+            <?php endif; ?>
             <form method="POST" onsubmit="return confirm('Konversi ke Invoice?')">
                 <input type="hidden" name="action" value="convert">
                 <input type="hidden" name="quotation_id" value="<?php echo $quotation['id']; ?>">
@@ -1376,17 +1431,8 @@ include 'layout-header.php';
                                     <a href="quotations.php?action=print&id=<?php echo $q['id']; ?>" target="_blank" class="ss-btn ss-btn-outline ss-btn-sm">
                                         <i data-feather="printer"></i>
                                     </a>
-                                    <?php if ($q['status'] === 'approved'): ?>
-                                        <?php
-                                        $rowBookingUrl = 'bookings-new.php?' . http_build_query([
-                                            'customer_id' => $q['customer_id'],
-                                            'package_id'  => $q['package_id'],
-                                            'pax_count'   => $q['pax_count'],
-                                            'start_date'  => $q['trip_date'],
-                                            'quotation_no' => $q['quotation_no'],
-                                        ]);
-                                        ?>
-                                        <a href="<?php echo htmlspecialchars($rowBookingUrl); ?>" class="ss-btn ss-btn-primary ss-btn-sm" title="Buat Booking">
+                                    <?php if ($q['status'] === 'approved' && !empty($q['booking_id'])): ?>
+                                        <a href="bookings.php?view=<?php echo $q['booking_id']; ?>" class="ss-btn ss-btn-primary ss-btn-sm" title="Lihat Data Booking">
                                             <i data-feather="calendar-check"></i>
                                         </a>
                                     <?php endif; ?>
