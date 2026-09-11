@@ -1290,6 +1290,7 @@ include 'layout-header.php';
                             <th>No. Penawaran</th>
                             <th>Customer</th>
                             <th>Sumber</th>
+                            <th>Jam Masuk</th>
                             <th>Tgl Trip</th>
                             <th>Pax</th>
                             <th>Total</th>
@@ -1311,6 +1312,9 @@ include 'layout-header.php';
                                     <?php else: ?>
                                         <span class="ss-status" style="background:#f1f5f9;color:#475569;">Manual</span>
                                     <?php endif; ?>
+                                </td>
+                                <td style="font-size:12px;color:var(--ss-muted);">
+                                    <?php echo $q['created_at'] ? date('d M Y H:i', strtotime($q['created_at'])) : '-'; ?>
                                 </td>
                                 <td><?php echo $q['trip_date'] ? date('d M Y', strtotime($q['trip_date'])) : '-'; ?></td>
                                 <td><?php echo $q['pax_count']; ?></td>
