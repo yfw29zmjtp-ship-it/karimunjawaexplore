@@ -1269,21 +1269,18 @@ include 'layout-header.php';
                             <td><?php echo strpos((string)$r['notes'], '✍️ Booking Manual') === 0 ? 'MANUAL' : strtoupper($r['booking_mode']); ?></td>
                             <td><?php echo date('d M Y', strtotime($r['start_date'])); ?> - <?php echo date('d M Y', strtotime($r['end_date'])); ?></td>
                             <td>
-                                <form method="POST" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+                                <form method="POST" style="display:flex;gap:8px;align-items:center;flex-wrap:nowrap;">
                                     <input type="hidden" name="action" value="update_status">
                                     <input type="hidden" name="booking_id" value="<?php echo (int)$r['id']; ?>">
-                                    <select name="status" class="ss-select" style="min-width:130px;height:32px;padding:4px 8px;font-size:12px;">
+                                    <select name="status" class="ss-select" onchange="this.form.submit()" style="min-width:130px;height:32px;padding:4px 8px;font-size:12px;">
                                         <option value="draft" <?php echo $r['status'] === 'draft' ? 'selected' : ''; ?>>Pending</option>
                                         <option value="confirmed" <?php echo $r['status'] === 'confirmed' ? 'selected' : ''; ?>>Confirmed</option>
                                         <option value="cancel" <?php echo $r['status'] === 'cancelled' ? 'selected' : ''; ?>>Cancel</option>
                                     </select>
-                                    <button type="submit" class="ss-btn ss-btn-outline ss-btn-sm" title="Update status">
-                                        <i data-feather="check"></i>
-                                    </button>
                                     <?php if ($isLunas): ?>
-                                        <span style="background:#F0FDF4;color:#15803d;font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:20px;white-space:nowrap;">&#10003; Lunas</span>
+                                        <span style="background:#F0FDF4;color:#15803d;font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:20px;white-space:nowrap;">&#10003; Lunas</span>
                                     <?php elseif ($paidTotalRow > 0): ?>
-                                        <span style="background:#FFF7ED;color:#C2410C;font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:20px;white-space:nowrap;">DP</span>
+                                        <span style="background:#FFF7ED;color:#C2410C;font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:20px;white-space:nowrap;">DP</span>
                                     <?php endif; ?>
                                 </form>
                             </td>
