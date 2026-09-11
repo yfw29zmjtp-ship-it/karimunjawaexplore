@@ -64,7 +64,12 @@
         </div>
     </footer>
 
-    <?php if ($weWaAdmins): ?>
+    <?php if ($weWaAdmins):
+        // Rotasi admin harian yang adil: index admin berganti tiap hari (day-of-year % jumlah admin)
+        // biar semua admin kebagian giliran menerima chat pertama, bukan selalu admin yang sama.
+        $weChatTodayAdminIndex = (int)date('z') % count($weWaAdmins);
+        $weChatTodayAdminName  = $weWaAdmins[$weChatTodayAdminIndex]['label'] ?? '';
+    ?>
         <div class="we-chat-widget" id="weChatWidget">
             <div class="we-chat-panel" id="weChatPanel">
                 <div class="we-chat-header">
@@ -78,7 +83,7 @@
                         </span>
                         <div>
                             <div class="we-chat-title"><?php echo htmlspecialchars($weCompanyName); ?></div>
-                            <div class="we-chat-status">Biasanya membalas cepat via WhatsApp</div>
+                            <div class="we-chat-status"><?php echo $weChatTodayAdminName ? 'Admin ' . htmlspecialchars($weChatTodayAdminName) . ' siap membalas via WhatsApp' : 'Biasanya membalas cepat via WhatsApp'; ?></div>
                         </div>
                     </div>
                     <button type="button" class="we-chat-close" onclick="weChatToggle(false)">&times;</button>
@@ -86,13 +91,15 @@
                 <?php if (count($weWaAdmins) > 1): ?>
                     <div class="we-chat-admins" id="weChatAdmins">
                         <?php foreach ($weWaAdmins as $i => $wa): ?>
-                            <button type="button" class="we-chat-admin-chip<?php echo $i === 0 ? ' we-active' : ''; ?>" data-index="<?php echo $i; ?>"><?php echo htmlspecialchars($wa['label']); ?></button>
+                            <button type="button" class="we-chat-admin-chip<?php echo $i === $weChatTodayAdminIndex ? ' we-active' : ''; ?>" data-index="<?php echo $i; ?>"><?php echo htmlspecialchars($wa['label']); ?></button>
                         <?php endforeach; ?>
                     </div>
                 <?php endif; ?>
                 <div class="we-chat-body" id="weChatBody">
                     <div class="we-chat-bubble we-chat-bubble-in">
-                        Halo! 👋 Ada yang bisa kami bantu seputar trip ke Karimunjawa? Tulis pesan Anda di bawah ini.
+                        <?php echo $weChatTodayAdminName
+                            ? 'Halo! 👋 Admin ' . htmlspecialchars($weChatTodayAdminName) . ' akan membalas pesan Anda. Ada yang bisa kami bantu seputar trip ke Karimunjawa? Tulis pesan Anda di bawah ini.'
+                            : 'Halo! 👋 Ada yang bisa kami bantu seputar trip ke Karimunjawa? Tulis pesan Anda di bawah ini.'; ?>
                     </div>
                 </div>
                 <div class="we-chat-footer">
@@ -110,7 +117,7 @@
         <script>
             (function() {
                 var admins = <?php echo json_encode(array_map(fn($a) => $a['wa'], $weWaAdmins)); ?>;
-                var selectedIndex = 0;
+                var selectedIndex = <?php echo (int)($weChatTodayAdminIndex ?? 0); ?>;
                 var panel = document.getElementById('weChatPanel');
                 var widget = document.getElementById('weChatWidget');
                 var body = document.getElementById('weChatBody');
