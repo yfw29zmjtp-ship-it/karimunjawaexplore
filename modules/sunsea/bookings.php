@@ -789,10 +789,12 @@ $facilities = [];
 
 $list = safeFetchAll(
     $pdo,
-    "SELECT b.*, c.name as customer_name,
-        COALESCE((SELECT SUM(i.paid_amount) FROM invoices i WHERE i.internal_notes = CONCAT('booking_id:', b.id)), 0) AS paid_amount_total
+    "SELECT b.*, c.name as customer_name, p.name as package_name,
+        COALESCE((SELECT SUM(i.paid_amount) FROM invoices i WHERE i.internal_notes = CONCAT('booking_id:', b.id)), 0) AS paid_amount_total,
+        (SELECT component_name FROM booking_order_items WHERE booking_id=b.id AND component_code='penginapan' ORDER BY sort_order LIMIT 1) AS accommodation_item
     FROM booking_orders b
     JOIN customers c ON c.id=b.customer_id
+    LEFT JOIN trip_packages p ON p.id=b.package_id
     ORDER BY b.created_at DESC
     LIMIT 200",
     [],
@@ -1340,19 +1342,18 @@ include 'layout-header.php';
         <form method="POST" id="bulkDeleteBookingForm" style="display:none;">
             <input type="hidden" name="action" value="bulk_delete_booking">
         </form>
-        <div class="ss-table-wrap">
+        <div class="ss-table-wrap" style="overflow:visible;">
             <table class="ss-table">
                 <thead>
                     <tr>
                         <th style="width:32px;"><input type="checkbox" id="checkAllBooking" onchange="toggleAllBookingRows(this)"></th>
-                        <th>No Booking</th>
                         <th>Customer</th>
                         <th>Mode</th>
                         <th>Tanggal</th>
+                        <th>Paket</th>
+                        <th>Penginapan</th>
                         <th>Status</th>
-                        <th>Modal</th>
-                        <th>Jual</th>
-                        <th>Margin</th>
+                        <th>Harga Deal</th>
                         <th>Aksi</th>
                     </tr>
                 </thead>
@@ -1369,10 +1370,19 @@ include 'layout-header.php';
                                     <input type="checkbox" class="booking-row-check" value="<?php echo $r['id']; ?>" onchange="updateBulkDeleteBookingBtn()">
                                 <?php endif; ?>
                             </td>
-                            <td><strong><?php echo htmlspecialchars($r['booking_no']); ?></strong></td>
-                            <td><?php echo htmlspecialchars($r['customer_name']); ?></td>
+                            <td>
+                                <div style="font-weight:700;"><?php echo htmlspecialchars($r['customer_name']); ?></div>
+                                <div style="font-size:11px;color:var(--ss-muted);margin-top:1px;"><?php echo htmlspecialchars($r['booking_no']); ?></div>
+                            </td>
                             <td><?php echo strpos((string)$r['notes'], '✍️ Booking Manual') === 0 ? 'MANUAL' : strtoupper($r['booking_mode']); ?></td>
                             <td><?php echo date('d M Y', strtotime($r['start_date'])); ?> - <?php echo date('d M Y', strtotime($r['end_date'])); ?></td>
+                            <td><?php echo $r['package_name'] ? htmlspecialchars($r['package_name']) : '<span style="color:var(--ss-muted);">Ecer</span>'; ?></td>
+                            <td>
+                                <?php
+                                $accomDisplay = $r['accommodation_item'] ? preg_replace('/^Penginapan:\s*/', '', $r['accommodation_item']) : ($r['accommodation_manual'] ?: '');
+                                echo $accomDisplay ? htmlspecialchars($accomDisplay) : '<span style="color:var(--ss-muted);">-</span>';
+                                ?>
+                            </td>
                             <td>
                                 <form method="POST" style="display:flex;gap:8px;align-items:center;flex-wrap:nowrap;">
                                     <input type="hidden" name="action" value="update_status">
@@ -1389,9 +1399,7 @@ include 'layout-header.php';
                                     <?php endif; ?>
                                 </form>
                             </td>
-                            <td><?php echo sunseaRupiah((float)$r['cost_total']); ?></td>
-                            <td><?php echo sunseaRupiah((float)$r['sell_total']); ?></td>
-                            <td><strong style="color:var(--ss-success)"><?php echo sunseaRupiah((float)$r['margin_amount']); ?></strong></td>
+                            <td><strong style="color:var(--ss-ocean)"><?php echo sunseaRupiah((float)$r['sell_total']); ?></strong></td>
                             <td>
                                 <details class="ss-actions-dropdown">
                                     <summary class="ss-btn ss-btn-outline ss-btn-sm">Aksi <i data-feather="chevron-down"></i></summary>
