@@ -745,7 +745,8 @@ $facilities = [];
 
 $list = safeFetchAll(
     $pdo,
-    "SELECT b.*, c.name as customer_name
+    "SELECT b.*, c.name as customer_name,
+        COALESCE((SELECT SUM(i.paid_amount) FROM invoices i WHERE i.internal_notes = CONCAT('booking_id:', b.id)), 0) AS paid_amount_total
     FROM booking_orders b
     JOIN customers c ON c.id=b.customer_id
     ORDER BY b.created_at DESC
@@ -1221,6 +1222,24 @@ include 'layout-header.php';
         </div>
         <a class="ss-btn ss-btn-primary" href="bookings.php?action=add"><i data-feather="plus"></i> Reservasi Baru</a>
     </div>
+    <style>
+        .ss-actions-dropdown { position: relative; display: inline-block; }
+        .ss-actions-dropdown summary { list-style: none; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+        .ss-actions-dropdown summary::-webkit-details-marker { display: none; }
+        .ss-actions-dropdown summary svg { width: 13px; height: 13px; }
+        .ss-actions-dropdown .ss-actions-menu {
+            position: absolute; right: 0; top: calc(100% + 4px); z-index: 20;
+            background: #fff; border: 1px solid var(--ss-gray-1); border-radius: 8px;
+            box-shadow: 0 6px 18px rgba(15,23,42,0.12); min-width: 160px; padding: 6px; text-align: left;
+        }
+        .ss-actions-dropdown .ss-actions-menu a,
+        .ss-actions-dropdown .ss-actions-menu form button {
+            display: block; width: 100%; text-align: left; padding: 7px 10px; font-size: 12.5px;
+            color: var(--ss-text); text-decoration: none; border-radius: 6px; border: none; background: none; cursor: pointer;
+        }
+        .ss-actions-dropdown .ss-actions-menu a:hover,
+        .ss-actions-dropdown .ss-actions-menu form button:hover { background: var(--ss-gray-1); }
+    </style>
     <div class="ss-card">
         <div class="ss-table-wrap">
             <table class="ss-table">
@@ -1239,13 +1258,18 @@ include 'layout-header.php';
                 </thead>
                 <tbody>
                     <?php foreach ($list as $r): ?>
+                        <?php
+                        $sellTotalRow = (float)$r['sell_total'];
+                        $paidTotalRow = (float)$r['paid_amount_total'];
+                        $isLunas = $sellTotalRow > 0 && $paidTotalRow >= $sellTotalRow - 0.01;
+                        ?>
                         <tr>
                             <td><strong><?php echo htmlspecialchars($r['booking_no']); ?></strong></td>
                             <td><?php echo htmlspecialchars($r['customer_name']); ?></td>
                             <td><?php echo strpos((string)$r['notes'], '✍️ Booking Manual') === 0 ? 'MANUAL' : strtoupper($r['booking_mode']); ?></td>
                             <td><?php echo date('d M Y', strtotime($r['start_date'])); ?> - <?php echo date('d M Y', strtotime($r['end_date'])); ?></td>
                             <td>
-                                <form method="POST" style="display:flex;gap:6px;align-items:center;">
+                                <form method="POST" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
                                     <input type="hidden" name="action" value="update_status">
                                     <input type="hidden" name="booking_id" value="<?php echo (int)$r['id']; ?>">
                                     <select name="status" class="ss-select" style="min-width:130px;height:32px;padding:4px 8px;font-size:12px;">
@@ -1256,23 +1280,33 @@ include 'layout-header.php';
                                     <button type="submit" class="ss-btn ss-btn-outline ss-btn-sm" title="Update status">
                                         <i data-feather="check"></i>
                                     </button>
+                                    <?php if ($isLunas): ?>
+                                        <span style="background:#F0FDF4;color:#15803d;font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:20px;white-space:nowrap;">&#10003; Lunas</span>
+                                    <?php elseif ($paidTotalRow > 0): ?>
+                                        <span style="background:#FFF7ED;color:#C2410C;font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:20px;white-space:nowrap;">DP</span>
+                                    <?php endif; ?>
                                 </form>
                             </td>
                             <td><?php echo sunseaRupiah((float)$r['cost_total']); ?></td>
                             <td><?php echo sunseaRupiah((float)$r['sell_total']); ?></td>
                             <td><strong style="color:var(--ss-success)"><?php echo sunseaRupiah((float)$r['margin_amount']); ?></strong></td>
                             <td>
-                                <a class="ss-btn ss-btn-outline ss-btn-sm" href="bookings.php?view=<?php echo $r['id']; ?>"><i data-feather="eye"></i></a>
-                                <a class="ss-btn ss-btn-outline ss-btn-sm" href="bookings.php?action=print_invoice&id=<?php echo $r['id']; ?>" title="Cetak Invoice"><i data-feather="file-text"></i></a>
-                                <a class="ss-btn ss-btn-outline ss-btn-sm" href="bookings.php?action=pay_invoice&id=<?php echo $r['id']; ?>&pay_mode=dp" title="Bayar DP"><i data-feather="dollar-sign"></i></a>
-                                <a class="ss-btn ss-btn-outline ss-btn-sm" href="bookings.php?action=pay_invoice&id=<?php echo $r['id']; ?>&pay_mode=full" title="Pelunasan"><i data-feather="check-circle"></i></a>
-                                <?php if ($r['status'] === 'cancelled'): ?>
-                                    <form method="POST" style="display:inline;" onsubmit="return confirm('Hapus reservasi <?php echo htmlspecialchars(addslashes($r['booking_no'])); ?>? Tindakan ini tidak bisa dibatalkan.');">
-                                        <input type="hidden" name="action" value="delete_booking">
-                                        <input type="hidden" name="booking_id" value="<?php echo (int)$r['id']; ?>">
-                                        <button type="submit" class="ss-btn ss-btn-outline ss-btn-sm" style="color:#dc2626;border-color:#dc2626;" title="Hapus"><i data-feather="trash-2"></i></button>
-                                    </form>
-                                <?php endif; ?>
+                                <details class="ss-actions-dropdown">
+                                    <summary class="ss-btn ss-btn-outline ss-btn-sm">Aksi <i data-feather="chevron-down"></i></summary>
+                                    <div class="ss-actions-menu">
+                                        <a href="bookings.php?view=<?php echo $r['id']; ?>">Lihat Detail</a>
+                                        <a href="bookings.php?action=print_invoice&id=<?php echo $r['id']; ?>">Cetak Invoice</a>
+                                        <a href="bookings.php?action=pay_invoice&id=<?php echo $r['id']; ?>&pay_mode=dp">Bayar DP</a>
+                                        <a href="bookings.php?action=pay_invoice&id=<?php echo $r['id']; ?>&pay_mode=full">Pelunasan</a>
+                                        <?php if ($r['status'] === 'cancelled'): ?>
+                                            <form method="POST" onsubmit="return confirm('Hapus reservasi <?php echo htmlspecialchars(addslashes($r['booking_no'])); ?>? Tindakan ini tidak bisa dibatalkan.');">
+                                                <input type="hidden" name="action" value="delete_booking">
+                                                <input type="hidden" name="booking_id" value="<?php echo (int)$r['id']; ?>">
+                                                <button type="submit" style="color:#dc2626;">Hapus</button>
+                                            </form>
+                                        <?php endif; ?>
+                                    </div>
+                                </details>
                             </td>
                         </tr>
                     <?php endforeach; ?>
