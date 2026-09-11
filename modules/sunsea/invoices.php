@@ -288,7 +288,60 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         header('Location: invoices.php?action=view&id=' . $iId);
         exit;
+    } elseif ($postAction === 'delete_invoice') {
+        $iId = (int)($_POST['invoice_id'] ?? 0);
+        $chk = $pdo->prepare("SELECT paid_amount FROM invoices WHERE id=?");
+        $chk->execute([$iId]);
+        $paidChk = $chk->fetchColumn();
+
+        if ($paidChk === false) {
+            $_SESSION['flash_message'] = 'Invoice tidak ditemukan.';
+            $_SESSION['flash_type']    = 'error';
+        } elseif ((float)$paidChk > 0) {
+            $_SESSION['flash_message'] = 'Invoice yang sudah ada pembayaran tidak bisa dihapus.';
+            $_SESSION['flash_type']    = 'error';
+        } else {
+            sunseaDeleteInvoiceCascade($pdo, $iId);
+            $_SESSION['flash_message'] = 'Invoice berhasil dihapus.';
+            $_SESSION['flash_type']    = 'success';
+        }
+        header('Location: invoices.php');
+        exit;
+    } elseif ($postAction === 'bulk_delete_invoice') {
+        $ids = array_filter(array_map('intval', $_POST['ids'] ?? []));
+        $deleted = 0;
+        $skipped = 0;
+        foreach ($ids as $iId) {
+            $chk = $pdo->prepare("SELECT paid_amount FROM invoices WHERE id=?");
+            $chk->execute([$iId]);
+            $paidChk = $chk->fetchColumn();
+            if ($paidChk === false || (float)$paidChk > 0) {
+                $skipped++;
+                continue;
+            }
+            sunseaDeleteInvoiceCascade($pdo, $iId);
+            $deleted++;
+        }
+        $msg = $deleted . ' invoice berhasil dihapus.';
+        if ($skipped > 0) {
+            $msg .= ' ' . $skipped . ' dilewati (sudah ada pembayaran).';
+        }
+        $_SESSION['flash_message'] = $msg;
+        $_SESSION['flash_type'] = $deleted > 0 ? 'success' : 'error';
+        header('Location: invoices.php');
+        exit;
     }
+}
+
+/**
+ * Hapus invoice beserta item/payment-nya, dan lepas link dari quotation yang sudah dikonversi ke invoice ini.
+ */
+function sunseaDeleteInvoiceCascade(PDO $pdo, int $invoiceId): void
+{
+    $pdo->prepare("UPDATE quotations SET status='approved', converted_invoice_id=NULL WHERE converted_invoice_id=?")->execute([$invoiceId]);
+    $pdo->prepare("DELETE FROM payments WHERE invoice_id=?")->execute([$invoiceId]);
+    $pdo->prepare("DELETE FROM invoice_items WHERE invoice_id=?")->execute([$invoiceId]);
+    $pdo->prepare("DELETE FROM invoices WHERE id=?")->execute([$invoiceId]);
 }
 
 // ---- LOAD DATA ----
@@ -1350,7 +1403,13 @@ $prefillPaxCount = max(1, (int)($_GET['pax_count'] ?? 1));
                     <div class="ss-card-title">Semua Invoice</div>
                     <div class="ss-card-sub"><?php echo count($invoiceList); ?> invoice</div>
                 </div>
+                <button type="button" id="bulkDeleteInvoiceBtn" class="ss-btn ss-btn-outline" style="display:none;color:#dc2626;border-color:#dc2626;" onclick="submitBulkDeleteInvoice()">
+                    <i data-feather="trash-2"></i> Hapus Terpilih (<span id="bulkDeleteInvoiceCount">0</span>)
+                </button>
             </div>
+            <form method="POST" id="bulkDeleteInvoiceForm" style="display:none;">
+                <input type="hidden" name="action" value="bulk_delete_invoice">
+            </form>
             <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
                 <?php foreach (['' => 'Semua', 'issued' => 'Issued', 'partial' => 'Partial', 'paid' => 'Lunas', 'overdue' => 'Overdue'] as $st => $lbl): ?>
                     <a href="invoices.php?status=<?php echo $st; ?>" class="ss-btn ss-btn-sm <?php echo $statusFilter === $st ? 'ss-btn-primary' : 'ss-btn-outline'; ?>"><?php echo $lbl; ?></a>
@@ -1366,6 +1425,7 @@ $prefillPaxCount = max(1, (int)($_GET['pax_count'] ?? 1));
                     <table class="ss-table">
                         <thead>
                             <tr>
+                                <th style="width:32px;"><input type="checkbox" id="checkAllInvoice" onchange="toggleAllInvoiceRows(this)"></th>
                                 <th>No. Invoice</th>
                                 <th>Customer</th>
                                 <th>Total</th>
@@ -1379,6 +1439,11 @@ $prefillPaxCount = max(1, (int)($_GET['pax_count'] ?? 1));
                         <tbody>
                             <?php foreach ($invoiceList as $inv): ?>
                                 <tr>
+                                    <td>
+                                        <?php if ((float)$inv['paid_amount'] <= 0): ?>
+                                            <input type="checkbox" class="invoice-row-check" value="<?php echo $inv['id']; ?>" onchange="updateBulkDeleteInvoiceBtn()">
+                                        <?php endif; ?>
+                                    </td>
                                     <td><a href="invoices.php?action=view&id=<?php echo $inv['id']; ?>" style="color:var(--ss-ocean);font-weight:600;text-decoration:none;"><?php echo htmlspecialchars($inv['invoice_no']); ?></a></td>
                                     <td><?php echo htmlspecialchars($inv['customer_name']); ?></td>
                                     <td style="font-weight:600;"><?php echo sunseaRupiah((float)$inv['total_amount']); ?></td>
@@ -1391,6 +1456,13 @@ $prefillPaxCount = max(1, (int)($_GET['pax_count'] ?? 1));
                                             <a href="invoices.php?action=view&id=<?php echo $inv['id']; ?>" class="ss-btn ss-btn-outline ss-btn-sm" title="Lihat invoice"><i data-feather="eye"></i></a>
                                             <a href="invoices.php?action=edit&id=<?php echo $inv['id']; ?>" class="ss-btn ss-btn-primary ss-btn-sm" title="Edit invoice"><i data-feather="edit-3"></i></a>
                                             <a href="invoices.php?action=print&id=<?php echo $inv['id']; ?>" target="_blank" class="ss-btn ss-btn-outline ss-btn-sm"><i data-feather="printer"></i></a>
+                                            <?php if ((float)$inv['paid_amount'] <= 0): ?>
+                                                <form method="POST" style="display:inline;" onsubmit="return confirm('Hapus invoice <?php echo htmlspecialchars(addslashes($inv['invoice_no'])); ?>? Tindakan ini tidak bisa dibatalkan.');">
+                                                    <input type="hidden" name="action" value="delete_invoice">
+                                                    <input type="hidden" name="invoice_id" value="<?php echo (int)$inv['id']; ?>">
+                                                    <button type="submit" class="ss-btn ss-btn-outline ss-btn-sm" style="color:#dc2626;border-color:#dc2626;" title="Hapus invoice"><i data-feather="trash-2"></i></button>
+                                                </form>
+                                            <?php endif; ?>
                                         </div>
                                     </td>
                                 </tr>
@@ -1405,7 +1477,7 @@ $prefillPaxCount = max(1, (int)($_GET['pax_count'] ?? 1));
 
 <style>
     .invoice-page-shell {
-        max-width: 1180px;
+        max-width: 100%;
     }
 
     .invoice-page-heading {
@@ -1612,6 +1684,41 @@ function invItemRow($type = '', $desc = '', $qty = 1, $unit = 'pax', $price = 0)
         switchInvoiceMode(document.getElementById('modeSimple').checked ? 'simple' : 'items');
     }
     calcTotals2();
+
+    // Bulk select/delete on the invoice list page
+    function toggleAllInvoiceRows(checkAllBox) {
+        document.querySelectorAll('.invoice-row-check').forEach(function(cb) {
+            cb.checked = checkAllBox.checked;
+        });
+        updateBulkDeleteInvoiceBtn();
+    }
+
+    function updateBulkDeleteInvoiceBtn() {
+        var checked = document.querySelectorAll('.invoice-row-check:checked');
+        var btn = document.getElementById('bulkDeleteInvoiceBtn');
+        var countEl = document.getElementById('bulkDeleteInvoiceCount');
+        if (!btn || !countEl) return;
+        countEl.textContent = checked.length;
+        btn.style.display = checked.length > 0 ? '' : 'none';
+    }
+
+    function submitBulkDeleteInvoice() {
+        var checked = document.querySelectorAll('.invoice-row-check:checked');
+        if (!checked.length) return;
+        if (!confirm('Hapus ' + checked.length + ' invoice terpilih? Tindakan ini tidak bisa dibatalkan.')) return;
+        var form = document.getElementById('bulkDeleteInvoiceForm');
+        form.querySelectorAll('input[name="ids[]"]').forEach(function(el) {
+            el.remove();
+        });
+        checked.forEach(function(cb) {
+            var input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'ids[]';
+            input.value = cb.value;
+            form.appendChild(input);
+        });
+        form.submit();
+    }
 </script>
 
 <?php include 'layout-footer.php'; ?>
