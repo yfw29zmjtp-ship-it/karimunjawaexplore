@@ -275,29 +275,33 @@ if (isset($dbError)): ?>
 ============================= -->
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px;">
 
-    <!-- Monthly Guests Chart -->
+    <!-- Guest Chart (toggle Bulanan/Tahunan) -->
     <div class="ss-card">
-        <div class="ss-card-header">
+        <div class="ss-card-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">
             <div>
-                <div class="ss-card-title">Tamu Reservasi Bulanan</div>
-                <div class="ss-card-sub">Total tamu per bulan (12 bulan terakhir)</div>
+                <div class="ss-card-title">Tamu Reservasi</div>
+                <div class="ss-card-sub" id="guestChartSub">Total tamu per bulan (12 bulan terakhir)</div>
+            </div>
+            <div style="display:flex;gap:6px;">
+                <button type="button" id="guestChartBtnMonthly" class="ss-btn ss-btn-sm ss-btn-outline" onclick="switchGuestChart('monthly')">Bulanan</button>
+                <button type="button" id="guestChartBtnYearly" class="ss-btn ss-btn-sm ss-btn-outline" onclick="switchGuestChart('yearly')">Tahunan</button>
             </div>
         </div>
         <div style="position:relative;height:300px;padding:10px;">
-            <canvas id="monthlyGuestsChart"></canvas>
+            <canvas id="guestChart"></canvas>
         </div>
     </div>
 
-    <!-- Yearly Guests Chart -->
+    <!-- Finance Pie Chart: Pemasukan vs Pengeluaran bulan ini -->
     <div class="ss-card">
         <div class="ss-card-header">
             <div>
-                <div class="ss-card-title">Tamu Reservasi Tahunan</div>
-                <div class="ss-card-sub">Total tamu per tahun (5 tahun terakhir)</div>
+                <div class="ss-card-title">Pemasukan vs Pengeluaran</div>
+                <div class="ss-card-sub">Ringkasan Finance bulan ini (<?php echo date('F Y'); ?>)</div>
             </div>
         </div>
         <div style="position:relative;height:300px;padding:10px;">
-            <canvas id="yearlyGuestsChart"></canvas>
+            <canvas id="financePieChart"></canvas>
         </div>
     </div>
 
@@ -413,119 +417,99 @@ if (isset($dbError)): ?>
         danger: '#ef4444' // Red
     };
 
-    // Monthly Guests Chart
-    const monthlyCtx = document.getElementById('monthlyGuestsChart');
-    if (monthlyCtx) {
-        new Chart(monthlyCtx, {
-            type: 'line',
+    // Guest Chart: toggle between monthly (line) and yearly (bar) datasets
+    const guestData = {
+        monthly: { labels: <?php echo $monthLabels; ?>, values: <?php echo $monthlyGuests; ?>, sub: 'Total tamu per bulan (12 bulan terakhir)' },
+        yearly: { labels: <?php echo $yearLabels; ?>, values: <?php echo $yearlyGuests; ?>, sub: 'Total tamu per tahun (5 tahun terakhir)' }
+    };
+    let guestChartInstance = null;
+
+    function switchGuestChart(mode) {
+        const ctx = document.getElementById('guestChart');
+        if (!ctx) return;
+        const isMonthly = mode === 'monthly';
+        const src = guestData[mode];
+
+        if (guestChartInstance) guestChartInstance.destroy();
+        guestChartInstance = new Chart(ctx, {
+            type: isMonthly ? 'line' : 'bar',
             data: {
-                labels: <?php echo $monthLabels; ?>,
+                labels: src.labels,
                 datasets: [{
-                    label: 'Tamu Reservasi',
-                    data: <?php echo $monthlyGuests; ?>,
+                    label: isMonthly ? 'Tamu Reservasi' : 'Total Tamu',
+                    data: src.values,
                     borderColor: oceanColors.primary,
-                    backgroundColor: oceanColors.primary + '15',
-                    borderWidth: 3,
-                    fill: true,
+                    backgroundColor: isMonthly ? (oceanColors.primary + '15') : [oceanColors.primary, oceanColors.secondary, oceanColors.success, oceanColors.warning, oceanColors.danger],
+                    borderWidth: isMonthly ? 3 : 0,
+                    fill: isMonthly,
                     tension: 0.4,
-                    pointRadius: 5,
+                    pointRadius: isMonthly ? 5 : 0,
                     pointBackgroundColor: oceanColors.primary,
                     pointBorderColor: '#fff',
                     pointBorderWidth: 2,
-                    pointHoverRadius: 7
-                }],
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: true,
-                            position: 'top',
-                            labels: {
-                                font: {
-                                    size: 13
-                                },
-                                padding: 15,
-                                usePointStyle: true
-                            }
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                stepSize: 5,
-                                font: {
-                                    size: 12
-                                }
-                            },
-                            grid: {
-                                color: 'rgba(0,0,0,0.05)'
-                            }
-                        },
-                        x: {
-                            grid: {
-                                display: false
-                            }
-                        }
+                    pointHoverRadius: isMonthly ? 7 : 0,
+                    borderRadius: isMonthly ? 0 : 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: { font: { size: 13 }, padding: 15, usePointStyle: true }
                     }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { stepSize: isMonthly ? 5 : 20, font: { size: 12 } },
+                        grid: { color: 'rgba(0,0,0,0.05)' }
+                    },
+                    x: { grid: { display: false } }
                 }
             }
         });
-    }
 
-    // Yearly Guests Chart
-    const yearlyCtx = document.getElementById('yearlyGuestsChart');
-    if (yearlyCtx) {
-        new Chart(yearlyCtx, {
-            type: 'bar',
+        document.getElementById('guestChartSub').textContent = src.sub;
+        const mBtn = document.getElementById('guestChartBtnMonthly');
+        const yBtn = document.getElementById('guestChartBtnYearly');
+        mBtn.style.background = isMonthly ? oceanColors.primary : '';
+        mBtn.style.color = isMonthly ? '#fff' : '';
+        yBtn.style.background = !isMonthly ? oceanColors.primary : '';
+        yBtn.style.color = !isMonthly ? '#fff' : '';
+    }
+    switchGuestChart('monthly');
+
+    // Finance Pie Chart: Pemasukan vs Pengeluaran bulan ini
+    const financePieCtx = document.getElementById('financePieChart');
+    if (financePieCtx) {
+        new Chart(financePieCtx, {
+            type: 'pie',
             data: {
-                labels: <?php echo $yearLabels; ?>,
+                labels: ['Pemasukan', 'Pengeluaran'],
                 datasets: [{
-                    label: 'Total Tamu',
-                    data: <?php echo $yearlyGuests; ?>,
-                    backgroundColor: [
-                        oceanColors.primary,
-                        oceanColors.secondary,
-                        oceanColors.success,
-                        oceanColors.warning,
-                        oceanColors.danger
-                    ],
-                    borderRadius: 8,
-                    borderWidth: 0
-                }],
-                options: {
-                    indexAxis: 'x',
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: true,
-                            position: 'top',
-                            labels: {
-                                font: {
-                                    size: 13
-                                },
-                                padding: 15
-                            }
-                        }
+                    data: [<?php echo (float)$monthRevenue; ?>, <?php echo (float)$monthExpense; ?>],
+                    backgroundColor: [oceanColors.success, oceanColors.danger],
+                    borderColor: '#fff',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: { font: { size: 13 }, padding: 15, usePointStyle: true }
                     },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                stepSize: 20,
-                                font: {
-                                    size: 12
-                                }
-                            },
-                            grid: {
-                                color: 'rgba(0,0,0,0.05)'
-                            }
-                        },
-                        x: {
-                            grid: {
-                                display: false
+                    tooltip: {
+                        callbacks: {
+                            label: function (ctx) {
+                                const val = ctx.parsed || 0;
+                                return ctx.label + ': Rp ' + val.toLocaleString('id-ID');
                             }
                         }
                     }
