@@ -695,6 +695,72 @@ if (empty($sunseaNavItemsVisible)) {
             font-size: 12px;
         }
 
+        /* ---- PACKAGE CARD (Paket Wisata admin list) ---- */
+        .ss-pkg-card {
+            background: var(--ss-white);
+            border-radius: 14px;
+            border: 1px solid var(--ss-gray-2);
+            box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
+            padding: 16px;
+            transition: box-shadow .2s, transform .2s;
+        }
+
+        .ss-pkg-card:hover {
+            box-shadow: var(--ss-shadow-md);
+            transform: translateY(-2px);
+        }
+
+        .ss-pkg-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding-top: 12px;
+            border-top: 1px solid var(--ss-gray-1);
+        }
+
+        .ss-pkg-actions-order {
+            display: flex;
+            gap: 6px;
+        }
+
+        .ss-pkg-actions-order form {
+            display: contents;
+        }
+
+        .ss-pkg-actions-main {
+            display: flex;
+            gap: 6px;
+        }
+
+        .ss-pkg-actions-main a {
+            font-size: 11.5px;
+            padding: 6px 8px;
+        }
+
+        .ss-pkg-icon-btn {
+            width: 28px;
+            height: 28px;
+            border-radius: 7px;
+            border: 1.5px solid var(--ss-gray-2);
+            background: transparent;
+            color: var(--ss-muted);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: .2s;
+        }
+
+        .ss-pkg-icon-btn svg {
+            width: 13px;
+            height: 13px;
+        }
+
+        .ss-pkg-icon-btn:hover {
+            border-color: var(--ss-ocean);
+            color: var(--ss-ocean);
+        }
+
         /* ---- QUICK ACTION GRID ---- */
         .ss-quick-actions-grid {
             display: grid;

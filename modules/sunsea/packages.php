@@ -724,71 +724,77 @@ include 'layout-header.php';
                 <p>Tambahkan paket wisata untuk digunakan saat membuat penawaran</p>
             </div>
         <?php else: ?>
-            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;">
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;">
                 <?php foreach ($packages as $pkg): ?>
-                    <div class="ss-card" style="padding:20px;box-shadow:none;border:1.5px solid var(--ss-gray-2);
-                opacity:<?php echo $pkg['is_active'] ? '1' : '0.55'; ?>;">
-                        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
-                            <div>
-                                <div style="font-size:20px;margin-bottom:4px;">
+                    <div class="ss-pkg-card" style="opacity:<?php echo $pkg['is_active'] ? '1' : '0.6'; ?>;">
+                        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:10px;">
+                            <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+                                <div style="width:36px;height:36px;flex:0 0 auto;border-radius:9px;background:var(--ss-gray-1,#F1F5F9);display:flex;align-items:center;justify-content:center;font-size:17px;">
                                     <?php echo $categoryMap[$pkg['category']]['icon'] ?? '🏝️'; ?>
                                 </div>
-                                <div style="font-weight:700;font-size:14px;"><?php echo htmlspecialchars($pkg['name']); ?></div>
-                                <div style="font-size:11px;color:var(--ss-muted);margin-top:2px;">
-                                    <?php echo $categoryMap[$pkg['category']]['label'] ?? ''; ?>
-                                    · <?php echo $pkg['duration_days']; ?>H<?php echo $pkg['duration_nights']; ?>M
+                                <div style="min-width:0;">
+                                    <div style="font-weight:700;font-size:13px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="<?php echo htmlspecialchars($pkg['name']); ?>"><?php echo htmlspecialchars($pkg['name']); ?></div>
+                                    <div style="font-size:10.5px;color:var(--ss-muted);margin-top:2px;">
+                                        <?php echo $categoryMap[$pkg['category']]['label'] ?? ''; ?>
+                                        · <?php echo $pkg['duration_days']; ?>H<?php echo $pkg['duration_nights']; ?>M
+                                    </div>
                                 </div>
                             </div>
                             <span class="ss-badge <?php echo $pkg['is_active'] ? 'ss-badge-ocean' : ''; ?>"
-                                style="<?php echo !$pkg['is_active'] ? 'background:#F1F5F9;color:#94A3B8' : ''; ?>">
+                                style="flex:0 0 auto;font-size:10px;<?php echo !$pkg['is_active'] ? 'background:#F1F5F9;color:#94A3B8' : ''; ?>">
                                 <?php echo $pkg['is_active'] ? 'Aktif' : 'Nonaktif'; ?>
                             </span>
                         </div>
 
-                        <div style="font-size:18px;font-weight:800;color:var(--ss-ocean);margin-bottom:8px;">
+                        <div style="font-size:16px;font-weight:800;color:var(--ss-ocean);margin-bottom:6px;">
                             <?php echo sunseaRupiah((float)$pkg['base_price']); ?>
-                            <span style="font-size:11px;font-weight:400;color:var(--ss-muted);">/ orang</span>
+                            <span style="font-size:10.5px;font-weight:400;color:var(--ss-muted);">/ orang</span>
                         </div>
 
-                        <div style="font-size:11px;color:var(--ss-muted);margin-bottom:14px;">
+                        <div style="font-size:10.5px;color:var(--ss-muted);margin-bottom:12px;">
                             Min <?php echo $pkg['min_pax']; ?> - Max <?php echo $pkg['max_pax']; ?> pax
                             <?php if ($pkg['used_count'] > 0): ?>
                                 · Dipakai <?php echo $pkg['used_count']; ?>x penawaran
                             <?php endif; ?>
                         </div>
 
-                        <div style="display:flex;gap:8px;">
-                            <form method="POST" style="display:inline;">
-                                <input type="hidden" name="action" value="move">
-                                <input type="hidden" name="id" value="<?php echo $pkg['id']; ?>">
-                                <input type="hidden" name="dir" value="up">
-                                <button type="submit" class="ss-btn ss-btn-outline ss-btn-sm" title="Naikkan urutan"><i data-feather="arrow-up"></i></button>
-                            </form>
-                            <form method="POST" style="display:inline;">
-                                <input type="hidden" name="action" value="move">
-                                <input type="hidden" name="id" value="<?php echo $pkg['id']; ?>">
-                                <input type="hidden" name="dir" value="down">
-                                <button type="submit" class="ss-btn ss-btn-outline ss-btn-sm" title="Turunkan urutan"><i data-feather="arrow-down"></i></button>
-                            </form>
-                            <a href="packages.php?action=edit&id=<?php echo $pkg['id']; ?>"
-                                class="ss-btn ss-btn-outline ss-btn-sm"><i data-feather="edit-2"></i> Edit</a>
-                            <a href="quotations.php?action=add&package_id=<?php echo $pkg['id']; ?>"
-                                class="ss-btn ss-btn-primary ss-btn-sm"><i data-feather="file-plus"></i> Buat Penawaran</a>
-                            <form method="POST" style="display:inline;">
-                                <input type="hidden" name="action" value="toggle">
-                                <input type="hidden" name="id" value="<?php echo $pkg['id']; ?>">
-                                <button type="submit" class="ss-btn ss-btn-outline ss-btn-sm"
-                                    title="<?php echo $pkg['is_active'] ? 'Nonaktifkan' : 'Aktifkan'; ?>">
-                                    <i data-feather="<?php echo $pkg['is_active'] ? 'eye-off' : 'eye'; ?>"></i>
-                                </button>
-                            </form>
-                            <form method="POST" style="display:inline;" onsubmit="return confirm('Hapus paket <?php echo htmlspecialchars(addslashes($pkg['name'])); ?>? Tindakan ini tidak bisa dibatalkan.');">
-                                <input type="hidden" name="action" value="delete">
-                                <input type="hidden" name="id" value="<?php echo $pkg['id']; ?>">
-                                <button type="submit" class="ss-btn ss-btn-outline ss-btn-sm" title="Hapus" style="color:#dc2626;border-color:#dc2626;">
-                                    <i data-feather="trash-2"></i>
-                                </button>
-                            </form>
+                        <div class="ss-pkg-actions">
+                            <div class="ss-pkg-actions-order">
+                                <form method="POST">
+                                    <input type="hidden" name="action" value="move">
+                                    <input type="hidden" name="id" value="<?php echo $pkg['id']; ?>">
+                                    <input type="hidden" name="dir" value="up">
+                                    <button type="submit" class="ss-pkg-icon-btn" title="Naikkan urutan"><i data-feather="arrow-up"></i></button>
+                                </form>
+                                <form method="POST">
+                                    <input type="hidden" name="action" value="move">
+                                    <input type="hidden" name="id" value="<?php echo $pkg['id']; ?>">
+                                    <input type="hidden" name="dir" value="down">
+                                    <button type="submit" class="ss-pkg-icon-btn" title="Turunkan urutan"><i data-feather="arrow-down"></i></button>
+                                </form>
+                                <form method="POST">
+                                    <input type="hidden" name="action" value="toggle">
+                                    <input type="hidden" name="id" value="<?php echo $pkg['id']; ?>">
+                                    <button type="submit" class="ss-pkg-icon-btn" title="<?php echo $pkg['is_active'] ? 'Nonaktifkan' : 'Aktifkan'; ?>">
+                                        <i data-feather="<?php echo $pkg['is_active'] ? 'eye-off' : 'eye'; ?>"></i>
+                                    </button>
+                                </form>
+                                <form method="POST" onsubmit="return confirm('Hapus paket <?php echo htmlspecialchars(addslashes($pkg['name'])); ?>? Tindakan ini tidak bisa dibatalkan.');">
+                                    <input type="hidden" name="action" value="delete">
+                                    <input type="hidden" name="id" value="<?php echo $pkg['id']; ?>">
+                                    <button type="submit" class="ss-pkg-icon-btn" title="Hapus" style="color:#dc2626;">
+                                        <i data-feather="trash-2"></i>
+                                    </button>
+                                </form>
+                            </div>
+                            <div class="ss-pkg-actions-main">
+                                <a href="packages.php?action=edit&id=<?php echo $pkg['id']; ?>" class="ss-btn ss-btn-outline ss-btn-sm" style="flex:1;justify-content:center;">
+                                    <i data-feather="edit-2"></i> Edit
+                                </a>
+                                <a href="quotations.php?action=add&package_id=<?php echo $pkg['id']; ?>" class="ss-btn ss-btn-primary ss-btn-sm" style="flex:1;justify-content:center;">
+                                    <i data-feather="file-plus"></i> Penawaran
+                                </a>
+                            </div>
                         </div>
                     </div>
                 <?php endforeach; ?>
