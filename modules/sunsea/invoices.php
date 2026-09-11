@@ -1014,6 +1014,35 @@ if ($action === 'print' && $invoice):
                 </div>
             </div>
 
+            <?php if (!empty($payments)): ?>
+                <div style="font-weight:700;font-size:12px;margin-top:14px;color:#334155;">Detail Pembayaran (DP)</div>
+                <table class="items" style="margin-top:6px;">
+                    <thead>
+                        <tr>
+                            <th style="width:90px;">Tahap</th>
+                            <th>Tanggal</th>
+                            <th>Metode</th>
+                            <th>Referensi</th>
+                            <th>Jumlah</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($payments as $ppIdx => $pp):
+                            $ppIsLast = $ppIdx === count($payments) - 1;
+                            $ppStage = $ppIdx === 0 ? 'DP 1' : ($ppIsLast && $computedRemaining <= 0 ? 'Pelunasan' : 'DP ' . ($ppIdx + 1));
+                        ?>
+                            <tr>
+                                <td><?php echo $ppStage; ?></td>
+                                <td><?php echo date('d M Y', strtotime($pp['payment_date'])); ?></td>
+                                <td><?php echo htmlspecialchars(ucfirst($pp['method'] ?: '-')); ?></td>
+                                <td><?php echo htmlspecialchars($pp['reference'] ?: '-'); ?></td>
+                                <td><?php echo sunseaRupiah((float)$pp['amount']); ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            <?php endif; ?>
+
             <?php if ($invoiceNotes): ?>
                 <div class="terms-box">
                     <div class="terms-title">Ketentuan &amp; Catatan</div>
