@@ -26,8 +26,9 @@ $categoryOptions = [
     'Lainnya',
 ];
 
-// ---- SAVE ----
+// ---- SAVE (tambah / edit) ----
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save') {
+    $editId      = (int)($_POST['edit_id'] ?? 0);
     $type        = ($_POST['type'] ?? 'expense') === 'income' ? 'income' : 'expense';
     $date        = $_POST['transaction_date'] ?: date('Y-m-d');
     $category    = trim($_POST['category'] ?? '');
@@ -40,6 +41,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save'
     if ($description === '' || $amount <= 0) {
         $_SESSION['flash_message'] = 'Keterangan dan jumlah wajib diisi (jumlah harus lebih dari 0).';
         $_SESSION['flash_type']    = 'error';
+    } elseif ($editId > 0) {
+        $chk = $pdo->prepare("SELECT invoice_id, booking_item_id FROM cash_book WHERE id=?");
+        $chk->execute([$editId]);
+        $existing = $chk->fetch();
+        if (!$existing) {
+            $_SESSION['flash_message'] = 'Transaksi tidak ditemukan.';
+            $_SESSION['flash_type']    = 'error';
+        } elseif ($existing['invoice_id'] || $existing['booking_item_id']) {
+            $_SESSION['flash_message'] = 'Transaksi otomatis dari invoice/pembayaran mitra tidak bisa diedit dari sini.';
+            $_SESSION['flash_type']    = 'error';
+        } else {
+            try {
+                $pdo->prepare("
+                    UPDATE cash_book SET transaction_date=?, type=?, category=?, description=?, amount=?, reference=?, customer_id=?, booking_id=?
+                    WHERE id=?
+                ")->execute([$date, $type, $category, $description, $amount, $reference, $customerId, $bookingId, $editId]);
+                $_SESSION['flash_message'] = 'Transaksi kas berhasil diperbarui.';
+                $_SESSION['flash_type']    = 'success';
+            } catch (Exception $e) {
+                $_SESSION['flash_message'] = 'Gagal menyimpan: ' . $e->getMessage();
+                $_SESSION['flash_type']    = 'error';
+            }
+        }
     } else {
         try {
             $pdo->prepare("
@@ -226,7 +250,7 @@ include 'layout-header.php';
                                 <?php if ($r['type'] === 'income'): ?>
                                     <span class="ss-status ss-status-approved" style="font-size:11px;">Masuk</span>
                                 <?php else: ?>
-                                    <span class="ss-status ss-status-draft" style="font-size:11px;">Keluar</span>
+                                    <span class="ss-status ss-status-rejected" style="font-size:11px;">Keluar</span>
                                 <?php endif; ?>
                             </td>
                             <td style="font-size:12px;"><?php echo htmlspecialchars($r['description']); ?></td>
@@ -239,10 +263,23 @@ include 'layout-header.php';
                                 <?php echo ($r['type'] === 'income' ? '+ ' : '- ') . sunseaRupiah((float)$r['amount']); ?>
                             </td>
                             <td>
-                                <?php if (!$r['invoice_id']): ?>
-                                    <a href="finance.php?action=delete&id=<?php echo $r['id']; ?>"
-                                        onclick="return confirm('Hapus transaksi ini?');"
-                                        style="color:var(--ss-danger);"><i data-feather="trash-2" style="width:14px;height:14px;"></i></a>
+                                <?php if (!$r['invoice_id'] && !$r['booking_item_id']): ?>
+                                    <div style="display:flex;gap:8px;align-items:center;">
+                                        <a href="javascript:void(0)" onclick='openEditTx(<?php echo json_encode([
+                                                                                                "id" => (int)$r["id"],
+                                                                                                "type" => $r["type"],
+                                                                                                "date" => $r["transaction_date"],
+                                                                                                "category" => $r["category"],
+                                                                                                "description" => $r["description"],
+                                                                                                "amount" => (float)$r["amount"],
+                                                                                                "customer_id" => $r["customer_id"],
+                                                                                                "booking_id" => $r["booking_id"],
+                                                                                                "reference" => $r["reference"],
+                                                                                            ], JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_HEX_TAG); ?>)' style="color:var(--ss-ocean);" title="Edit transaksi"><i data-feather="edit-3" style="width:14px;height:14px;"></i></a>
+                                        <a href="finance.php?action=delete&id=<?php echo $r['id']; ?>"
+                                            onclick="return confirm('Hapus transaksi ini?');"
+                                            style="color:var(--ss-danger);" title="Hapus transaksi"><i data-feather="trash-2" style="width:14px;height:14px;"></i></a>
+                                    </div>
                                 <?php endif; ?>
                             </td>
                         </tr>
@@ -291,7 +328,7 @@ include 'layout-header.php';
 <div id="txModalOverlay" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,0.55);z-index:1000;align-items:center;justify-content:center;padding:20px;">
     <div style="width:100%;max-width:680px;max-height:88vh;display:flex;flex-direction:column;background:#fff;border-radius:10px;overflow:hidden;">
         <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 20px;border-bottom:1px solid var(--ss-gray-1);flex-shrink:0;">
-            <div style="font-size:13px;font-weight:700;">Input Transaksi Kas</div>
+            <div style="font-size:13px;font-weight:700;" id="txModalTitle">Input Transaksi Kas</div>
             <button type="button" onclick="closeTxModal()" style="background:none;border:none;cursor:pointer;color:var(--ss-muted);padding:4px;">
                 <i data-feather="x" style="width:16px;height:16px;"></i>
             </button>
@@ -299,6 +336,7 @@ include 'layout-header.php';
         <div style="flex:1;overflow:auto;padding:16px 20px;">
             <form method="POST" id="txForm">
                 <input type="hidden" name="action" value="save">
+                <input type="hidden" name="edit_id" id="editIdInput" value="">
                 <input type="hidden" name="redirect_qs" value="<?php echo htmlspecialchars(http_build_query($_GET)); ?>">
                 <div class="fin-modal-grid">
                     <div class="ss-form-group" style="margin:0;">
@@ -357,7 +395,7 @@ include 'layout-header.php';
                         <input type="text" name="reference" class="ss-input" style="font-size:12px;" placeholder="No. nota / kwitansi">
                     </div>
                 </div>
-                <button type="submit" class="ss-btn ss-btn-primary" style="width:100%;font-size:12px;margin-top:14px;">
+                <button type="submit" class="ss-btn ss-btn-primary" style="width:100%;font-size:12px;margin-top:14px;" id="txSubmitBtn">
                     <i data-feather="save"></i> Simpan Transaksi
                 </button>
             </form>
@@ -400,6 +438,29 @@ include 'layout-header.php';
 
 <script>
     function openTxModal() {
+        document.getElementById('txForm').reset();
+        document.getElementById('editIdInput').value = '';
+        document.getElementById('txModalTitle').textContent = 'Input Transaksi Kas';
+        document.getElementById('txSubmitBtn').innerHTML = '<i data-feather="save"></i> Simpan Transaksi';
+        document.getElementById('txForm').querySelector('[name="transaction_date"]').value = '<?php echo date('Y-m-d'); ?>';
+        document.getElementById('txModalOverlay').style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        if (window.feather) feather.replace();
+    }
+
+    function openEditTx(tx) {
+        var form = document.getElementById('txForm');
+        form.querySelector('[name="type"]').value = tx.type;
+        form.querySelector('[name="transaction_date"]').value = tx.date;
+        form.querySelector('[name="booking_id"]').value = tx.booking_id || '';
+        form.querySelector('[name="customer_id"]').value = tx.customer_id || '';
+        form.querySelector('[name="category"]').value = tx.category || '';
+        form.querySelector('[name="amount"]').value = tx.amount ? Math.round(tx.amount).toLocaleString('id-ID') : '';
+        form.querySelector('[name="description"]').value = tx.description || '';
+        form.querySelector('[name="reference"]').value = tx.reference || '';
+        document.getElementById('editIdInput').value = tx.id;
+        document.getElementById('txModalTitle').textContent = 'Edit Transaksi Kas';
+        document.getElementById('txSubmitBtn').innerHTML = '<i data-feather="save"></i> Simpan Perubahan';
         document.getElementById('txModalOverlay').style.display = 'flex';
         document.body.style.overflow = 'hidden';
         if (window.feather) feather.replace();
