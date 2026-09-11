@@ -181,7 +181,7 @@ if (isset($dbError)): ?>
 ============================= -->
 <style>
     .ss-stats-grid.compact {
-        grid-template-columns: repeat(9, 1fr);
+        grid-template-columns: repeat(6, 1fr);
         gap: 10px;
         margin-bottom: 20px;
     }
@@ -215,7 +215,7 @@ if (isset($dbError)): ?>
 
     @media (max-width: 1200px) {
         .ss-stats-grid.compact {
-            grid-template-columns: repeat(5, 1fr);
+            grid-template-columns: repeat(3, 1fr);
         }
     }
 
@@ -226,20 +226,6 @@ if (isset($dbError)): ?>
     }
 </style>
 <div class="ss-stats-grid compact">
-    <div class="ss-stat-card">
-        <div class="ss-stat-icon ocean"><i data-feather="users"></i></div>
-        <div>
-            <div class="ss-stat-value"><?php echo $custCount; ?></div>
-            <div class="ss-stat-label">Total Pelanggan</div>
-        </div>
-    </div>
-    <div class="ss-stat-card">
-        <div class="ss-stat-icon cyan"><i data-feather="file-text"></i></div>
-        <div>
-            <div class="ss-stat-value"><?php echo $qStats['total'] ?? 0; ?></div>
-            <div class="ss-stat-label">Penawaran <span style="color:var(--ss-warning);"><?php echo (int)($qStats['sent'] ?? 0); ?> terkirim</span></div>
-        </div>
-    </div>
     <div class="ss-stat-card">
         <div class="ss-stat-icon success"><i data-feather="credit-card"></i></div>
         <div>
@@ -273,13 +259,6 @@ if (isset($dbError)): ?>
         <div>
             <div class="ss-stat-value" style="font-size:16px;"><?php echo sunseaRupiah((float)($iStats['outstanding'] ?? 0), true); ?></div>
             <div class="ss-stat-label">Piutang Belum Lunas</div>
-        </div>
-    </div>
-    <div class="ss-stat-card">
-        <div class="ss-stat-icon ocean"><i data-feather="package"></i></div>
-        <div>
-            <div class="ss-stat-value"><?php echo $pkgCount; ?></div>
-            <div class="ss-stat-label">Paket Wisata Aktif</div>
         </div>
     </div>
     <div class="ss-stat-card">
