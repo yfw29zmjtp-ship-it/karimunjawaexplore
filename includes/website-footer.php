@@ -69,6 +69,10 @@
         // biar semua admin kebagian giliran menerima chat pertama, bukan selalu admin yang sama.
         $weChatTodayAdminIndex = (int)date('z') % count($weWaAdmins);
         $weChatTodayAdminName  = $weWaAdmins[$weChatTodayAdminIndex]['label'] ?? '';
+        // Jangan dobel kata "Admin" kalau nama yang diisi di Pengaturan sudah mengandungnya sendiri.
+        $weChatTodayAdminDisplay = $weChatTodayAdminName && stripos($weChatTodayAdminName, 'admin') === false
+            ? 'Admin ' . $weChatTodayAdminName
+            : $weChatTodayAdminName;
     ?>
         <div class="we-chat-widget" id="weChatWidget">
             <div class="we-chat-panel" id="weChatPanel">
@@ -83,7 +87,7 @@
                         </span>
                         <div>
                             <div class="we-chat-title"><?php echo htmlspecialchars($weCompanyName); ?></div>
-                            <div class="we-chat-status"><?php echo $weChatTodayAdminName ? 'Admin ' . htmlspecialchars($weChatTodayAdminName) . ' siap membalas via WhatsApp' : 'Biasanya membalas cepat via WhatsApp'; ?></div>
+                            <div class="we-chat-status"><?php echo $weChatTodayAdminDisplay ? htmlspecialchars($weChatTodayAdminDisplay) . ' siap membalas via WhatsApp' : 'Biasanya membalas cepat via WhatsApp'; ?></div>
                         </div>
                     </div>
                     <button type="button" class="we-chat-close" onclick="weChatToggle(false)">&times;</button>
@@ -97,8 +101,8 @@
                 <?php endif; ?>
                 <div class="we-chat-body" id="weChatBody">
                     <div class="we-chat-bubble we-chat-bubble-in">
-                        <?php echo $weChatTodayAdminName
-                            ? 'Halo! 👋 Admin ' . htmlspecialchars($weChatTodayAdminName) . ' akan membalas pesan Anda. Ada yang bisa kami bantu seputar trip ke Karimunjawa? Tulis pesan Anda di bawah ini.'
+                        <?php echo $weChatTodayAdminDisplay
+                            ? 'Halo! 👋 ' . htmlspecialchars($weChatTodayAdminDisplay) . ' akan membalas pesan Anda. Ada yang bisa kami bantu seputar trip ke Karimunjawa? Tulis pesan Anda di bawah ini.'
                             : 'Halo! 👋 Ada yang bisa kami bantu seputar trip ke Karimunjawa? Tulis pesan Anda di bawah ini.'; ?>
                     </div>
                 </div>
