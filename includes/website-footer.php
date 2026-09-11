@@ -92,13 +92,6 @@
                     </div>
                     <button type="button" class="we-chat-close" onclick="weChatToggle(false)">&times;</button>
                 </div>
-                <?php if (count($weWaAdmins) > 1): ?>
-                    <div class="we-chat-admins" id="weChatAdmins">
-                        <?php foreach ($weWaAdmins as $i => $wa): ?>
-                            <button type="button" class="we-chat-admin-chip<?php echo $i === $weChatTodayAdminIndex ? ' we-active' : ''; ?>" data-index="<?php echo $i; ?>"><?php echo htmlspecialchars($wa['label']); ?></button>
-                        <?php endforeach; ?>
-                    </div>
-                <?php endif; ?>
                 <div class="we-chat-body" id="weChatBody">
                     <div class="we-chat-bubble we-chat-bubble-in">
                         <?php echo $weChatTodayAdminDisplay
