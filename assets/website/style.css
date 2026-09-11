@@ -1028,22 +1028,26 @@ a {
   background: #fff;
   color: #fff;
   box-shadow:
-    0 10px 26px rgba(3, 105, 161, 0.35),
-    0 0 0 3px rgba(3, 105, 161, 0.18);
+    0 10px 26px rgba(37, 211, 102, 0.4),
+    0 0 0 3px rgba(37, 211, 102, 0.2);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition:
-    transform 0.2s,
-    box-shadow 0.2s;
+    transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.25s;
 }
 
 .we-chat-fab:hover {
-  transform: scale(1.07);
+  transform: scale(1.18) translateY(-4px);
   box-shadow:
-    0 14px 32px rgba(3, 105, 161, 0.45),
-    0 0 0 3px rgba(3, 105, 161, 0.3);
+    0 20px 40px rgba(37, 211, 102, 0.55),
+    0 0 0 4px rgba(37, 211, 102, 0.35);
+}
+
+.we-chat-fab:active {
+  transform: scale(1.05) translateY(-1px);
 }
 
 .we-chat-fab-icon {
