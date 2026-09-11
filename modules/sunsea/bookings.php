@@ -333,6 +333,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
     $coordId = (int)($_POST['coordinator_id'] ?? 0) ?: null;
     $guideDaratId = (int)($_POST['guide_darat_id'] ?? 0) ?: null;
     $guideLautId = (int)($_POST['guide_laut_id'] ?? 0) ?: null;
+    $accommodationManual = trim($_POST['accommodation_manual'] ?? '');
 
     $components = [];
     $costTotal = 0.0;
@@ -447,8 +448,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
         $pdo->prepare("INSERT INTO booking_orders
             (booking_no, customer_id, booking_mode, package_id, start_date, end_date, pax_count,
              ticket_kapal_type, include_btn_ticket, transport_notes, meal_notes, island_trip, land_trip, documentation,
-             coordinator_id, guide_darat_id, guide_laut_id, status, cost_total, sell_total, margin_amount, notes, created_by)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
+             coordinator_id, guide_darat_id, guide_laut_id, status, cost_total, sell_total, margin_amount, notes, accommodation_manual, created_by)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
             ->execute([
                 $bookingNo,
                 $customerId,
@@ -472,6 +473,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
                 $sellTotal,
                 $margin,
                 trim($_POST['notes'] ?? ''),
+                $accommodationManual,
                 $createdBy
             ]);
         $bookingId = (int)$pdo->lastInsertId();
@@ -820,6 +822,9 @@ include 'layout-header.php';
             <div><span style="color:var(--ss-muted);">Koordinator: </span><strong><?php echo htmlspecialchars($detail['coordinator_name'] ?: '-'); ?></strong></div>
             <div><span style="color:var(--ss-muted);">Guide Darat: </span><strong><?php echo htmlspecialchars($detail['guide_darat_name'] ?: '-'); ?></strong></div>
             <div><span style="color:var(--ss-muted);">Guide Laut: </span><strong><?php echo htmlspecialchars($detail['guide_laut_name'] ?: '-'); ?></strong></div>
+            <?php if (!empty($detail['accommodation_manual'])): ?>
+                <div><span style="color:var(--ss-muted);">Penginapan: </span><strong><?php echo htmlspecialchars($detail['accommodation_manual']); ?></strong></div>
+            <?php endif; ?>
         </div>
     </div>
 
@@ -1147,6 +1152,8 @@ include 'layout-header.php';
                             </select></div>
                         <div class="ss-form-group"><label class="ss-label">Jumlah Kamar</label><input class="ss-input" name="stay_room_qty" type="number" min="1" value="1"></div>
                         <div class="ss-form-group"><label class="ss-label">Jumlah Malam</label><input class="ss-input" name="stay_nights" type="number" min="1" value="1"></div>
+
+                        <div class="ss-form-group" style="grid-column:1/-1;"><label class="ss-label">Penginapan (Manual)</label><input class="ss-input" name="accommodation_manual" placeholder="Isi hanya jika penginapan tidak dipilih dari daftar di atas, mis: Homestay Pak Budi"></div>
 
                         <div class="ss-form-group"><label class="ss-label">Makan</label><input class="ss-input" name="meal_notes" placeholder="Katering/resto"></div>
                         <div class="ss-form-group"><label class="ss-label">Qty Makan</label><input class="ss-input" name="meal_qty" type="number" min="0" value="1"></div>

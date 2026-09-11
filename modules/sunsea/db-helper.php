@@ -109,6 +109,7 @@ function sunseaEnsureBookingSchema(PDO $pdo): void
             'ticket_kapal_booked' => "ALTER TABLE booking_orders ADD COLUMN ticket_kapal_booked TINYINT(1) DEFAULT 0 AFTER ticket_kapal_type",
             'driver_name' => "ALTER TABLE booking_orders ADD COLUMN driver_name VARCHAR(150) NULL AFTER guide_laut_id",
             'quotation_id' => "ALTER TABLE booking_orders ADD COLUMN quotation_id INT NULL AFTER id",
+            'accommodation_manual' => "ALTER TABLE booking_orders ADD COLUMN accommodation_manual VARCHAR(200) NULL AFTER meal_notes",
         ];
 
         $columnCheck = $pdo->prepare("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'booking_orders' AND COLUMN_NAME = ?");
@@ -418,10 +419,15 @@ function sunseaEnsureAccommodationSchema(PDO $pdo): void
 function sunseaEnsureQuotationItinerarySchema(PDO $pdo): void
 {
     try {
-        $check = $pdo->prepare("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'quotations' AND COLUMN_NAME = 'itinerary'");
-        $check->execute();
+        $check = $pdo->prepare("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'quotations' AND COLUMN_NAME = ?");
+        $check->execute(['itinerary']);
         if ((int)$check->fetchColumn() === 0) {
             $pdo->exec("ALTER TABLE quotations ADD COLUMN itinerary TEXT NULL AFTER trip_end_date");
+        }
+        // Label penginapan manual, dipakai saat tidak memilih dari database Penginapan.
+        $check->execute(['accommodation_manual']);
+        if ((int)$check->fetchColumn() === 0) {
+            $pdo->exec("ALTER TABLE quotations ADD COLUMN accommodation_manual VARCHAR(200) NULL AFTER trip_end_date");
         }
     } catch (Exception $e) {
         error_log('sunseaEnsureQuotationItinerarySchema error: ' . $e->getMessage());

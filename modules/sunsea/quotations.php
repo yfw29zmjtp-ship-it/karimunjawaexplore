@@ -56,6 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $tripDate   = $_POST['trip_date']     ?: null;
         $tripEnd    = $_POST['trip_end_date'] ?: null;
         $itinerary  = trim($_POST['itinerary'] ?? '');
+        $accommodationManual = trim($_POST['accommodation_manual'] ?? '');
         $paxCount   = max(1, (int)($_POST['pax_count'] ?? 1));
         $notes      = trim($_POST['notes'] ?? '');
         $intNotes   = trim($_POST['internal_notes'] ?? '');
@@ -106,7 +107,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($id > 0) {
             $pdo->prepare("
                 UPDATE quotations SET customer_id=?, package_id=?, trip_date=?, trip_end_date=?,
-                itinerary=?, pax_count=?, subtotal=?, tax_pct=?, tax_amount=?, discount_amount=?, total_amount=?,
+                itinerary=?, accommodation_manual=?, pax_count=?, subtotal=?, tax_pct=?, tax_amount=?, discount_amount=?, total_amount=?,
                 notes=?, internal_notes=?, valid_until=?, updated_at=NOW()
                 WHERE id=?
             ")->execute([
@@ -115,6 +116,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $tripDate,
                 $tripEnd,
                 $itinerary,
+                $accommodationManual,
                 $paxCount,
                 $subtotal,
                 $taxPct,
@@ -132,10 +134,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $qNo = sunseaNextNumber($pdo, 'quotation');
             $pdo->prepare("
                 INSERT INTO quotations 
-                (quotation_no, customer_id, package_id, trip_date, trip_end_date, itinerary, pax_count,
+                (quotation_no, customer_id, package_id, trip_date, trip_end_date, itinerary, accommodation_manual, pax_count,
                  subtotal, tax_pct, tax_amount, discount_amount, total_amount,
                  notes, internal_notes, valid_until, created_by)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             ")->execute([
                 $qNo,
                 $customerId,
@@ -143,6 +145,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $tripDate,
                 $tripEnd,
                 $itinerary,
+                $accommodationManual,
                 $paxCount,
                 $subtotal,
                 $taxPct,
@@ -205,8 +208,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $pdo->prepare("
                             INSERT INTO booking_orders
                             (quotation_id, booking_no, customer_id, booking_mode, package_id, start_date, end_date,
-                             pax_count, status, cost_total, sell_total, margin_amount, notes, created_by)
-                            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                             pax_count, status, cost_total, sell_total, margin_amount, notes, accommodation_manual, created_by)
+                            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                         ")->execute([
                             $id,
                             $bookingNo,
@@ -221,6 +224,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $quote['total_amount'],
                             $quote['total_amount'],
                             "Dari Penawaran {$quote['quotation_no']}",
+                            $quote['accommodation_manual'] ?? null,
                             'system',
                         ]);
                         $newBookingId = (int)$pdo->lastInsertId();
@@ -1008,7 +1012,7 @@ include 'layout-header.php';
                     </span>
                 </div>
 
-                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;padding:12px 14px;background:var(--ss-sky);border-radius:8px;">
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:16px;padding:12px 14px;background:var(--ss-sky);border-radius:8px;">
                     <div>
                         <div style="font-size:9px;color:var(--ss-muted);text-transform:uppercase;letter-spacing:.3px;">Tanggal Trip</div>
                         <div style="font-size:12.5px;font-weight:600;"><?php echo $quotation['trip_date'] ? date('d M Y', strtotime($quotation['trip_date'])) : '-'; ?></div>
@@ -1021,6 +1025,12 @@ include 'layout-header.php';
                         <div style="font-size:9px;color:var(--ss-muted);text-transform:uppercase;letter-spacing:.3px;">Berlaku s/d</div>
                         <div style="font-size:12.5px;font-weight:600;"><?php echo $quotation['valid_until'] ? date('d M Y', strtotime($quotation['valid_until'])) : '-'; ?></div>
                     </div>
+                    <?php if (!empty($quotation['accommodation_manual'])): ?>
+                        <div>
+                            <div style="font-size:9px;color:var(--ss-muted);text-transform:uppercase;letter-spacing:.3px;">Penginapan</div>
+                            <div style="font-size:12.5px;font-weight:600;"><?php echo htmlspecialchars($quotation['accommodation_manual']); ?></div>
+                        </div>
+                    <?php endif; ?>
                 </div>
 
                 <!-- Items table -->
@@ -1177,6 +1187,13 @@ include 'layout-header.php';
                                 <label class="ss-label">Tanggal Selesai</label>
                                 <input type="date" name="trip_end_date" id="tripEndInput" class="ss-input"
                                     value="<?php echo $quotation['trip_end_date'] ?? ''; ?>">
+                            </div>
+                            <div class="ss-form-group" style="grid-column:1/-1;">
+                                <label class="ss-label">Penginapan (Manual)</label>
+                                <input type="text" name="accommodation_manual" class="ss-input"
+                                    value="<?php echo htmlspecialchars($quotation['accommodation_manual'] ?? ''); ?>"
+                                    placeholder="Contoh: Homestay Pak Budi (isi hanya jika penginapan tidak dipilih dari Tambah dari Database)">
+                                <div style="font-size:11px;color:var(--ss-muted);margin-top:4px;">* Cuma sebagai tanda/keterangan di detail reservasi, tidak masuk ke perhitungan harga.</div>
                             </div>
                         </div>
                     </div>

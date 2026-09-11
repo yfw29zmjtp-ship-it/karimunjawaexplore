@@ -40,9 +40,14 @@ if (($_GET['ajax'] ?? '') === 'detail' && (int)($_GET['id'] ?? 0) > 0) {
     $items->execute([$bId]);
     $items = $items->fetchAll();
 
-    // Info penginapan: cari item Penginapan dari komponen, atau catatan hotel manual di notes booking.
+    // Info penginapan: pakai label manual dulu (kalau diisi saat penawaran/booking),
+    // lalu item Penginapan dari komponen, lalu catatan hotel manual di notes booking.
     $accommodationInfo = '-';
+    if (!empty($booking['accommodation_manual'])) {
+        $accommodationInfo = $booking['accommodation_manual'];
+    }
     foreach ($items as $it) {
+        if ($accommodationInfo !== '-') break;
         if (stripos($it['component_name'], 'penginapan') !== false) {
             $accommodationInfo = preg_replace('/^Penginapan:\s*/i', '', $it['component_name']);
             break;
