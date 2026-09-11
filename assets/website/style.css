@@ -935,11 +935,11 @@ a {
   height: 58px;
   border-radius: 50%;
   border: none;
-  background: linear-gradient(135deg, var(--we-ocean), var(--we-ocean-dark));
+  background: #fff;
   color: #fff;
   box-shadow:
     0 10px 26px rgba(3, 105, 161, 0.35),
-    0 0 0 4px rgba(255, 255, 255, 0.6);
+    0 0 0 3px rgba(3, 105, 161, 0.18);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -953,12 +953,12 @@ a {
   transform: scale(1.07);
   box-shadow:
     0 14px 32px rgba(3, 105, 161, 0.45),
-    0 0 0 4px rgba(255, 255, 255, 0.7);
+    0 0 0 3px rgba(3, 105, 161, 0.3);
 }
 
 .we-chat-fab-icon {
-  width: 27px;
-  height: 27px;
+  width: 34px;
+  height: 34px;
 }
 
 .we-chat-panel {
