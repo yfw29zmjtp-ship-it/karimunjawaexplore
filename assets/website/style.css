@@ -1025,7 +1025,7 @@ a {
   height: 58px;
   border-radius: 50%;
   border: none;
-  background: #fff;
+  background: linear-gradient(135deg, #25D366, #128C7E);
   color: #fff;
   box-shadow:
     0 10px 26px rgba(37, 211, 102, 0.4),
