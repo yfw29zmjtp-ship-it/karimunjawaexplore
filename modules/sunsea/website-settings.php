@@ -110,6 +110,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $tab = 'gallery';
     }
 
+    // Urutan galeri menentukan urutan tampil di Beranda/Tentang Kami (ORDER BY sort_order ASC).
+    if ($postTab === 'gallery_set_order') {
+        $gid = (int)($_POST['id'] ?? 0);
+        $newOrder = (int)($_POST['sort_order'] ?? 0);
+        $pdo->prepare("UPDATE website_gallery SET sort_order = ? WHERE id = ?")->execute([$newOrder, $gid]);
+        $flashMsg = 'Urutan foto galeri diperbarui.';
+        $flashType = 'success';
+        $tab = 'gallery';
+    }
+
+    if ($postTab === 'gallery_move') {
+        $gid = (int)($_POST['id'] ?? 0);
+        $direction = $_POST['direction'] ?? '';
+        $orderedIds = $pdo->query("SELECT id FROM website_gallery ORDER BY sort_order ASC, id DESC")->fetchAll(PDO::FETCH_COLUMN);
+
+        // Renumber semua item jadi 0,1,2,... dulu (sesuai urutan tampil saat ini) supaya nilai
+        // sort_order selalu unik per posisi - kalau tidak, item dengan sort_order sama (misal
+        // semua masih 0 dari default) tidak akan benar-benar tertukar posisinya.
+        foreach ($orderedIds as $idx => $rowId) {
+            $pdo->prepare("UPDATE website_gallery SET sort_order = ? WHERE id = ?")->execute([$idx, $rowId]);
+        }
+
+        $pos = array_search($gid, $orderedIds, true);
+        $swapPos = $direction === 'up' ? $pos - 1 : ($direction === 'down' ? $pos + 1 : null);
+        if ($pos !== false && $swapPos !== null && isset($orderedIds[$swapPos])) {
+            $pdo->prepare("UPDATE website_gallery SET sort_order = ? WHERE id = ?")->execute([$swapPos, $gid]);
+            $pdo->prepare("UPDATE website_gallery SET sort_order = ? WHERE id = ?")->execute([$pos, $orderedIds[$swapPos]]);
+        }
+        $tab = 'gallery';
+    }
+
     if ($postTab === 'gallery_settings') {
         $interval = (float)($_POST['gallery_interval'] ?? 3);
         if ($interval < 0.5) $interval = 0.5;
@@ -453,16 +484,36 @@ include 'layout-header.php';
             </form>
         </div>
         <div style="background:#fff;border:1px solid #dde5ef;border-radius:8px;padding:20px;">
-            <div style="font-size:16px;font-weight:700;color:#0C4A6E;margin-bottom:16px;">🖼️ Foto Galeri (<?php echo count($galleryItems); ?>)</div>
+            <div style="font-size:16px;font-weight:700;color:#0C4A6E;margin-bottom:4px;">🖼️ Foto Galeri (<?php echo count($galleryItems); ?>)</div>
+            <div style="font-size:11.5px;color:#888;margin-bottom:14px;">Urutan di sini (angka #1, #2, dst) menentukan urutan tampil foto di Beranda &amp; Tentang Kami. Pakai tombol &uarr;/&darr; untuk mengubah urutan; foto #1 akan tampil paling depan/jadi foto utama Tentang Kami.</div>
             <?php if (!$galleryItems): ?>
                 <div style="color:#888;font-size:13px;">Belum ada foto. Tambahkan lewat form di samping.</div>
             <?php else: ?>
                 <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:14px;">
-                    <?php foreach ($galleryItems as $g): ?>
+                    <?php foreach ($galleryItems as $gIdx => $g): ?>
                         <div style="border:1px solid #e0e7ef;border-radius:8px;overflow:hidden;<?php echo $g['is_active'] ? '' : 'opacity:.45;'; ?>">
-                            <img src="<?php echo htmlspecialchars(sunseaAssetUrl($g['image_path'])); ?>" alt="" style="width:100%;height:100px;object-fit:cover;display:block;">
+                            <div style="position:relative;">
+                                <img src="<?php echo htmlspecialchars(sunseaAssetUrl($g['image_path'])); ?>" alt="" style="width:100%;height:100px;object-fit:cover;display:block;">
+                                <span style="position:absolute;top:6px;left:6px;background:rgba(12,74,110,.85);color:#fff;font-size:11px;font-weight:700;padding:2px 7px;border-radius:10px;">#<?php echo $gIdx + 1; ?></span>
+                            </div>
                             <div style="padding:8px;">
                                 <div style="font-size:12px;color:#444;min-height:16px;"><?php echo htmlspecialchars($g['caption'] ?: '—'); ?></div>
+                                <div style="display:flex;gap:4px;margin-top:6px;">
+                                    <form method="POST">
+                                        <input type="hidden" name="tab" value="gallery_move">
+                                        <input type="hidden" name="id" value="<?php echo (int)$g['id']; ?>">
+                                        <input type="hidden" name="direction" value="up">
+                                        <button type="submit" title="Naikkan urutan" <?php echo $gIdx === 0 ? 'disabled' : ''; ?>
+                                            style="font-size:11px;padding:4px 7px;border:1px solid #ccc;border-radius:4px;background:#f8fafc;cursor:pointer;<?php echo $gIdx === 0 ? 'opacity:.4;cursor:not-allowed;' : ''; ?>">&uarr;</button>
+                                    </form>
+                                    <form method="POST">
+                                        <input type="hidden" name="tab" value="gallery_move">
+                                        <input type="hidden" name="id" value="<?php echo (int)$g['id']; ?>">
+                                        <input type="hidden" name="direction" value="down">
+                                        <button type="submit" title="Turunkan urutan" <?php echo $gIdx === count($galleryItems) - 1 ? 'disabled' : ''; ?>
+                                            style="font-size:11px;padding:4px 7px;border:1px solid #ccc;border-radius:4px;background:#f8fafc;cursor:pointer;<?php echo $gIdx === count($galleryItems) - 1 ? 'opacity:.4;cursor:not-allowed;' : ''; ?>">&darr;</button>
+                                    </form>
+                                </div>
                                 <div style="display:flex;gap:6px;margin-top:6px;">
                                     <form method="POST" onsubmit="return confirm('Nonaktifkan/aktifkan foto ini?');">
                                         <input type="hidden" name="tab" value="gallery_toggle">
