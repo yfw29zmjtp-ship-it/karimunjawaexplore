@@ -177,6 +177,8 @@ include 'layout-header.php';
     .cal-timeline {
         width: 100%;
         background: #fff;
+        touch-action: pan-y;
+        will-change: transform;
     }
 
     .cal-day-row {
@@ -365,10 +367,10 @@ include 'layout-header.php';
             <span style="width:9px;height:9px;border-radius:2px;background:#FFE4D1;border:1px solid var(--ss-ocean);display:inline-block;"></span>
             Hari Ini
         </span>
-        <span style="color:var(--ss-muted);">&middot; Geser timeline dengan klik-tahan lalu tarik, atau pakai tombol &lsaquo;/&rsaquo; untuk ganti bulan</span>
+        <span style="color:var(--ss-muted);">&middot; Geser timeline ke kiri/kanan untuk pindah bulan</span>
     </div>
-    <div class="cal-timeline-scroll">
-        <div class="cal-timeline" style="--cal-days:<?php echo $daysInMonth; ?>;">
+    <div class="cal-timeline-scroll" id="calTimelineScroll" data-prev-month="<?php echo $prevMonth; ?>" data-next-month="<?php echo $nextMonth; ?>">
+        <div class="cal-timeline" id="calTimeline" style="--cal-days:<?php echo $daysInMonth; ?>;">
             <div class="cal-day-row">
                 <div class="cal-name-col">Tamu</div>
                 <?php for ($d = 1; $d <= $daysInMonth; $d++):
@@ -924,39 +926,69 @@ include 'layout-header.php';
         document.body.style.overflow = '';
     }
 
-    // Geser timeline dengan klik-tahan lalu tarik (drag to scroll), pakai Pointer Events (mouse & touch).
-    // move/up dipasang di window (bukan di scroller) supaya drag tetap jalan walau pointer keluar dari area scroller.
+    // Geser (swipe) timeline ke kiri/kanan untuk pindah ke bulan berikutnya/sebelumnya, dengan animasi slide yang halus.
     (function() {
-        var scroller = document.querySelector('.cal-timeline-scroll');
-        if (!scroller) return;
+        var scroller = document.getElementById('calTimelineScroll');
+        var timeline = document.getElementById('calTimeline');
+        if (!scroller || !timeline) return;
+
+        var prevMonthVal = scroller.dataset.prevMonth;
+        var nextMonthVal = scroller.dataset.nextMonth;
         var isDown = false,
             startX = 0,
-            startScroll = 0,
-            dragged = false;
+            dx = 0,
+            dragged = false,
+            width = 0;
+        var THRESHOLD = 90;
+
+        function setTransition(on) {
+            timeline.style.transition = on ? 'transform .28s cubic-bezier(.22,.9,.36,1), opacity .28s ease' : 'none';
+        }
 
         scroller.addEventListener('pointerdown', function(e) {
             if (e.pointerType === 'mouse' && e.button !== 0) return;
             isDown = true;
             dragged = false;
+            dx = 0;
             startX = e.clientX;
-            startScroll = scroller.scrollLeft;
+            width = scroller.clientWidth;
+            setTransition(false);
             scroller.classList.add('is-dragging');
         });
         window.addEventListener('pointermove', function(e) {
             if (!isDown) return;
             e.preventDefault();
-            var delta = e.clientX - startX;
-            if (Math.abs(delta) > 4) dragged = true;
-            scroller.scrollLeft = startScroll - delta;
+            dx = e.clientX - startX;
+            if (Math.abs(dx) > 4) dragged = true;
+            // Beri efek "tertahan" (rubber-band) kalau ditarik ke arah tanpa bulan berikutnya/sebelumnya.
+            var limited = dx;
+            if (dx < 0 && !nextMonthVal) limited = dx * 0.25;
+            if (dx > 0 && !prevMonthVal) limited = dx * 0.25;
+            timeline.style.transform = 'translateX(' + limited + 'px)';
         });
 
         function endDrag() {
+            if (!isDown) return;
             isDown = false;
             scroller.classList.remove('is-dragging');
+            setTransition(true);
+
+            var goNext = dx <= -THRESHOLD && nextMonthVal;
+            var goPrev = dx >= THRESHOLD && prevMonthVal;
+
+            if (goNext || goPrev) {
+                timeline.style.transform = 'translateX(' + (goNext ? -width : width) + 'px)';
+                timeline.style.opacity = '0';
+                window.setTimeout(function() {
+                    window.location.href = '?month=' + (goNext ? nextMonthVal : prevMonthVal);
+                }, 240);
+            } else {
+                timeline.style.transform = 'translateX(0)';
+            }
         }
         window.addEventListener('pointerup', endDrag);
         window.addEventListener('pointercancel', endDrag);
-        // Cegah klik baris terbuka modal detail kalau baru saja dipakai untuk drag.
+        // Cegah klik baris terbuka modal detail kalau baru saja dipakai untuk swipe.
         scroller.addEventListener('click', function(e) {
             if (dragged) {
                 e.stopPropagation();
