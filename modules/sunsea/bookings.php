@@ -833,7 +833,6 @@ include 'layout-header.php';
 <?php endif; ?>
 
 <?php if ($detail):
-    $marginPct = (float)$detail['sell_total'] > 0 ? round((float)$detail['margin_amount'] / (float)$detail['sell_total'] * 100) : 0;
     $pendingCount = 0;
     foreach ($detailItems as $it) {
         if (empty($it['is_done'])) $pendingCount++;
@@ -848,6 +847,15 @@ include 'layout-header.php';
             $mitraPaidTotal += (float)$it['total_cost'];
         }
     }
+
+    // Samakan sumber angka finance dengan modal detail di Kalender: RAB dari item, Pengeluaran dari transaksi Finance asli (cash_book), bukan cost_total/margin_amount statis.
+    $detailExpenses = safeFetchAll($pdo, "SELECT transaction_date, category, description, amount FROM cash_book WHERE booking_id=? AND type='expense' ORDER BY transaction_date, id", [$viewId], 'expense booking');
+    $totalExpenseActual = 0;
+    foreach ($detailExpenses as $ex) $totalExpenseActual += (float)$ex['amount'];
+    $totalRabActual = 0;
+    foreach ($detailItems as $it) $totalRabActual += (float)$it['total_sell'];
+    $marginActual = $totalRabActual - $totalExpenseActual;
+    $marginPct = $totalRabActual > 0 ? round($marginActual / $totalRabActual * 100) : 0;
 ?>
     <div style="margin-bottom:14px;"><a class="ss-btn ss-btn-outline ss-btn-sm" href="bookings.php"><i data-feather="arrow-left"></i> Kembali</a></div>
 
@@ -875,7 +883,7 @@ include 'layout-header.php';
         </div>
     </div>
 
-    <!-- 2. Ringkasan Keuangan: pie chart proporsi modal vs margin, di samping angka besar -->
+    <!-- 2. Ringkasan Keuangan: disamakan dengan modal detail di Kalender (RAB item vs pengeluaran nyata di Finance) -->
     <div class="ss-card" style="margin-bottom:14px;">
         <div class="ss-card-title" style="margin-bottom:12px;">💰 Ringkasan Keuangan</div>
         <div style="display:grid;grid-template-columns:150px 1fr;gap:22px;align-items:center;">
@@ -884,19 +892,57 @@ include 'layout-header.php';
             </div>
             <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;">
                 <div>
-                    <div style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--ss-muted);"><span style="width:9px;height:9px;border-radius:50%;background:#dc2626;display:inline-block;"></span> Total Modal</div>
-                    <div style="font-size:17px;font-weight:800;margin-top:4px;"><?php echo sunseaRupiah((float)$detail['cost_total']); ?></div>
+                    <div style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--ss-muted);"><span style="width:9px;height:9px;border-radius:50%;background:#dc2626;display:inline-block;"></span> Total Pengeluaran (Finance)</div>
+                    <div style="font-size:17px;font-weight:800;margin-top:4px;"><?php echo sunseaRupiah($totalExpenseActual); ?></div>
                 </div>
                 <div>
                     <div style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--ss-muted);"><span style="width:9px;height:9px;border-radius:50%;background:var(--ss-success);display:inline-block;"></span> Margin (<?php echo $marginPct; ?>%)</div>
-                    <div style="font-size:17px;font-weight:800;margin-top:4px;color:var(--ss-success);"><?php echo sunseaRupiah((float)$detail['margin_amount']); ?></div>
+                    <div style="font-size:17px;font-weight:800;margin-top:4px;color:var(--ss-success);"><?php echo sunseaRupiah($marginActual); ?></div>
                 </div>
                 <div>
-                    <div style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--ss-muted);"><span style="width:9px;height:9px;border-radius:50%;background:var(--ss-ocean);display:inline-block;"></span> Total Jual</div>
-                    <div style="font-size:17px;font-weight:800;margin-top:4px;color:var(--ss-ocean);"><?php echo sunseaRupiah((float)$detail['sell_total']); ?></div>
+                    <div style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--ss-muted);"><span style="width:9px;height:9px;border-radius:50%;background:var(--ss-ocean);display:inline-block;"></span> Total RAB/Penawaran</div>
+                    <div style="font-size:17px;font-weight:800;margin-top:4px;color:var(--ss-ocean);"><?php echo sunseaRupiah($totalRabActual); ?></div>
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- 2b. Pengeluaran Trip Ini (dari Finance): daftar transaksi cash_book nyata, sama seperti modal Kalender -->
+    <div class="ss-card" style="margin-bottom:14px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <div class="ss-card-title" style="margin:0;">🧾 Pengeluaran Trip Ini (dari Finance)</div>
+            <a href="finance.php?customer_id=<?php echo (int)$detail['customer_id']; ?>" class="ss-btn ss-btn-outline ss-btn-sm">Lihat di Finance</a>
+        </div>
+        <?php if (empty($detailExpenses)): ?>
+            <div style="font-size:12px;color:var(--ss-muted);">Belum ada pengeluaran dicatat di Finance untuk trip ini.</div>
+        <?php else: ?>
+            <div class="ss-table-wrap">
+                <table class="ss-table">
+                    <thead>
+                        <tr>
+                            <th style="white-space:nowrap;">Tanggal</th>
+                            <th>Keterangan</th>
+                            <th style="width:130px;white-space:nowrap;">Jumlah</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($detailExpenses as $ex): ?>
+                            <tr>
+                                <td style="white-space:nowrap;"><?php echo htmlspecialchars($ex['transaction_date']); ?></td>
+                                <td><?php echo htmlspecialchars($ex['description']); ?><?php if (!empty($ex['category'])): ?><br><small style="color:var(--ss-muted);"><?php echo htmlspecialchars($ex['category']); ?></small><?php endif; ?></td>
+                                <td style="font-weight:600;color:var(--ss-danger);white-space:nowrap;"><?php echo sunseaRupiah((float)$ex['amount']); ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                    <tfoot>
+                        <tr style="border-top:2px solid var(--ss-gray-2);">
+                            <td colspan="2" style="text-align:right;"><strong>Total Pengeluaran</strong></td>
+                            <td style="font-weight:700;color:var(--ss-danger);white-space:nowrap;"><?php echo sunseaRupiah($totalExpenseActual); ?></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        <?php endif; ?>
     </div>
 
     <!-- 3. Rekap Pengeluaran: khusus biaya ke mitra, terpisah dari ringkasan keuangan -->
@@ -1126,9 +1172,9 @@ include 'layout-header.php';
             new Chart(ctx, {
                 type: 'doughnut',
                 data: {
-                    labels: ['Modal', 'Margin'],
+                    labels: ['Pengeluaran', 'Margin'],
                     datasets: [{
-                        data: [<?php echo (float)$detail['cost_total']; ?>, <?php echo (float)$detail['margin_amount']; ?>],
+                        data: [<?php echo (float)$totalExpenseActual; ?>, <?php echo (float)$marginActual; ?>],
                         backgroundColor: ['#dc2626', '#16a34a'],
                         borderWidth: 0
                     }]
