@@ -258,6 +258,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             header('Location: invoices.php?action=view&id=' . $newInvId);
             exit;
         }
+
+        // Bulk delete selected quotations from the list page
+    } elseif ($postAction === 'bulk_delete') {
+        $ids = array_filter(array_map('intval', $_POST['ids'] ?? []));
+        if ($ids) {
+            $in = implode(',', array_fill(0, count($ids), '?'));
+            $pdo->prepare("DELETE FROM quotation_items WHERE quotation_id IN ($in)")->execute($ids);
+            $pdo->prepare("DELETE FROM quotations WHERE id IN ($in)")->execute($ids);
+            $_SESSION['flash_message'] = count($ids) . ' penawaran berhasil dihapus.';
+            $_SESSION['flash_type']    = 'success';
+        }
+        $redirectStatus = trim($_POST['redirect_status'] ?? '');
+        header('Location: quotations.php' . ($redirectStatus !== '' ? '?status=' . urlencode($redirectStatus) : ''));
+        exit;
     }
 }
 
@@ -1261,9 +1275,14 @@ include 'layout-header.php';
                 <div class="ss-card-title">Daftar Penawaran</div>
                 <div class="ss-card-sub"><?php echo count($quotations); ?> penawaran</div>
             </div>
-            <a href="quotations.php?action=add" class="ss-btn ss-btn-primary">
-                <i data-feather="plus"></i> Buat Penawaran
-            </a>
+            <div style="display:flex;gap:8px;">
+                <button type="button" id="bulkDeleteBtn" class="ss-btn ss-btn-outline" style="display:none;color:#dc2626;border-color:#dc2626;" onclick="submitBulkDelete()">
+                    <i data-feather="trash-2"></i> Hapus Terpilih (<span id="bulkDeleteCount">0</span>)
+                </button>
+                <a href="quotations.php?action=add" class="ss-btn ss-btn-primary">
+                    <i data-feather="plus"></i> Buat Penawaran
+                </a>
+            </div>
         </div>
 
         <!-- Filter status -->
@@ -1283,11 +1302,15 @@ include 'layout-header.php';
                 <p>Buat penawaran untuk customer Anda</p>
             </div>
         <?php else: ?>
-            <div class="ss-table-wrap">
-                <table class="ss-table">
-                    <thead>
-                        <tr>
-                            <th>No. Penawaran</th>
+            <form method="POST" id="bulkDeleteForm" onsubmit="return confirm('Hapus ' + document.getElementById('bulkDeleteCount').textContent + ' penawaran terpilih? Tindakan ini tidak bisa dibatalkan.');">
+                <input type="hidden" name="action" value="bulk_delete">
+                <input type="hidden" name="redirect_status" value="<?php echo htmlspecialchars($filter); ?>">
+                <div class="ss-table-wrap">
+                    <table class="ss-table">
+                        <thead>
+                            <tr>
+                                <th style="width:32px;"><input type="checkbox" id="checkAll" onchange="toggleAllQuoteRows(this)"></th>
+                                <th>No. Penawaran</th>
                             <th>Customer</th>
                             <th>Sumber</th>
                             <th>Jam Masuk</th>
@@ -1301,6 +1324,7 @@ include 'layout-header.php';
                     <tbody>
                         <?php foreach ($quotations as $q): ?>
                             <tr>
+                                <td><input type="checkbox" class="quote-row-check" name="ids[]" value="<?php echo $q['id']; ?>" onchange="updateBulkDeleteBtn()"></td>
                                 <td><a href="quotations.php?action=view&id=<?php echo $q['id']; ?>"
                                         style="color:var(--ss-ocean);font-weight:600;text-decoration:none;">
                                         <?php echo htmlspecialchars($q['quotation_no']); ?>
@@ -1336,6 +1360,7 @@ include 'layout-header.php';
                     </tbody>
                 </table>
             </div>
+            </form>
         <?php endif; ?>
     </div>
 <?php endif; ?>
@@ -1396,6 +1421,27 @@ HTML;
         if (forceOverwrite || !box.value.trim()) {
             box.value = itinerary;
         }
+    }
+
+    // Bulk select/delete on the quotations list page
+    function toggleAllQuoteRows(checkAllBox) {
+        document.querySelectorAll('.quote-row-check').forEach(function(cb) {
+            cb.checked = checkAllBox.checked;
+        });
+        updateBulkDeleteBtn();
+    }
+
+    function updateBulkDeleteBtn() {
+        var checked = document.querySelectorAll('.quote-row-check:checked');
+        var btn = document.getElementById('bulkDeleteBtn');
+        var countEl = document.getElementById('bulkDeleteCount');
+        if (!btn || !countEl) return;
+        countEl.textContent = checked.length;
+        btn.style.display = checked.length > 0 ? '' : 'none';
+    }
+
+    function submitBulkDelete() {
+        document.getElementById('bulkDeleteForm').requestSubmit();
     }
 
     // Package duration (e.g. "3H2M" -> data-days=3) implies the trip end date, so
