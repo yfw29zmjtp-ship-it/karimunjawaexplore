@@ -515,12 +515,25 @@ include 'layout-header.php';
 
     #bookingDetailBody .bd-cols {
         display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 0 22px;
+        grid-template-columns: 1fr 300px;
+        gap: 0 18px;
         align-items: start;
     }
 
     #bookingDetailBody .bd-col .bd-section-title {
+        margin-top: 0;
+        padding-top: 0;
+        border-top: none;
+    }
+
+    #bookingDetailBody .bd-col-expense {
+        background: #fff;
+        border: 1px solid var(--ss-ocean);
+        border-radius: 8px;
+        padding: 12px 14px;
+    }
+
+    #bookingDetailBody .bd-col-expense .bd-section-title {
         margin-top: 0;
         padding-top: 0;
         border-top: none;
@@ -727,6 +740,10 @@ include 'layout-header.php';
                 html += '<div style="height:1px;background:var(--ss-gray-1);margin:0 0 14px;"></div>';
 
 
+                html += '<div class="bd-cols">';
+
+                html += '<div class="bd-col">';
+
                 html += '<div class="bd-grid">';
                 html += '<div><strong>Tanggal Check-in</strong><span class="bd-val">' + b.start_date + ' s/d ' + b.end_date + '</span></div>';
                 html += '<div><strong>Durasi</strong><span class="bd-val">' + data.durationLabel + '</span></div>';
@@ -761,9 +778,6 @@ include 'layout-header.php';
                 html += '</div>';
                 html += '</div>';
 
-                html += '<div class="bd-cols">';
-
-                html += '<div class="bd-col">';
                 html += '<div class="bd-section-title">Item Booking (RAB)</div>';
                 if (data.items.length === 0) {
                     html += '<div style="font-size:12px;color:var(--ss-muted);">Belum ada item.</div>';
@@ -780,12 +794,12 @@ include 'layout-header.php';
                 }
                 html += '</div>';
 
-                html += '<div class="bd-col">';
+                html += '<div class="bd-col bd-col-expense">';
                 html += '<div class="bd-section-title">Pengeluaran Trip Ini (dari Finance)</div>';
                 if (data.expenses.length === 0) {
                     html += '<div style="font-size:12px;color:var(--ss-muted);">Belum ada pengeluaran dicatat di Finance untuk trip ini.</div>';
                 } else {
-                    html += '<table class="ss-table"><thead><tr><th style="width:90px;white-space:nowrap;">Tanggal</th><th>Keterangan</th><th style="width:115px;white-space:nowrap;">Jumlah</th></tr></thead><tbody>';
+                    html += '<table class="ss-table"><thead><tr><th style="white-space:nowrap;">Tanggal</th><th>Keterangan</th><th style="width:100px;white-space:nowrap;">Jumlah</th></tr></thead><tbody>';
                     data.expenses.forEach(function(ex) {
                         html += '<tr><td style="white-space:nowrap;">' + ex.transaction_date + '</td>' +
                             '<td>' + ex.description + (ex.category ? '<br><small style="color:var(--ss-muted);">' + ex.category + '</small>' : '') + '</td>' +

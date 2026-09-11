@@ -128,6 +128,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $validUntil,
                 $id
             ]);
+            // Sinkron ke booking yang sudah terbentuk (kalau Penawaran ini sudah pernah di-approve),
+            // supaya edit Penginapan Manual setelah approve tetap muncul di Detail Booking/Kalender.
+            $pdo->prepare("UPDATE booking_orders SET accommodation_manual=? WHERE quotation_id=?")
+                ->execute([$accommodationManual, $id]);
             // Replace items
             $pdo->prepare("DELETE FROM quotation_items WHERE quotation_id=?")->execute([$id]);
         } else {
