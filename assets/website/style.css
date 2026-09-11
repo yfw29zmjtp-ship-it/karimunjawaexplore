@@ -307,6 +307,9 @@ a {
   border: 1px solid var(--we-border);
   border-radius: 14px;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
   transition:
     box-shadow 0.15s,
     transform 0.15s;
@@ -328,6 +331,7 @@ a {
 
 .we-card-body {
   padding: 16px 18px;
+  flex: 1;
 }
 
 .we-card-title {
@@ -349,6 +353,7 @@ a {
 
 .we-card-footer {
   padding: 0 18px 18px;
+  margin-top: auto;
 }
 
 .we-card-btn {
@@ -1312,7 +1317,11 @@ a {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0) 55%, rgba(0, 0, 0, 0.65) 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0) 55%,
+    rgba(0, 0, 0, 0.65) 100%
+  );
 }
 
 .we-gallery-caption {
