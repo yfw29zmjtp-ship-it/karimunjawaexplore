@@ -945,8 +945,8 @@ include 'layout-header.php';
             <div class="ss-card" style="margin-bottom:16px;">
                 <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
                     <div>
-                        <div style="font-size:17px;font-weight:800;color:var(--ss-ocean);letter-spacing:.2px;"><?php echo htmlspecialchars($quotation['quotation_no']); ?></div>
-                        <div style="font-size:12px;color:var(--ss-muted);">untuk <?php echo htmlspecialchars($quotation['customer_name']); ?></div>
+                        <div style="font-size:11px;font-weight:700;color:var(--ss-muted);letter-spacing:.2px;"><?php echo htmlspecialchars($quotation['quotation_no']); ?></div>
+                        <div style="font-size:20px;font-weight:800;color:var(--ss-ocean);">untuk <?php echo htmlspecialchars($quotation['customer_name']); ?></div>
                     </div>
                     <span class="ss-status ss-status-<?php echo $quotation['status']; ?>" style="font-size:11px;padding:4px 10px;">
                         <?php echo ucfirst($quotation['status']); ?>
