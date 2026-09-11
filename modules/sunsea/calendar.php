@@ -181,7 +181,7 @@ include 'layout-header.php';
 
     .cal-day-row {
         display: grid;
-        grid-template-columns: 190px repeat(var(--cal-days), 30px);
+        grid-template-columns: 190px repeat(var(--cal-days), minmax(18px, 1fr));
     }
 
     .cal-name-col {
@@ -223,7 +223,7 @@ include 'layout-header.php';
 
     .cal-row {
         display: grid;
-        grid-template-columns: 190px repeat(var(--cal-days), 30px);
+        grid-template-columns: 190px repeat(var(--cal-days), minmax(18px, 1fr));
         align-items: center;
         cursor: pointer;
         transition: background .15s ease;
@@ -414,11 +414,11 @@ include 'layout-header.php';
                     ?>
                         <?php if ($d >= $s && $d <= $e): ?>
                             <?php
-                                $isLeftEdge = $d === $s;
-                                $isRightEdge = $d === $e;
-                                $roundLeft = $isLeftEdge && !$clippedLeft;
-                                $roundRight = $isRightEdge && !$clippedRight;
-                                $radius = ($roundLeft ? '999px' : '0') . ' ' . ($roundRight ? '999px' : '0') . ' ' . ($roundRight ? '999px' : '0') . ' ' . ($roundLeft ? '999px' : '0');
+                            $isLeftEdge = $d === $s;
+                            $isRightEdge = $d === $e;
+                            $roundLeft = $isLeftEdge && !$clippedLeft;
+                            $roundRight = $isRightEdge && !$clippedRight;
+                            $radius = ($roundLeft ? '999px' : '0') . ' ' . ($roundRight ? '999px' : '0') . ' ' . ($roundRight ? '999px' : '0') . ' ' . ($roundLeft ? '999px' : '0');
                             ?>
                             <div class="cal-cell<?php echo $isTodayCol ? ' is-today' : ''; ?>" style="padding:4px 0;" title="<?php echo $barTitle; ?>">
                                 <div class="cal-bar" style="background:linear-gradient(90deg,<?php echo $barColor; ?>,<?php echo $barColor; ?>cc);border-radius:<?php echo $radius; ?>;<?php echo !$isLeftEdge ? 'margin-left:-1px;' : ''; ?><?php echo !$isRightEdge ? 'margin-right:-1px;' : ''; ?>">
@@ -929,7 +929,10 @@ include 'layout-header.php';
     (function() {
         var scroller = document.querySelector('.cal-timeline-scroll');
         if (!scroller) return;
-        var isDown = false, startX = 0, startScroll = 0, dragged = false;
+        var isDown = false,
+            startX = 0,
+            startScroll = 0,
+            dragged = false;
 
         scroller.addEventListener('pointerdown', function(e) {
             if (e.pointerType === 'mouse' && e.button !== 0) return;
@@ -946,6 +949,7 @@ include 'layout-header.php';
             if (Math.abs(delta) > 4) dragged = true;
             scroller.scrollLeft = startScroll - delta;
         });
+
         function endDrag() {
             isDown = false;
             scroller.classList.remove('is-dragging');
