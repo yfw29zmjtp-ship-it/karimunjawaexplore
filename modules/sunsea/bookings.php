@@ -604,6 +604,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delet
     exit;
 }
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'bulk_delete_booking') {
+    $ids = array_filter(array_map('intval', $_POST['ids'] ?? []));
+    $deleted = 0;
+    $skipped = 0;
+    foreach ($ids as $bookingId) {
+        $stStmt = $pdo->prepare("SELECT status FROM booking_orders WHERE id=?");
+        $stStmt->execute([$bookingId]);
+        $bkStatus = $stStmt->fetchColumn();
+
+        if ($bkStatus !== 'cancelled') {
+            $skipped++;
+            continue;
+        }
+
+        $internalRef = 'booking_id:' . $bookingId;
+        $paidStmt = $pdo->prepare("SELECT COALESCE(SUM(paid_amount),0) FROM invoices WHERE internal_notes=?");
+        $paidStmt->execute([$internalRef]);
+        if ((float)$paidStmt->fetchColumn() > 0) {
+            $skipped++;
+            continue;
+        }
+
+        try {
+            $pdo->prepare("DELETE FROM cash_book WHERE booking_id=?")->execute([$bookingId]);
+            $pdo->prepare("DELETE FROM invoices WHERE internal_notes=?")->execute([$internalRef]);
+            $pdo->prepare("DELETE FROM booking_schedule WHERE booking_id=?")->execute([$bookingId]);
+            $pdo->prepare("DELETE FROM booking_order_items WHERE booking_id=?")->execute([$bookingId]);
+            $pdo->prepare("DELETE FROM booking_orders WHERE id=?")->execute([$bookingId]);
+            $deleted++;
+        } catch (Exception $e) {
+            $skipped++;
+        }
+    }
+
+    $msg = $deleted . ' reservasi berhasil dihapus.';
+    if ($skipped > 0) {
+        $msg .= ' ' . $skipped . ' dilewati (bukan status Cancel atau sudah ada pembayaran).';
+    }
+    $_SESSION['flash_message'] = $msg;
+    $_SESSION['flash_type'] = $deleted > 0 ? 'success' : 'error';
+    header('Location: bookings.php');
+    exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'update_checklist') {
     $bookingId = (int)($_POST['booking_id'] ?? 0);
     $doneIds = array_map('intval', $_POST['done_items'] ?? []);
@@ -1092,8 +1136,16 @@ include 'layout-header.php';
                     maintainAspectRatio: false,
                     cutout: '65%',
                     plugins: {
-                        legend: { display: false },
-                        tooltip: { callbacks: { label: function(c) { return c.label + ': Rp ' + c.raw.toLocaleString('id-ID'); } } }
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(c) {
+                                    return c.label + ': Rp ' + c.raw.toLocaleString('id-ID');
+                                }
+                            }
+                        }
                     }
                 }
             });
@@ -1220,31 +1272,79 @@ include 'layout-header.php';
             <h3 style="margin:0;font-size:18px;">Daftar Pemesanan</h3>
             <div style="color:var(--ss-muted);font-size:12px;">Paket / Ecer dengan rentang tanggal</div>
         </div>
-        <a class="ss-btn ss-btn-primary" href="bookings.php?action=add"><i data-feather="plus"></i> Reservasi Baru</a>
+        <div style="display:flex;gap:8px;">
+            <button type="button" id="bulkDeleteBookingBtn" class="ss-btn ss-btn-outline" style="display:none;color:#dc2626;border-color:#dc2626;" onclick="submitBulkDeleteBooking()">
+                <i data-feather="trash-2"></i> Hapus Terpilih (<span id="bulkDeleteBookingCount">0</span>)
+            </button>
+            <a class="ss-btn ss-btn-primary" href="bookings.php?action=add"><i data-feather="plus"></i> Reservasi Baru</a>
+        </div>
     </div>
     <style>
-        .ss-actions-dropdown { position: relative; display: inline-block; }
-        .ss-actions-dropdown summary { list-style: none; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
-        .ss-actions-dropdown summary::-webkit-details-marker { display: none; }
-        .ss-actions-dropdown summary svg { width: 13px; height: 13px; }
-        .ss-actions-dropdown .ss-actions-menu {
-            position: absolute; right: 0; top: calc(100% + 4px); z-index: 20;
-            background: #fff; border: 1px solid var(--ss-gray-1); border-radius: 8px;
-            box-shadow: 0 6px 18px rgba(15,23,42,0.12); min-width: 160px; padding: 6px; text-align: left;
+        .ss-actions-dropdown {
+            position: relative;
+            display: inline-block;
         }
+
+        .ss-actions-dropdown summary {
+            list-style: none;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .ss-actions-dropdown summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .ss-actions-dropdown summary svg {
+            width: 13px;
+            height: 13px;
+        }
+
+        .ss-actions-dropdown .ss-actions-menu {
+            position: absolute;
+            right: 0;
+            top: calc(100% + 4px);
+            z-index: 20;
+            background: #fff;
+            border: 1px solid var(--ss-gray-1);
+            border-radius: 8px;
+            box-shadow: 0 6px 18px rgba(15, 23, 42, 0.12);
+            min-width: 160px;
+            padding: 6px;
+            text-align: left;
+        }
+
         .ss-actions-dropdown .ss-actions-menu a,
         .ss-actions-dropdown .ss-actions-menu form button {
-            display: block; width: 100%; text-align: left; padding: 7px 10px; font-size: 12.5px;
-            color: var(--ss-text); text-decoration: none; border-radius: 6px; border: none; background: none; cursor: pointer;
+            display: block;
+            width: 100%;
+            text-align: left;
+            padding: 7px 10px;
+            font-size: 12.5px;
+            color: var(--ss-text);
+            text-decoration: none;
+            border-radius: 6px;
+            border: none;
+            background: none;
+            cursor: pointer;
         }
+
         .ss-actions-dropdown .ss-actions-menu a:hover,
-        .ss-actions-dropdown .ss-actions-menu form button:hover { background: var(--ss-gray-1); }
+        .ss-actions-dropdown .ss-actions-menu form button:hover {
+            background: var(--ss-gray-1);
+        }
     </style>
     <div class="ss-card">
+        <form method="POST" id="bulkDeleteBookingForm" style="display:none;">
+            <input type="hidden" name="action" value="bulk_delete_booking">
+        </form>
         <div class="ss-table-wrap">
             <table class="ss-table">
                 <thead>
                     <tr>
+                        <th style="width:32px;"><input type="checkbox" id="checkAllBooking" onchange="toggleAllBookingRows(this)"></th>
                         <th>No Booking</th>
                         <th>Customer</th>
                         <th>Mode</th>
@@ -1264,6 +1364,11 @@ include 'layout-header.php';
                         $isLunas = $sellTotalRow > 0 && $paidTotalRow >= $sellTotalRow - 0.01;
                         ?>
                         <tr>
+                            <td>
+                                <?php if ($r['status'] === 'cancelled'): ?>
+                                    <input type="checkbox" class="booking-row-check" value="<?php echo $r['id']; ?>" onchange="updateBulkDeleteBookingBtn()">
+                                <?php endif; ?>
+                            </td>
                             <td><strong><?php echo htmlspecialchars($r['booking_no']); ?></strong></td>
                             <td><?php echo htmlspecialchars($r['customer_name']); ?></td>
                             <td><?php echo strpos((string)$r['notes'], '✍️ Booking Manual') === 0 ? 'MANUAL' : strtoupper($r['booking_mode']); ?></td>
@@ -1312,5 +1417,41 @@ include 'layout-header.php';
         </div>
     </div>
 <?php endif; ?>
+
+<script>
+    function toggleAllBookingRows(checkAllBox) {
+        document.querySelectorAll('.booking-row-check').forEach(function(cb) {
+            cb.checked = checkAllBox.checked;
+        });
+        updateBulkDeleteBookingBtn();
+    }
+
+    function updateBulkDeleteBookingBtn() {
+        var checked = document.querySelectorAll('.booking-row-check:checked');
+        var btn = document.getElementById('bulkDeleteBookingBtn');
+        var countEl = document.getElementById('bulkDeleteBookingCount');
+        if (!btn || !countEl) return;
+        countEl.textContent = checked.length;
+        btn.style.display = checked.length > 0 ? '' : 'none';
+    }
+
+    function submitBulkDeleteBooking() {
+        var checked = document.querySelectorAll('.booking-row-check:checked');
+        if (!checked.length) return;
+        if (!confirm('Hapus ' + checked.length + ' reservasi terpilih? Tindakan ini tidak bisa dibatalkan.')) return;
+        var form = document.getElementById('bulkDeleteBookingForm');
+        form.querySelectorAll('input[name="ids[]"]').forEach(function(el) {
+            el.remove();
+        });
+        checked.forEach(function(cb) {
+            var input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'ids[]';
+            input.value = cb.value;
+            form.appendChild(input);
+        });
+        form.submit();
+    }
+</script>
 
 <?php include 'layout-footer.php';
