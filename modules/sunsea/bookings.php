@@ -856,6 +856,25 @@ include 'layout-header.php';
     foreach ($detailItems as $it) $totalRabActual += (float)$it['total_sell'];
     $marginActual = $totalRabActual - $totalExpenseActual;
     $marginPct = $totalRabActual > 0 ? round($marginActual / $totalRabActual * 100) : 0;
+
+    // Riwayat pembayaran/DP: invoice booking ini bisa dibayar bertahap (DP 1, DP 2, pelunasan, dst) di tabel payments.
+    $detailInvStmt = $pdo->prepare("SELECT id, total_amount FROM invoices WHERE internal_notes = ? OR internal_notes = ?");
+    $detailInvStmt->execute(['booking_id:' . $viewId, 'Generated from Reservasi: ' . $detail['booking_no']]);
+    $detailBookingInvoices = $detailInvStmt->fetchAll();
+
+    $detailPayments = [];
+    $totalInvoiceAmountActual = 0;
+    foreach ($detailBookingInvoices as $dbi) $totalInvoiceAmountActual += (float)$dbi['total_amount'];
+    if ($detailBookingInvoices) {
+        $detailInvIds = array_column($detailBookingInvoices, 'id');
+        $detailPh = implode(',', array_fill(0, count($detailInvIds), '?'));
+        $detailPayStmt = $pdo->prepare("SELECT payment_date, amount, method, reference FROM payments WHERE invoice_id IN ($detailPh) ORDER BY payment_date, id");
+        $detailPayStmt->execute($detailInvIds);
+        $detailPayments = $detailPayStmt->fetchAll();
+    }
+    $totalPaidActual = 0;
+    foreach ($detailPayments as $dp) $totalPaidActual += (float)$dp['amount'];
+    $remainingPaymentActual = max(0, $totalInvoiceAmountActual - $totalPaidActual);
 ?>
     <div style="margin-bottom:14px;"><a class="ss-btn ss-btn-outline ss-btn-sm" href="bookings.php"><i data-feather="arrow-left"></i> Kembali</a></div>
 
@@ -938,6 +957,50 @@ include 'layout-header.php';
                         <tr style="border-top:2px solid var(--ss-gray-2);">
                             <td colspan="2" style="text-align:right;"><strong>Total Pengeluaran</strong></td>
                             <td style="font-weight:700;color:var(--ss-danger);white-space:nowrap;"><?php echo sunseaRupiah($totalExpenseActual); ?></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        <?php endif; ?>
+    </div>
+
+    <!-- 2c. Riwayat Pembayaran (DP): sama seperti modal detail di Kalender, tampilkan semua tahap DP -->
+    <div class="ss-card" style="margin-bottom:14px;">
+        <div class="ss-card-title" style="margin-bottom:10px;">💳 Riwayat Pembayaran (DP)</div>
+        <?php if (empty($detailPayments)): ?>
+            <div style="font-size:12px;color:var(--ss-muted);">Belum ada pembayaran/DP tercatat untuk booking ini.</div>
+        <?php else: ?>
+            <div class="ss-table-wrap">
+                <table class="ss-table">
+                    <thead>
+                        <tr>
+                            <th style="width:100px;">Tahap</th>
+                            <th style="white-space:nowrap;">Tanggal</th>
+                            <th>Metode</th>
+                            <th style="width:130px;white-space:nowrap;">Jumlah</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($detailPayments as $dpIdx => $dp):
+                            $dpIsLast = $dpIdx === count($detailPayments) - 1;
+                            $dpStage = $dpIdx === 0 ? 'DP 1' : ($dpIsLast && $remainingPaymentActual <= 0 ? 'Pelunasan' : 'DP ' . ($dpIdx + 1));
+                        ?>
+                            <tr>
+                                <td><strong><?php echo $dpStage; ?></strong></td>
+                                <td style="white-space:nowrap;"><?php echo date('d M Y', strtotime($dp['payment_date'])); ?></td>
+                                <td><?php echo htmlspecialchars(ucfirst($dp['method'] ?: '-')); ?></td>
+                                <td style="font-weight:600;color:var(--ss-success);white-space:nowrap;"><?php echo sunseaRupiah((float)$dp['amount']); ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                    <tfoot>
+                        <tr style="border-top:2px solid var(--ss-gray-2);">
+                            <td colspan="3" style="text-align:right;"><strong>Total Dibayar</strong></td>
+                            <td style="font-weight:700;color:var(--ss-success);white-space:nowrap;"><?php echo sunseaRupiah($totalPaidActual); ?></td>
+                        </tr>
+                        <tr>
+                            <td colspan="3" style="text-align:right;"><strong>Sisa Tagihan</strong></td>
+                            <td style="font-weight:700;white-space:nowrap;color:<?php echo $remainingPaymentActual > 0 ? 'var(--ss-danger)' : 'var(--ss-success)'; ?>;"><?php echo $remainingPaymentActual > 0 ? sunseaRupiah($remainingPaymentActual) : '✓ Lunas'; ?></td>
                         </tr>
                     </tfoot>
                 </table>

@@ -1146,11 +1146,12 @@ $prefillPaxCount = max(1, (int)($_GET['pax_count'] ?? 1));
 
     <?php if (!empty($payments)): ?>
         <div class="ss-card" style="max-width:900px;">
-            <div class="ss-card-title" style="margin-bottom:14px;">Riwayat Pembayaran</div>
+            <div class="ss-card-title" style="margin-bottom:14px;">Riwayat Pembayaran (Rekap DP)</div>
             <div class="ss-table-wrap">
                 <table class="ss-table">
                     <thead>
                         <tr>
+                            <th>Tahap</th>
                             <th>Tanggal</th>
                             <th>Jumlah</th>
                             <th>Metode</th>
@@ -1158,8 +1159,12 @@ $prefillPaxCount = max(1, (int)($_GET['pax_count'] ?? 1));
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach ($payments as $p): ?>
+                        <?php foreach ($payments as $pIdx => $p):
+                            $isLastPayment = $pIdx === count($payments) - 1;
+                            $payStage = $pIdx === 0 ? 'DP 1' : ($isLastPayment && (float)$invoice['remaining_amount'] <= 0 ? 'Pelunasan' : 'DP ' . ($pIdx + 1));
+                        ?>
                             <tr>
+                                <td><strong><?php echo $payStage; ?></strong></td>
                                 <td><?php echo date('d M Y', strtotime($p['payment_date'])); ?></td>
                                 <td style="font-weight:600;color:var(--ss-success);"><?php echo sunseaRupiah((float)$p['amount']); ?></td>
                                 <td><?php echo ucfirst($p['method']); ?></td>
@@ -1167,6 +1172,16 @@ $prefillPaxCount = max(1, (int)($_GET['pax_count'] ?? 1));
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
+                    <tfoot>
+                        <tr style="border-top:2px solid var(--ss-gray-2);">
+                            <td colspan="2" style="text-align:right;"><strong>Total Dibayar</strong></td>
+                            <td colspan="3" style="font-weight:700;color:var(--ss-success);"><?php echo sunseaRupiah((float)$invoice['paid_amount']); ?></td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" style="text-align:right;"><strong><?php echo (float)$invoice['remaining_amount'] > 0 ? 'Sisa Tagihan' : 'Status'; ?></strong></td>
+                            <td colspan="3" style="font-weight:700;color:<?php echo (float)$invoice['remaining_amount'] > 0 ? 'var(--ss-danger)' : 'var(--ss-success)'; ?>;"><?php echo (float)$invoice['remaining_amount'] > 0 ? sunseaRupiah((float)$invoice['remaining_amount']) : '✓ Lunas'; ?></td>
+                        </tr>
+                    </tfoot>
                 </table>
             </div>
         </div>
