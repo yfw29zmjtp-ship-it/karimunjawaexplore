@@ -318,6 +318,13 @@ include 'layout-header.php';
         padding-left: 8px;
         letter-spacing: .01em;
     }
+
+    .cal-bar-continue {
+        font-size: 12px;
+        font-weight: 900;
+        color: #fff;
+        padding: 0 4px;
+    }
 </style>
 
 <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
@@ -380,6 +387,10 @@ include 'layout-header.php';
                 $durationLabel = ($nights + 1) . 'H' . $nights . 'M';
                 $barColor = calBarColor($durationLabel, $b['package_name'], $calDurationColors, $calHoneymoonColor, $calDefaultColor);
                 $initial = mb_strtoupper(mb_substr($b['customer_name'], 0, 1));
+                // Balok "terpotong" kalau tanggal aslinya nyambung ke bulan sebelum/sesudah bulan yang sedang ditampilkan.
+                $clippedLeft = strtotime($b['start_date']) < strtotime($startMonth);
+                $clippedRight = strtotime($b['end_date']) > strtotime($endMonth);
+                $barTitle = htmlspecialchars(date('d M Y', strtotime($b['start_date'])) . ' - ' . date('d M Y', strtotime($b['end_date'])) . ' (' . $durationLabel . ')');
             ?>
                 <div class="cal-row" onclick="openBookingDetail(<?php echo $b['id']; ?>)">
                     <div class="cal-guest">
@@ -402,9 +413,18 @@ include 'layout-header.php';
                         $isTodayCol = $todayIsInMonth && $d === $todayDay;
                     ?>
                         <?php if ($d >= $s && $d <= $e): ?>
-                            <div class="cal-cell<?php echo $isTodayCol ? ' is-today' : ''; ?>" style="padding:4px 0;">
-                                <div class="cal-bar" style="background:linear-gradient(90deg,<?php echo $barColor; ?>,<?php echo $barColor; ?>cc);<?php echo $d > $s ? 'margin-left:-1px;border-radius:0 999px 999px 0;' : ''; ?><?php echo $d < $e ? 'margin-right:-1px;border-radius:' . ($d > $s ? '0' : '999px 0 0 999px') . ';' : ''; ?>">
-                                    <?php if ($d === $s): ?><span class="cal-bar-label"><?php echo (int)$b['pax_count']; ?> pax</span><?php endif; ?>
+                            <?php
+                                $isLeftEdge = $d === $s;
+                                $isRightEdge = $d === $e;
+                                $roundLeft = $isLeftEdge && !$clippedLeft;
+                                $roundRight = $isRightEdge && !$clippedRight;
+                                $radius = ($roundLeft ? '999px' : '0') . ' ' . ($roundRight ? '999px' : '0') . ' ' . ($roundRight ? '999px' : '0') . ' ' . ($roundLeft ? '999px' : '0');
+                            ?>
+                            <div class="cal-cell<?php echo $isTodayCol ? ' is-today' : ''; ?>" style="padding:4px 0;" title="<?php echo $barTitle; ?>">
+                                <div class="cal-bar" style="background:linear-gradient(90deg,<?php echo $barColor; ?>,<?php echo $barColor; ?>cc);border-radius:<?php echo $radius; ?>;<?php echo !$isLeftEdge ? 'margin-left:-1px;' : ''; ?><?php echo !$isRightEdge ? 'margin-right:-1px;' : ''; ?>">
+                                    <?php if ($isLeftEdge && $clippedLeft): ?><span class="cal-bar-continue" title="Lanjutan dari bulan sebelumnya">&laquo;</span><?php endif; ?>
+                                    <?php if ($isLeftEdge): ?><span class="cal-bar-label"><?php echo (int)$b['pax_count']; ?> pax</span><?php endif; ?>
+                                    <?php if ($isRightEdge && $clippedRight): ?><span class="cal-bar-continue" title="Lanjut ke bulan berikutnya">&raquo;</span><?php endif; ?>
                                 </div>
                             </div>
                         <?php else: ?>
