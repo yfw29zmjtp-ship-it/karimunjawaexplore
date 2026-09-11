@@ -463,15 +463,15 @@ include 'layout-header.php';
         font-size: 12px;
         margin-bottom: 14px;
         background: #fff;
-        border: 1px solid var(--ss-gray-1);
-        border-radius: 10px;
+        border: 1px solid var(--ss-ocean);
+        border-radius: 8px;
         overflow: hidden;
     }
 
     #bookingDetailBody .bd-grid>div {
-        padding: 12px 16px;
-        border-right: 1px solid var(--ss-gray-1);
-        border-bottom: 1px solid var(--ss-gray-1);
+        padding: 8px 12px;
+        border-right: 1px solid #FDE4CE;
+        border-bottom: 1px solid #FDE4CE;
     }
 
     #bookingDetailBody .bd-grid>div:nth-child(3n) {
@@ -486,15 +486,15 @@ include 'layout-header.php';
         display: block;
         color: var(--ss-muted);
         font-weight: 600;
-        font-size: 10px;
+        font-size: 9px;
         text-transform: uppercase;
         letter-spacing: .4px;
-        margin-bottom: 3px;
+        margin-bottom: 2px;
     }
 
     #bookingDetailBody .bd-grid .bd-val {
         display: block;
-        font-size: 14.5px;
+        font-size: 12.5px;
         font-weight: 700;
         color: #0f172a;
     }
@@ -650,11 +650,11 @@ include 'layout-header.php';
         }
 
         #bookingDetailBody .bd-grid>div {
-            border-right: 1px solid var(--ss-gray-1);
+            border-right: 1px solid #FDE4CE;
         }
 
         #bookingDetailBody .bd-grid>div:nth-child(3n) {
-            border-right: 1px solid var(--ss-gray-1);
+            border-right: 1px solid #FDE4CE;
         }
 
         #bookingDetailBody .bd-grid>div:nth-child(2n) {
@@ -662,7 +662,7 @@ include 'layout-header.php';
         }
 
         #bookingDetailBody .bd-grid>div:nth-last-child(-n+3) {
-            border-bottom: 1px solid var(--ss-gray-1);
+            border-bottom: 1px solid #FDE4CE;
         }
 
         #bookingDetailBody .bd-grid>div:nth-last-child(-n+2) {
@@ -731,6 +731,31 @@ include 'layout-header.php';
                 html += '<div><strong>Total RAB/Penawaran</strong><span class="bd-val" style="color:var(--ss-ocean);">' + fmt(data.totalRab) + '</span></div>';
                 html += '</div>';
 
+                html += '<div class="bd-summary">';
+                html += '<div class="bd-summary-box" style="background:var(--ss-gray-1);"><div class="bd-label">Total RAB/Penawaran</div><div class="bd-value">' + fmt(data.totalRab) + '</div></div>';
+                html += '<div class="bd-summary-box" style="background:#FEF2F2;"><div class="bd-label" style="color:var(--ss-danger);">Total Pengeluaran</div><div class="bd-value" style="color:var(--ss-danger);">' + fmt(data.totalExpense) + '</div></div>';
+                html += '<div class="bd-summary-box" style="background:#F0FDF4;"><div class="bd-label" style="color:' + marginColor + ';">Margin</div><div class="bd-value" style="color:' + marginColor + ';">' + fmt(data.margin) + '</div></div>';
+                html += '</div>';
+
+                // Donut chart: proporsi pemasukan vs pengeluaran + persentase profit di tengah
+                var incomeVal = parseFloat(data.totalRab) || 0;
+                var expenseVal = parseFloat(data.totalExpense) || 0;
+                var chartTotal = incomeVal + expenseVal;
+                var incomeShare = chartTotal > 0 ? (incomeVal / chartTotal * 100) : 0;
+                var profitPct = incomeVal > 0 ? (data.margin / incomeVal * 100) : 0;
+                var profitPctColor = profitPct >= 0 ? 'var(--ss-success)' : 'var(--ss-danger)';
+
+                html += '<div class="bd-chart-row">';
+                html += '<div class="bd-donut" style="background:conic-gradient(#16a34a 0% ' + incomeShare + '%, #dc2626 ' + incomeShare + '% 100%);">';
+                html += '<div class="bd-donut-center"><div class="pct" style="color:' + profitPctColor + ';">' + profitPct.toFixed(1) + '%</div><div class="lbl">Profit</div></div>';
+                html += '</div>';
+                html += '<div class="bd-legend">';
+                html += '<div class="bd-legend-item"><span class="bd-legend-dot" style="background:#16a34a;"></span> Pemasukan (RAB) &mdash; ' + fmt(incomeVal) + '</div>';
+                html += '<div class="bd-legend-item"><span class="bd-legend-dot" style="background:#dc2626;"></span> Pengeluaran &mdash; ' + fmt(expenseVal) + '</div>';
+                html += '<div style="margin-top:6px;color:var(--ss-muted);font-size:11px;">Margin bersih: <strong style="color:' + marginColor + ';">' + fmt(data.margin) + '</strong></div>';
+                html += '</div>';
+                html += '</div>';
+
                 html += '<div class="bd-cols">';
 
                 html += '<div class="bd-col">';
@@ -767,30 +792,6 @@ include 'layout-header.php';
 
                 html += '</div>';
 
-                html += '<div class="bd-summary">';
-                html += '<div class="bd-summary-box" style="background:var(--ss-gray-1);"><div class="bd-label">Total RAB/Penawaran</div><div class="bd-value">' + fmt(data.totalRab) + '</div></div>';
-                html += '<div class="bd-summary-box" style="background:#FEF2F2;"><div class="bd-label" style="color:var(--ss-danger);">Total Pengeluaran</div><div class="bd-value" style="color:var(--ss-danger);">' + fmt(data.totalExpense) + '</div></div>';
-                html += '<div class="bd-summary-box" style="background:#F0FDF4;"><div class="bd-label" style="color:' + marginColor + ';">Margin</div><div class="bd-value" style="color:' + marginColor + ';">' + fmt(data.margin) + '</div></div>';
-                html += '</div>';
-
-                // Donut chart: proporsi pemasukan vs pengeluaran + persentase profit di tengah
-                var incomeVal = parseFloat(data.totalRab) || 0;
-                var expenseVal = parseFloat(data.totalExpense) || 0;
-                var chartTotal = incomeVal + expenseVal;
-                var incomeShare = chartTotal > 0 ? (incomeVal / chartTotal * 100) : 0;
-                var profitPct = incomeVal > 0 ? (data.margin / incomeVal * 100) : 0;
-                var profitPctColor = profitPct >= 0 ? 'var(--ss-success)' : 'var(--ss-danger)';
-
-                html += '<div class="bd-chart-row">';
-                html += '<div class="bd-donut" style="background:conic-gradient(#16a34a 0% ' + incomeShare + '%, #dc2626 ' + incomeShare + '% 100%);">';
-                html += '<div class="bd-donut-center"><div class="pct" style="color:' + profitPctColor + ';">' + profitPct.toFixed(1) + '%</div><div class="lbl">Profit</div></div>';
-                html += '</div>';
-                html += '<div class="bd-legend">';
-                html += '<div class="bd-legend-item"><span class="bd-legend-dot" style="background:#16a34a;"></span> Pemasukan (RAB) &mdash; ' + fmt(incomeVal) + '</div>';
-                html += '<div class="bd-legend-item"><span class="bd-legend-dot" style="background:#dc2626;"></span> Pengeluaran &mdash; ' + fmt(expenseVal) + '</div>';
-                html += '<div style="margin-top:6px;color:var(--ss-muted);font-size:11px;">Margin bersih: <strong style="color:' + marginColor + ';">' + fmt(data.margin) + '</strong></div>';
-                html += '</div>';
-                html += '</div>';
 
                 // Checklist layanan mitra: pakai data terstruktur dari detail layanan paket
                 // (component_code != 'paket'), bukan tebakan kata kunci dari teks pengeluaran.
