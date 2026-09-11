@@ -1025,6 +1025,25 @@ include 'layout-header.php';
         syncTicketQty();
         syncStayNights();
         syncCateringQty();
+
+        // Prefill dari tombol "Buat Booking" di halaman Penawaran (?customer_id=&package_id=&pax_count=&start_date=&quotation_no=)
+        var qs = new URLSearchParams(window.location.search);
+        if (qs.get('customer_id')) document.getElementById('customerSelect').value = qs.get('customer_id');
+        if (qs.get('pax_count')) document.getElementById('paxCount').value = qs.get('pax_count');
+        if (qs.get('start_date')) document.getElementById('startDate').value = qs.get('start_date');
+        if (qs.get('quotation_no')) {
+            var notesField = document.querySelector('textarea[name="notes"]');
+            if (notesField) notesField.value = 'Dari Penawaran ' + qs.get('quotation_no');
+        }
+        if (qs.get('package_id')) {
+            document.getElementById('packageSelect').value = qs.get('package_id');
+            selectMode('paket');
+        }
+        if (qs.get('customer_id') || qs.get('package_id')) {
+            syncTicketQty();
+            syncCateringQty();
+            calculateTotal();
+        }
     });
 </script>
 

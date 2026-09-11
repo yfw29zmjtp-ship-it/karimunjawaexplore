@@ -334,7 +334,7 @@ $listParams  = $filter ? [$filter] : [];
 
 $quotations = $pdo->prepare("
     SELECT q.id, q.quotation_no, q.status, q.total_amount, q.trip_date, q.valid_until, q.created_at,
-           q.created_by, c.name as customer_name, q.pax_count
+           q.created_by, q.customer_id, q.package_id, c.name as customer_name, q.pax_count
     FROM quotations q
     JOIN customers c ON c.id = q.customer_id
     $whereClause
@@ -918,6 +918,18 @@ include 'layout-header.php';
             <?php endif; ?>
         <?php endforeach; ?>
         <?php if ($quotation['status'] === 'approved'): ?>
+            <?php
+            $bookingUrl = 'bookings-new.php?' . http_build_query([
+                'customer_id' => $quotation['customer_id'],
+                'package_id'  => $quotation['package_id'],
+                'pax_count'   => $quotation['pax_count'],
+                'start_date'  => $quotation['trip_date'],
+                'quotation_no' => $quotation['quotation_no'],
+            ]);
+            ?>
+            <a href="<?php echo htmlspecialchars($bookingUrl); ?>" class="ss-btn ss-btn-primary ss-btn-sm">
+                <i data-feather="calendar-check"></i> Buat Booking
+            </a>
             <form method="POST" onsubmit="return confirm('Konversi ke Invoice?')">
                 <input type="hidden" name="action" value="convert">
                 <input type="hidden" name="quotation_id" value="<?php echo $quotation['id']; ?>">
@@ -1364,6 +1376,20 @@ include 'layout-header.php';
                                     <a href="quotations.php?action=print&id=<?php echo $q['id']; ?>" target="_blank" class="ss-btn ss-btn-outline ss-btn-sm">
                                         <i data-feather="printer"></i>
                                     </a>
+                                    <?php if ($q['status'] === 'approved'): ?>
+                                        <?php
+                                        $rowBookingUrl = 'bookings-new.php?' . http_build_query([
+                                            'customer_id' => $q['customer_id'],
+                                            'package_id'  => $q['package_id'],
+                                            'pax_count'   => $q['pax_count'],
+                                            'start_date'  => $q['trip_date'],
+                                            'quotation_no' => $q['quotation_no'],
+                                        ]);
+                                        ?>
+                                        <a href="<?php echo htmlspecialchars($rowBookingUrl); ?>" class="ss-btn ss-btn-primary ss-btn-sm" title="Buat Booking">
+                                            <i data-feather="calendar-check"></i>
+                                        </a>
+                                    <?php endif; ?>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
