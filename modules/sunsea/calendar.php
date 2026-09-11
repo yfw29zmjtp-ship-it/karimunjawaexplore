@@ -90,6 +90,9 @@ if (($_GET['ajax'] ?? '') === 'detail' && (int)($_GET['id'] ?? 0) > 0) {
 $month = $_GET['month'] ?? date('Y-m');
 $startMonth = date('Y-m-01', strtotime($month . '-01'));
 $endMonth = date('Y-m-t', strtotime($month . '-01'));
+$prevMonth = date('Y-m', strtotime($startMonth . ' -1 month'));
+$nextMonth = date('Y-m', strtotime($startMonth . ' +1 month'));
+$isCurrentMonth = ($month === date('Y-m'));
 
 $bookings = [];
 $errorMsg = '';
@@ -163,6 +166,12 @@ include 'layout-header.php';
         overflow-x: auto;
         border-radius: 10px;
         border: 1px solid var(--ss-gray-2);
+        cursor: grab;
+        user-select: none;
+    }
+
+    .cal-timeline-scroll.is-dragging {
+        cursor: grabbing;
     }
 
     .cal-timeline {
@@ -279,6 +288,11 @@ include 'layout-header.php';
         background: #FFF7F0;
     }
 
+    .cal-cell.is-today {
+        background: #FFE4D1;
+        box-shadow: inset 1px 0 0 var(--ss-ocean), inset -1px 0 0 var(--ss-ocean);
+    }
+
     .cal-bar {
         height: 24px;
         margin: 0 1px;
@@ -312,6 +326,9 @@ include 'layout-header.php';
         <div style="color:var(--ss-muted);font-size:11px;">Menampilkan reservasi tamu dengan status confirmed</div>
     </div>
     <form method="GET" style="display:flex;gap:6px;align-items:center;">
+        <a href="?month=<?php echo $prevMonth; ?>" class="ss-btn ss-btn-outline ss-btn-sm" title="Bulan sebelumnya"><i data-feather="chevron-left" style="width:14px;height:14px;"></i></a>
+        <a href="?month=<?php echo date('Y-m'); ?>" class="ss-btn <?php echo $isCurrentMonth ? 'ss-btn-primary' : 'ss-btn-outline'; ?> ss-btn-sm">Hari Ini</a>
+        <a href="?month=<?php echo $nextMonth; ?>" class="ss-btn ss-btn-outline ss-btn-sm" title="Bulan berikutnya"><i data-feather="chevron-right" style="width:14px;height:14px;"></i></a>
         <input type="month" name="month" class="ss-input" style="width:150px;padding:6px 8px;font-size:12.5px;" value="<?php echo htmlspecialchars($month); ?>">
         <button class="ss-btn ss-btn-outline ss-btn-sm" type="submit"><i data-feather="search" style="width:14px;height:14px;"></i> Lihat</button>
     </form>
@@ -330,13 +347,18 @@ include 'layout-header.php';
             '5H4M'      => $calDurationColors['5H4M'],
             'Lainnya'   => $calDefaultColor,
         ];
-        foreach ($calLegend as $label => $color):
         ?>
+        <?php foreach ($calLegend as $label => $color): ?>
             <span style="display:inline-flex;align-items:center;gap:4px;">
                 <span style="width:9px;height:9px;border-radius:50%;background:<?php echo $color; ?>;display:inline-block;"></span>
                 <?php echo htmlspecialchars($label); ?>
             </span>
         <?php endforeach; ?>
+        <span style="display:inline-flex;align-items:center;gap:4px;">
+            <span style="width:9px;height:9px;border-radius:2px;background:#FFE4D1;border:1px solid var(--ss-ocean);display:inline-block;"></span>
+            Hari Ini
+        </span>
+        <span style="color:var(--ss-muted);">&middot; Geser timeline dengan klik-tahan lalu tarik, atau pakai tombol &lsaquo;/&rsaquo; untuk ganti bulan</span>
     </div>
     <div class="cal-timeline-scroll">
         <div class="cal-timeline" style="--cal-days:<?php echo $daysInMonth; ?>;">
@@ -377,15 +399,16 @@ include 'layout-header.php';
                     <?php for ($d = 1; $d <= $daysInMonth; $d++):
                         $dow = (int)date('N', strtotime("$month-" . str_pad($d, 2, '0', STR_PAD_LEFT)));
                         $isWeekend = $dow >= 6;
+                        $isTodayCol = $todayIsInMonth && $d === $todayDay;
                     ?>
                         <?php if ($d >= $s && $d <= $e): ?>
-                            <div class="cal-cell" style="padding:4px 0;">
+                            <div class="cal-cell<?php echo $isTodayCol ? ' is-today' : ''; ?>" style="padding:4px 0;">
                                 <div class="cal-bar" style="background:linear-gradient(90deg,<?php echo $barColor; ?>,<?php echo $barColor; ?>cc);<?php echo $d > $s ? 'margin-left:-1px;border-radius:0 999px 999px 0;' : ''; ?><?php echo $d < $e ? 'margin-right:-1px;border-radius:' . ($d > $s ? '0' : '999px 0 0 999px') . ';' : ''; ?>">
                                     <?php if ($d === $s): ?><span class="cal-bar-label"><?php echo (int)$b['pax_count']; ?> pax</span><?php endif; ?>
                                 </div>
                             </div>
                         <?php else: ?>
-                            <div class="cal-cell<?php echo $isWeekend ? ' is-weekend' : ''; ?>"></div>
+                            <div class="cal-cell<?php echo $isWeekend ? ' is-weekend' : ''; ?><?php echo $isTodayCol ? ' is-today' : ''; ?>"></div>
                         <?php endif; ?>
                     <?php endfor; ?>
                 </div>
@@ -880,6 +903,39 @@ include 'layout-header.php';
         document.getElementById('bookingDetailOverlay').style.display = 'none';
         document.body.style.overflow = '';
     }
+
+    // Geser timeline dengan klik-tahan lalu tarik (drag to scroll), termasuk mouse & touch.
+    (function() {
+        var scroller = document.querySelector('.cal-timeline-scroll');
+        if (!scroller) return;
+        var isDown = false, startX = 0, startScroll = 0, dragged = false;
+
+        scroller.addEventListener('mousedown', function(e) {
+            isDown = true;
+            dragged = false;
+            scroller.classList.add('is-dragging');
+            startX = e.pageX;
+            startScroll = scroller.scrollLeft;
+        });
+        window.addEventListener('mouseup', function() {
+            isDown = false;
+            scroller.classList.remove('is-dragging');
+        });
+        window.addEventListener('mousemove', function(e) {
+            if (!isDown) return;
+            e.preventDefault();
+            var delta = e.pageX - startX;
+            if (Math.abs(delta) > 4) dragged = true;
+            scroller.scrollLeft = startScroll - delta;
+        });
+        // Cegah klik baris terbuka modal detail kalau baru saja dipakai untuk drag.
+        scroller.addEventListener('click', function(e) {
+            if (dragged) {
+                e.stopPropagation();
+                e.preventDefault();
+            }
+        }, true);
+    })();
 
     function printBookingExpenses() {
         var ctx = window.__bookingDetailPrintCtx;
