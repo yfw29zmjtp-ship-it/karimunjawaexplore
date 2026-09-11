@@ -1376,7 +1376,16 @@ include 'layout-header.php';
                             </td>
                             <td><?php echo strpos((string)$r['notes'], '✍️ Booking Manual') === 0 ? 'MANUAL' : strtoupper($r['booking_mode']); ?></td>
                             <td><?php echo date('d M Y', strtotime($r['start_date'])); ?> - <?php echo date('d M Y', strtotime($r['end_date'])); ?></td>
-                            <td><?php echo $r['package_name'] ? htmlspecialchars($r['package_name']) : '<span style="color:var(--ss-muted);">Ecer</span>'; ?></td>
+                            <td>
+                                <?php
+                                $nightsRow = max(0, (int)round((strtotime($r['end_date']) - strtotime($r['start_date'])) / 86400));
+                                $durationLabelRow = ($nightsRow + 1) . 'H' . $nightsRow . 'M';
+                                echo htmlspecialchars($durationLabelRow);
+                                if ($r['package_name']) {
+                                    echo '<div style="font-size:11px;color:var(--ss-muted);margin-top:1px;">' . htmlspecialchars($r['package_name']) . '</div>';
+                                }
+                                ?>
+                            </td>
                             <td>
                                 <?php
                                 $accomDisplay = $r['accommodation_item'] ? preg_replace('/^Penginapan:\s*/', '', $r['accommodation_item']) : ($r['accommodation_manual'] ?: '');
