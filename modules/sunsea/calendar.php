@@ -142,13 +142,13 @@ include 'layout-header.php';
     }
 
     .cal-timeline {
-        min-width: max-content;
+        width: 100%;
         background: #fff;
     }
 
     .cal-day-row {
         display: grid;
-        grid-template-columns: 190px repeat(var(--cal-days), 28px);
+        grid-template-columns: 210px repeat(var(--cal-days), minmax(34px, 1fr));
     }
 
     .cal-name-col {
@@ -157,8 +157,8 @@ include 'layout-header.php';
         z-index: 2;
         background: var(--ss-sky);
         border-right: 1px solid var(--ss-gray-2);
-        padding: 8px 10px;
-        font-size: 10px;
+        padding: 10px 12px;
+        font-size: 12px;
         font-weight: 800;
         color: var(--ss-deep);
         text-transform: uppercase;
@@ -169,8 +169,8 @@ include 'layout-header.php';
 
     .cal-day-col {
         text-align: center;
-        padding: 8px 2px;
-        font-size: 10px;
+        padding: 10px 2px;
+        font-size: 13px;
         font-weight: 700;
         color: var(--ss-muted);
         background: var(--ss-sky);
@@ -190,7 +190,7 @@ include 'layout-header.php';
 
     .cal-row {
         display: grid;
-        grid-template-columns: 190px repeat(var(--cal-days), 28px);
+        grid-template-columns: 210px repeat(var(--cal-days), minmax(34px, 1fr));
         align-items: center;
         cursor: pointer;
         transition: background .15s ease;
@@ -210,27 +210,27 @@ include 'layout-header.php';
         z-index: 1;
         background: #fff;
         border-right: 1px solid var(--ss-gray-2);
-        padding: 7px 10px;
+        padding: 10px 12px;
         overflow: hidden;
     }
 
     .cal-guest-avatar {
-        width: 22px;
-        height: 22px;
+        width: 28px;
+        height: 28px;
         border-radius: 50%;
         background: linear-gradient(135deg, var(--ss-ocean), var(--ss-cyan));
         color: #fff;
-        font-size: 10px;
+        font-size: 12px;
         font-weight: 800;
         display: inline-flex;
         align-items: center;
         justify-content: center;
         flex-shrink: 0;
-        margin-right: 6px;
+        margin-right: 8px;
     }
 
     .cal-guest-name {
-        font-size: 12px;
+        font-size: 14px;
         font-weight: 700;
         color: var(--ss-text);
         white-space: nowrap;
@@ -239,14 +239,14 @@ include 'layout-header.php';
     }
 
     .cal-guest-meta {
-        font-size: 9.5px;
+        font-size: 11px;
         font-weight: 500;
         color: var(--ss-muted);
         white-space: nowrap;
     }
 
     .cal-cell {
-        height: 26px;
+        height: 34px;
         border-left: 1px solid rgba(15, 23, 42, .03);
         border-bottom: 1px solid rgba(15, 23, 42, .03);
     }
@@ -256,7 +256,7 @@ include 'layout-header.php';
     }
 
     .cal-bar {
-        height: 18px;
+        height: 24px;
         margin: 0 1px;
         border-radius: 999px;
         background: linear-gradient(90deg, var(--ss-ocean), #E85D2C);
@@ -272,7 +272,7 @@ include 'layout-header.php';
     }
 
     .cal-bar-label {
-        font-size: 9px;
+        font-size: 11px;
         font-weight: 700;
         color: #fff;
         white-space: nowrap;
