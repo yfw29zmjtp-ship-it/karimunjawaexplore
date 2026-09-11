@@ -48,10 +48,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['we_action'] ?? '') === 'qu
         $weQuoteErrorMsg = 'Nama, No. WhatsApp, Tanggal Trip, dan Pilihan Paket wajib diisi.';
     } else {
         try {
-            $custStmt = $pdo->prepare("SELECT id, name FROM customers WHERE phone = ? OR whatsapp = ? LIMIT 1");
-            $custStmt->execute([$qPhone, $qPhone]);
-            $qCustomerRow = $custStmt->fetch();
-            $qCustomerId = (int)($qCustomerRow['id'] ?? 0);
+            // Cocokkan berdasarkan HP + nama sekaligus — kalau nomor sama dipakai nama lain
+            // (anggota keluarga/kunjungan lain), buat customer baru, jangan timpa nama lama
+            // (menimpa nama akan ikut mengubah nama di semua penawaran lama customer itu).
+            $custStmt = $pdo->prepare("SELECT id FROM customers WHERE (phone = ? OR whatsapp = ?) AND name = ? LIMIT 1");
+            $custStmt->execute([$qPhone, $qPhone, $qName]);
+            $qCustomerId = (int)($custStmt->fetchColumn() ?: 0);
 
             if ($qCustomerId <= 0) {
                 $lastCode = $pdo->query("SELECT code FROM customers ORDER BY id DESC LIMIT 1")->fetchColumn();
@@ -63,10 +65,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['we_action'] ?? '') === 'qu
                 $pdo->prepare("INSERT INTO customers (code, name, type, email, phone, whatsapp, country) VALUES (?,?,?,?,?,?,?)")
                     ->execute([$newCode, $qName, 'individual', '', $qPhone, $qPhone, 'Indonesia']);
                 $qCustomerId = (int)$pdo->lastInsertId();
-            } elseif ($qCustomerRow['name'] !== $qName) {
-                // Nama terbaru yang diketik tamu dipakai — nomor WA yang sama dipakai ulang
-                // (mis. beda kunjungan/anggota keluarga) seharusnya tidak "mengunci" nama lama.
-                $pdo->prepare("UPDATE customers SET name = ? WHERE id = ?")->execute([$qName, $qCustomerId]);
             }
 
             $qPackageStmt = $pdo->prepare("SELECT name, duration_days, base_price FROM trip_packages WHERE id = ?");

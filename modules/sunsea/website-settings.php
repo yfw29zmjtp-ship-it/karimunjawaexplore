@@ -282,34 +282,34 @@ include 'layout-header.php';
                 style="margin-top:8px;padding:6px 12px;font-size:12px;border:1px solid #ccc;border-radius:5px;background:#f8fafc;cursor:pointer;">🔄 Refresh Preview</button>
         </div>
         <div style="background:#fff;border:1px solid #dde5ef;border-radius:8px;padding:20px;">
-        <div style="font-size:16px;font-weight:700;color:#0C4A6E;margin-bottom:16px;">🏠 Hero Beranda</div>
-        <form method="POST" enctype="multipart/form-data" style="display:flex;flex-direction:column;gap:14px;">
-            <input type="hidden" name="tab" value="hero">
-            <div>
-                <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;">Judul Utama</label>
-                <input type="text" name="hero_title" value="<?php echo htmlspecialchars($heroTitle); ?>"
-                    style="width:100%;padding:9px 12px;border:1px solid #ccc;border-radius:5px;font-family:inherit;font-size:14px;box-sizing:border-box;">
-            </div>
-            <div>
-                <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;">Sub Judul / Deskripsi</label>
-                <textarea name="hero_subtitle" rows="3"
-                    style="width:100%;padding:9px 12px;border:1px solid #ccc;border-radius:5px;font-family:inherit;font-size:14px;box-sizing:border-box;resize:vertical;"><?php echo htmlspecialchars($heroSubtitle); ?></textarea>
-            </div>
-            <div>
-                <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;">Background Header (gambar)</label>
-                <?php if ($heroBg): ?>
-                    <img src="<?php echo htmlspecialchars(sunseaAssetUrl($heroBg)); ?>" alt="" style="width:100%;max-height:140px;object-fit:cover;border-radius:6px;margin-bottom:8px;display:block;">
-                    <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#b91c1c;margin-bottom:8px;">
-                        <input type="checkbox" name="remove_hero_bg" value="1"> Hapus background (kembali ke warna default)
-                    </label>
-                <?php endif; ?>
-                <input type="file" name="hero_bg" accept="image/*" style="width:100%;font-size:13px;">
-                <div style="font-size:11px;color:#888;margin-top:4px;">Kosongkan kalau tidak ingin ganti. Ukuran disarankan lebar &ge; 1600px.</div>
-            </div>
-            <div>
-                <button type="submit" style="padding:10px 24px;background:#0C4A6E;color:white;border:none;border-radius:5px;font-weight:700;cursor:pointer;font-size:14px;">💾 Simpan</button>
-            </div>
-        </form>
+            <div style="font-size:16px;font-weight:700;color:#0C4A6E;margin-bottom:16px;">🏠 Hero Beranda</div>
+            <form method="POST" enctype="multipart/form-data" style="display:flex;flex-direction:column;gap:14px;">
+                <input type="hidden" name="tab" value="hero">
+                <div>
+                    <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;">Judul Utama</label>
+                    <input type="text" name="hero_title" value="<?php echo htmlspecialchars($heroTitle); ?>"
+                        style="width:100%;padding:9px 12px;border:1px solid #ccc;border-radius:5px;font-family:inherit;font-size:14px;box-sizing:border-box;">
+                </div>
+                <div>
+                    <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;">Sub Judul / Deskripsi</label>
+                    <textarea name="hero_subtitle" rows="3"
+                        style="width:100%;padding:9px 12px;border:1px solid #ccc;border-radius:5px;font-family:inherit;font-size:14px;box-sizing:border-box;resize:vertical;"><?php echo htmlspecialchars($heroSubtitle); ?></textarea>
+                </div>
+                <div>
+                    <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;">Background Header (gambar)</label>
+                    <?php if ($heroBg): ?>
+                        <img src="<?php echo htmlspecialchars(sunseaAssetUrl($heroBg)); ?>" alt="" style="width:100%;max-height:140px;object-fit:cover;border-radius:6px;margin-bottom:8px;display:block;">
+                        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#b91c1c;margin-bottom:8px;">
+                            <input type="checkbox" name="remove_hero_bg" value="1"> Hapus background (kembali ke warna default)
+                        </label>
+                    <?php endif; ?>
+                    <input type="file" name="hero_bg" accept="image/*" style="width:100%;font-size:13px;">
+                    <div style="font-size:11px;color:#888;margin-top:4px;">Kosongkan kalau tidak ingin ganti. Ukuran disarankan lebar &ge; 1600px.</div>
+                </div>
+                <div>
+                    <button type="submit" style="padding:10px 24px;background:#0C4A6E;color:white;border:none;border-radius:5px;font-weight:700;cursor:pointer;font-size:14px;">💾 Simpan</button>
+                </div>
+            </form>
         </div>
     </div>
 <?php endif; ?>

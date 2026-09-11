@@ -37,11 +37,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $pdo->beginTransaction();
 
-            // Cari customer berdasarkan no. HP, atau buat baru.
-            $custStmt = $pdo->prepare("SELECT id, name FROM customers WHERE phone = ? OR whatsapp = ? LIMIT 1");
-            $custStmt->execute([$phone, $phone]);
-            $custRow = $custStmt->fetch();
-            $customerId = (int)($custRow['id'] ?? 0);
+            // Cari customer berdasarkan HP + nama sekaligus. Kalau nomor sama dipakai nama lain,
+            // buat customer baru — jangan timpa nama lama (itu akan ikut mengubah nama di semua
+            // penawaran lama milik customer tersebut).
+            $custStmt = $pdo->prepare("SELECT id FROM customers WHERE (phone = ? OR whatsapp = ?) AND name = ? LIMIT 1");
+            $custStmt->execute([$phone, $phone, $name]);
+            $customerId = (int)($custStmt->fetchColumn() ?: 0);
 
             if ($customerId <= 0) {
                 $lastCode = $pdo->query("SELECT code FROM customers ORDER BY id DESC LIMIT 1")->fetchColumn();
@@ -51,9 +52,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $pdo->prepare("INSERT INTO customers (code, name, type, email, phone, whatsapp, country) VALUES (?,?,?,?,?,?,?)")
                     ->execute([$newCode, $name, 'individual', $email, $phone, $phone, 'Indonesia']);
                 $customerId = (int)$pdo->lastInsertId();
-            } elseif ($custRow['name'] !== $name) {
-                // Nama terbaru yang diketik tamu dipakai, jangan terkunci ke nama lama.
-                $pdo->prepare("UPDATE customers SET name = ? WHERE id = ?")->execute([$name, $customerId]);
             }
 
             $quotationNo = sunseaNextNumber($pdo, 'quotation');
