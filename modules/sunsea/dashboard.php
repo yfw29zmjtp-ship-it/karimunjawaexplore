@@ -292,11 +292,11 @@ if (isset($dbError)): ?>
         </div>
     </div>
 
-    <!-- Finance Pie Chart: Pemasukan vs Pengeluaran bulan ini -->
+    <!-- Finance Pie Chart: Pemasukan vs Pengeluaran vs Profit Margin bulan ini -->
     <div class="ss-card">
         <div class="ss-card-header">
             <div>
-                <div class="ss-card-title">Pemasukan vs Pengeluaran</div>
+                <div class="ss-card-title">Pemasukan, Pengeluaran &amp; Profit Margin</div>
                 <div class="ss-card-sub">Ringkasan Finance bulan ini (<?php echo date('F Y'); ?>)</div>
             </div>
         </div>
@@ -482,16 +482,16 @@ if (isset($dbError)): ?>
     }
     switchGuestChart('monthly');
 
-    // Finance Pie Chart: Pemasukan vs Pengeluaran bulan ini
+    // Finance Pie Chart: Pemasukan vs Pengeluaran vs Profit Margin bulan ini
     const financePieCtx = document.getElementById('financePieChart');
     if (financePieCtx) {
         new Chart(financePieCtx, {
             type: 'pie',
             data: {
-                labels: ['Pemasukan', 'Pengeluaran'],
+                labels: ['Pemasukan', 'Pengeluaran', 'Profit Margin'],
                 datasets: [{
-                    data: [<?php echo (float)$monthRevenue; ?>, <?php echo (float)$monthExpense; ?>],
-                    backgroundColor: [oceanColors.success, oceanColors.danger],
+                    data: [<?php echo (float)$monthRevenue; ?>, <?php echo (float)$monthExpense; ?>, <?php echo max(0, (float)$monthProfit); ?>],
+                    backgroundColor: [oceanColors.success, oceanColors.danger, oceanColors.primary],
                     borderColor: '#fff',
                     borderWidth: 2
                 }]
