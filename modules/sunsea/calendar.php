@@ -181,7 +181,7 @@ include 'layout-header.php';
 
     .cal-day-row {
         display: grid;
-        grid-template-columns: 210px repeat(var(--cal-days), 42px);
+        grid-template-columns: 190px repeat(var(--cal-days), 30px);
     }
 
     .cal-name-col {
@@ -202,8 +202,8 @@ include 'layout-header.php';
 
     .cal-day-col {
         text-align: center;
-        padding: 10px 2px;
-        font-size: 13px;
+        padding: 8px 1px;
+        font-size: 11px;
         font-weight: 700;
         color: var(--ss-muted);
         background: var(--ss-sky);
@@ -223,7 +223,7 @@ include 'layout-header.php';
 
     .cal-row {
         display: grid;
-        grid-template-columns: 210px repeat(var(--cal-days), 42px);
+        grid-template-columns: 190px repeat(var(--cal-days), 30px);
         align-items: center;
         cursor: pointer;
         transition: background .15s ease;
@@ -279,7 +279,7 @@ include 'layout-header.php';
     }
 
     .cal-cell {
-        height: 34px;
+        height: 28px;
         border-left: 1px solid rgba(15, 23, 42, .03);
         border-bottom: 1px solid rgba(15, 23, 42, .03);
     }
@@ -294,7 +294,7 @@ include 'layout-header.php';
     }
 
     .cal-bar {
-        height: 24px;
+        height: 20px;
         margin: 0 1px;
         border-radius: 999px;
         background: linear-gradient(90deg, var(--ss-ocean), #E85D2C);
@@ -925,6 +925,7 @@ include 'layout-header.php';
     }
 
     // Geser timeline dengan klik-tahan lalu tarik (drag to scroll), pakai Pointer Events (mouse & touch).
+    // move/up dipasang di window (bukan di scroller) supaya drag tetap jalan walau pointer keluar dari area scroller.
     (function() {
         var scroller = document.querySelector('.cal-timeline-scroll');
         if (!scroller) return;
@@ -937,10 +938,10 @@ include 'layout-header.php';
             startX = e.clientX;
             startScroll = scroller.scrollLeft;
             scroller.classList.add('is-dragging');
-            scroller.setPointerCapture(e.pointerId);
         });
-        scroller.addEventListener('pointermove', function(e) {
+        window.addEventListener('pointermove', function(e) {
             if (!isDown) return;
+            e.preventDefault();
             var delta = e.clientX - startX;
             if (Math.abs(delta) > 4) dragged = true;
             scroller.scrollLeft = startScroll - delta;
@@ -949,8 +950,8 @@ include 'layout-header.php';
             isDown = false;
             scroller.classList.remove('is-dragging');
         }
-        scroller.addEventListener('pointerup', endDrag);
-        scroller.addEventListener('pointercancel', endDrag);
+        window.addEventListener('pointerup', endDrag);
+        window.addEventListener('pointercancel', endDrag);
         // Cegah klik baris terbuka modal detail kalau baru saja dipakai untuk drag.
         scroller.addEventListener('click', function(e) {
             if (dragged) {
