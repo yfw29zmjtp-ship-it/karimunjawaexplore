@@ -654,22 +654,24 @@ include 'layout-header.php';
     }
 
     #bookingDetailBody .bd-donut {
-        width: 140px;
-        height: 140px;
+        width: 150px;
+        height: 150px;
         border-radius: 50%;
         position: relative;
         margin: 0 auto;
+        box-shadow: 0 10px 22px -8px rgba(0,0,0,.28), inset 0 2px 4px rgba(255,255,255,.35), inset 0 -3px 6px rgba(0,0,0,.15);
     }
 
     #bookingDetailBody .bd-donut-center {
         position: absolute;
-        inset: 16px;
-        background: #fff;
+        inset: 38px;
+        background: radial-gradient(circle at 35% 30%, #ffffff, #f4f6f8);
         border-radius: 50%;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
+        box-shadow: 0 3px 10px rgba(0,0,0,.14), inset 0 1px 2px rgba(255,255,255,.8);
     }
 
     #bookingDetailBody .bd-donut-center .pct {
@@ -823,16 +825,15 @@ include 'layout-header.php';
                 html += '<div class="bd-summary-box" style="background:#F0FDF4;"><div class="bd-label" style="color:' + marginColor + ';">Margin</div><div class="bd-value" style="color:' + marginColor + ';">' + fmt(data.margin) + '</div></div>';
                 html += '</div>';
 
-                // Donut chart: proporsi pemasukan vs pengeluaran + persentase profit di tengah
+                // Donut chart: proporsi margin (profit) vs pengeluaran, dihitung dari RAB yang sama dengan angka persen di tengah.
                 var incomeVal = parseFloat(data.totalRab) || 0;
                 var expenseVal = parseFloat(data.totalExpense) || 0;
-                var chartTotal = incomeVal + expenseVal;
-                var incomeShare = chartTotal > 0 ? (incomeVal / chartTotal * 100) : 0;
                 var profitPct = incomeVal > 0 ? (data.margin / incomeVal * 100) : 0;
                 var profitPctColor = profitPct >= 0 ? 'var(--ss-success)' : 'var(--ss-danger)';
+                var profitShare = Math.max(0, Math.min(100, profitPct));
 
                 html += '<div class="bd-chart-row">';
-                html += '<div class="bd-donut" style="background:conic-gradient(#16a34a 0% ' + incomeShare + '%, #dc2626 ' + incomeShare + '% 100%);">';
+                html += '<div class="bd-donut" style="background:conic-gradient(#16a34a 0% ' + profitShare + '%, #dc2626 ' + profitShare + '% 100%);">';
                 html += '<div class="bd-donut-center"><div class="pct" style="color:' + profitPctColor + ';">' + profitPct.toFixed(1) + '%</div><div class="lbl">Profit</div></div>';
                 html += '</div>';
                 html += '<div class="bd-legend">';
