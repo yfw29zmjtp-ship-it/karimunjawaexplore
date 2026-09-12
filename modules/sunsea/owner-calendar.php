@@ -113,9 +113,11 @@ $daysInMonth = (int)date('t', strtotime($startMonth));
 $todayDay = (date('Y-m') === $month) ? (int)date('j') : 0;
 
 $bookings = $pdo->prepare("
-    SELECT b.id, b.booking_no, b.start_date, b.end_date, b.pax_count, c.name AS customer_name
+    SELECT b.id, b.booking_no, b.start_date, b.end_date, b.pax_count, c.name AS customer_name, p.name AS package_name,
+        (SELECT COUNT(*) FROM booking_order_items i WHERE i.booking_id=b.id AND i.is_done=0) as pending_count
     FROM booking_orders b
     JOIN customers c ON c.id = b.customer_id
+    LEFT JOIN trip_packages p ON p.id = b.package_id
     WHERE b.end_date >= ? AND b.start_date <= ? AND b.status = 'confirmed'
     ORDER BY b.start_date, b.id
 ");
@@ -124,7 +126,25 @@ $bookings = $bookings->fetchAll();
 
 $prevMonth = date('Y-m', strtotime($startMonth . ' -1 month'));
 $nextMonth = date('Y-m', strtotime($startMonth . ' +1 month'));
-$colWidth = 22;
+
+// Warna balok reservasi jadi penanda durasi/tipe trip (samakan dengan kalender di system).
+$calDurationColors = [
+    '2H1M' => '#EAB308',
+    '3H2M' => '#EA580C',
+    '4H1M' => '#2563EB',
+    '4H3M' => '#0D9488',
+    '5H4M' => '#7C3AED',
+];
+$calHoneymoonColor = '#DB2777';
+$calDefaultColor = '#64748B';
+
+function obCalBarColor(string $durationLabel, ?string $packageName, array $durationColors, string $honeymoonColor, string $defaultColor): string
+{
+    if ($packageName && stripos($packageName, 'honeymoon') !== false) {
+        return $honeymoonColor;
+    }
+    return $durationColors[$durationLabel] ?? $defaultColor;
+}
 
 // Tamu yang akan check-in dalam 7 hari ke depan (untuk widget di bawah kalender)
 $todayDate = date('Y-m-d');
@@ -177,89 +197,175 @@ include 'owner-mobile-header.php';
         text-align: center;
     }
 
-    .ob-cal-scroll {
+    /* Timeline balok reservasi, disamakan persis dengan tampilan Kalender Booking di system (calendar.php) */
+    .cal-timeline-scroll {
         overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        cursor: grab;
+        user-select: none;
     }
 
-    .ob-cal-grid {
+    .cal-timeline-scroll.is-dragging {
+        cursor: grabbing;
+    }
+
+    .cal-timeline {
+        width: 100%;
+        background: #fff;
+        touch-action: pan-y;
+        will-change: transform;
+    }
+
+    .cal-day-row {
         display: grid;
-        grid-auto-rows: 22px;
+        grid-template-columns: 130px repeat(var(--cal-days), minmax(16px, 1fr));
+    }
+
+    .cal-name-col {
+        position: sticky;
+        left: 0;
+        z-index: 2;
+        background: var(--sky);
+        border-right: 1px solid var(--border);
+        padding: 8px 10px;
+        font-size: 10.5px;
+        font-weight: 800;
+        color: var(--text);
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        display: flex;
         align-items: center;
     }
 
-    .ob-cal-head-name {
-        position: sticky;
-        left: 0;
-        background: #fff;
-        z-index: 2;
-        font-size: 9px;
-        font-weight: 700;
-        color: var(--muted);
-        padding-left: 2px;
-    }
-
-    .ob-cal-daynum {
-        font-size: 8.5px;
+    .cal-day-col {
         text-align: center;
+        padding: 6px 1px;
+        font-size: 9.5px;
+        font-weight: 700;
         color: var(--muted);
+        background: var(--sky);
+        border-left: 1px solid rgba(3, 105, 161, .06);
     }
 
-    .ob-cal-daynum.today {
+    .cal-day-col.is-weekend {
         color: var(--ocean);
-        font-weight: 800;
+        background: #E0F2FE;
     }
 
-    .ob-cal-name {
+    .cal-day-col.is-today {
+        background: var(--ocean);
+        color: #fff;
+        border-radius: 6px 6px 0 0;
+    }
+
+    .cal-row {
+        display: grid;
+        grid-template-columns: 130px repeat(var(--cal-days), minmax(16px, 1fr));
+        align-items: center;
+        cursor: pointer;
+        transition: background .15s ease;
+    }
+
+    .cal-row:active {
+        background: var(--sky);
+    }
+
+    .cal-guest {
         position: sticky;
         left: 0;
-        background: #fff;
         z-index: 1;
-        padding-right: 6px;
-        font-size: 10.5px;
+        background: #fff;
+        border-right: 1px solid var(--border);
+        padding: 8px 10px;
+        overflow: hidden;
+    }
+
+    .cal-guest-avatar {
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        color: #fff;
+        font-size: 10px;
+        font-weight: 800;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        margin-right: 6px;
+    }
+
+    .cal-guest-name {
+        font-size: 11.5px;
         font-weight: 700;
+        color: var(--text);
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        border-right: 2px solid var(--border);
     }
 
-    .ob-cal-name .sub {
-        font-size: 8.5px;
-        font-weight: 400;
+    .cal-guest-meta {
+        font-size: 9px;
+        font-weight: 500;
         color: var(--muted);
+        white-space: nowrap;
     }
 
-    .ob-cal-cell {
-        height: 14px;
-        border-radius: 2px;
-        background: #F1F5F9;
+    .cal-cell {
+        height: 24px;
+        border-left: 1px solid rgba(15, 23, 42, .03);
+        border-bottom: 1px solid rgba(15, 23, 42, .03);
+    }
+
+    .cal-cell.is-weekend {
+        background: #F8FAFC;
+    }
+
+    .cal-cell.is-today {
+        background: #E0F2FE;
+        box-shadow: inset 1px 0 0 var(--ocean), inset -1px 0 0 var(--ocean);
+    }
+
+    .cal-bar {
+        height: 17px;
         margin: 0 1px;
+        border-radius: 999px;
+        box-shadow: 0 2px 6px rgba(3, 105, 161, .28);
+        display: flex;
+        align-items: center;
     }
 
-    .ob-cal-cell.on {
-        background: var(--ocean);
+    .cal-bar-label {
+        font-size: 9px;
+        font-weight: 700;
+        color: #fff;
+        white-space: nowrap;
+        overflow: hidden;
+        padding-left: 6px;
+        letter-spacing: .01em;
     }
 
-    .ob-cal-name,
-    .ob-cal-cell {
-        cursor: pointer;
+    .cal-bar-continue {
+        font-size: 10px;
+        font-weight: 900;
+        color: #fff;
+        padding: 0 3px;
     }
 
     .ob-cal-legend {
         display: flex;
+        flex-wrap: wrap;
         align-items: center;
-        gap: 6px;
-        font-size: 10.5px;
+        gap: 8px;
+        font-size: 9.5px;
         color: var(--muted);
         margin-top: 10px;
     }
 
     .ob-cal-legend span.dot {
-        width: 10px;
-        height: 10px;
-        border-radius: 2px;
-        background: var(--ocean);
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
         display: inline-block;
     }
 </style>
@@ -271,33 +377,99 @@ include 'owner-mobile-header.php';
 </div>
 
 <div class="ob-section">
+    <?php
+    $obCalLegend = [
+        'Honeymoon' => $calHoneymoonColor,
+        '2H1M'      => $calDurationColors['2H1M'],
+        '3H2M'      => $calDurationColors['3H2M'],
+        '4H1M'      => $calDurationColors['4H1M'],
+        '4H3M'      => $calDurationColors['4H3M'],
+        '5H4M'      => $calDurationColors['5H4M'],
+        'Lainnya'   => $calDefaultColor,
+    ];
+    ?>
     <?php if (empty($bookings)): ?>
         <div class="ob-empty">Tidak ada reservasi confirmed pada bulan ini.</div>
     <?php else: ?>
-        <div class="ob-cal-scroll">
-            <div class="ob-cal-grid" style="grid-template-columns:96px repeat(<?php echo $daysInMonth; ?>, <?php echo $colWidth; ?>px);">
-                <div class="ob-cal-head-name">Tamu</div>
-                <?php for ($d = 1; $d <= $daysInMonth; $d++): ?>
-                    <div class="ob-cal-daynum <?php echo $d === $todayDay ? 'today' : ''; ?>"><?php echo $d; ?></div>
-                <?php endfor; ?>
+        <div class="cal-timeline-scroll" id="calTimelineScroll" data-prev-month="<?php echo $prevMonth; ?>" data-next-month="<?php echo $nextMonth; ?>">
+            <div class="cal-timeline" id="calTimeline" style="--cal-days:<?php echo $daysInMonth; ?>;">
+                <div class="cal-day-row">
+                    <div class="cal-name-col">Tamu</div>
+                    <?php for ($d = 1; $d <= $daysInMonth; $d++):
+                        $dow = (int)date('N', strtotime("$month-" . str_pad($d, 2, '0', STR_PAD_LEFT)));
+                        $isWeekend = $dow >= 6;
+                        $isToday = $d === $todayDay;
+                    ?>
+                        <div class="cal-day-col<?php echo $isWeekend ? ' is-weekend' : ''; ?><?php echo $isToday ? ' is-today' : ''; ?>"><?php echo $d; ?></div>
+                    <?php endfor; ?>
+                </div>
 
                 <?php foreach ($bookings as $b):
                     $s = max(1, (int)date('j', strtotime(max($b['start_date'], $startMonth))));
                     $e = min($daysInMonth, (int)date('j', strtotime(min($b['end_date'], $endMonth))));
+                    $nights = max(0, (int)round((strtotime($b['end_date']) - strtotime($b['start_date'])) / 86400));
+                    $durationLabel = ($nights + 1) . 'H' . $nights . 'M';
+                    $barColor = obCalBarColor($durationLabel, $b['package_name'], $calDurationColors, $calHoneymoonColor, $calDefaultColor);
+                    $initial = mb_strtoupper(mb_substr($b['customer_name'], 0, 1));
+                    $clippedLeft = strtotime($b['start_date']) < strtotime($startMonth);
+                    $clippedRight = strtotime($b['end_date']) > strtotime($endMonth);
+                    $barTitle = htmlspecialchars(date('d M Y', strtotime($b['start_date'])) . ' - ' . date('d M Y', strtotime($b['end_date'])) . ' (' . $durationLabel . ')');
                 ?>
-                    <div class="ob-cal-name" onclick="openBookingDetail(<?php echo (int)$b['id']; ?>)">
-                        <?php echo htmlspecialchars($b['customer_name']); ?>
-                        <div class="sub"><?php echo htmlspecialchars($b['booking_no']); ?> · <?php echo (int)$b['pax_count']; ?> pax</div>
+                    <div class="cal-row" onclick="openBookingDetail(<?php echo (int)$b['id']; ?>)">
+                        <div class="cal-guest">
+                            <div style="display:flex;align-items:center;">
+                                <span class="cal-guest-avatar" style="background:linear-gradient(135deg,<?php echo $barColor; ?>,#0EA5E9);"><?php echo htmlspecialchars($initial); ?></span>
+                                <div style="min-width:0;">
+                                    <div class="cal-guest-name">
+                                        <?php if ((int)$b['pending_count'] > 0): ?>
+                                            <span title="Ada layanan belum selesai" style="display:inline-block;width:5px;height:5px;border-radius:50%;background:#dc2626;margin-right:3px;"></span>
+                                        <?php endif; ?>
+                                        <?php echo htmlspecialchars($b['customer_name']); ?>
+                                    </div>
+                                    <div class="cal-guest-meta"><?php echo htmlspecialchars($b['booking_no']); ?> · <?php echo (int)$b['pax_count']; ?> pax</div>
+                                </div>
+                            </div>
+                        </div>
+                        <?php for ($d = 1; $d <= $daysInMonth; $d++):
+                            $dow = (int)date('N', strtotime("$month-" . str_pad($d, 2, '0', STR_PAD_LEFT)));
+                            $isWeekend = $dow >= 6;
+                            $isTodayCol = $d === $todayDay;
+                        ?>
+                            <?php if ($d >= $s && $d <= $e): ?>
+                                <?php
+                                $isLeftEdge = $d === $s;
+                                $isRightEdge = $d === $e;
+                                $roundLeft = $isLeftEdge && !$clippedLeft;
+                                $roundRight = $isRightEdge && !$clippedRight;
+                                $radius = ($roundLeft ? '999px' : '0') . ' ' . ($roundRight ? '999px' : '0') . ' ' . ($roundRight ? '999px' : '0') . ' ' . ($roundLeft ? '999px' : '0');
+                                ?>
+                                <div class="cal-cell<?php echo $isTodayCol ? ' is-today' : ''; ?>" style="padding:3px 0;" title="<?php echo $barTitle; ?>">
+                                    <div class="cal-bar" style="background:linear-gradient(90deg,<?php echo $barColor; ?>,<?php echo $barColor; ?>cc);border-radius:<?php echo $radius; ?>;<?php echo !$isLeftEdge ? 'margin-left:-1px;' : ''; ?><?php echo !$isRightEdge ? 'margin-right:-1px;' : ''; ?>">
+                                        <?php if ($isLeftEdge && $clippedLeft): ?><span class="cal-bar-continue" title="Lanjutan dari bulan sebelumnya">&laquo;</span><?php endif; ?>
+                                        <?php if ($isLeftEdge): ?><span class="cal-bar-label"><?php echo (int)$b['pax_count']; ?> pax</span><?php endif; ?>
+                                        <?php if ($isRightEdge && $clippedRight): ?><span class="cal-bar-continue" title="Lanjut ke bulan berikutnya">&raquo;</span><?php endif; ?>
+                                    </div>
+                                </div>
+                            <?php else: ?>
+                                <div class="cal-cell<?php echo $isWeekend ? ' is-weekend' : ''; ?><?php echo $isTodayCol ? ' is-today' : ''; ?>"></div>
+                            <?php endif; ?>
+                        <?php endfor; ?>
                     </div>
-                    <?php for ($d = 1; $d <= $daysInMonth; $d++): ?>
-                        <div class="ob-cal-cell <?php echo ($d >= $s && $d <= $e) ? 'on' : ''; ?>" onclick="openBookingDetail(<?php echo (int)$b['id']; ?>)"></div>
-                    <?php endfor; ?>
                 <?php endforeach; ?>
             </div>
         </div>
-        <div class="ob-cal-legend"><span class="dot"></span> Reservasi confirmed · geser ke samping untuk lihat tanggal lain</div>
+        <div class="ob-cal-legend">
+            <?php foreach ($obCalLegend as $label => $color): ?>
+                <span style="display:inline-flex;align-items:center;gap:4px;">
+                    <span class="dot" style="background:<?php echo $color; ?>;"></span>
+                    <?php echo htmlspecialchars($label); ?>
+                </span>
+            <?php endforeach; ?>
+            <span style="color:var(--muted);">&middot; Geser ke samping untuk lihat tanggal lain</span>
+        </div>
     <?php endif; ?>
 </div>
+
 
 <div class="ob-section">
     <div class="ob-section-head">
@@ -606,6 +778,75 @@ include 'owner-mobile-header.php';
         document.getElementById('bookingDetailOverlay').style.display = 'none';
         document.body.style.overflow = '';
     }
+
+    // Geser (swipe) timeline ke kiri/kanan untuk pindah bulan, sama seperti kalender di system.
+    (function() {
+        var scroller = document.getElementById('calTimelineScroll');
+        var timeline = document.getElementById('calTimeline');
+        if (!scroller || !timeline) return;
+
+        var prevMonthVal = scroller.dataset.prevMonth;
+        var nextMonthVal = scroller.dataset.nextMonth;
+        var isDown = false,
+            startX = 0,
+            dx = 0,
+            dragged = false,
+            width = 0;
+        var THRESHOLD = 90;
+
+        function setTransition(on) {
+            timeline.style.transition = on ? 'transform .28s cubic-bezier(.22,.9,.36,1), opacity .28s ease' : 'none';
+        }
+
+        scroller.addEventListener('pointerdown', function(e) {
+            if (e.pointerType === 'mouse' && e.button !== 0) return;
+            isDown = true;
+            dragged = false;
+            dx = 0;
+            startX = e.clientX;
+            width = scroller.clientWidth;
+            setTransition(false);
+            scroller.classList.add('is-dragging');
+        });
+        window.addEventListener('pointermove', function(e) {
+            if (!isDown) return;
+            e.preventDefault();
+            dx = e.clientX - startX;
+            if (Math.abs(dx) > 4) dragged = true;
+            var limited = dx;
+            if (dx < 0 && !nextMonthVal) limited = dx * 0.25;
+            if (dx > 0 && !prevMonthVal) limited = dx * 0.25;
+            timeline.style.transform = 'translateX(' + limited + 'px)';
+        });
+
+        function endDrag() {
+            if (!isDown) return;
+            isDown = false;
+            scroller.classList.remove('is-dragging');
+            setTransition(true);
+
+            var goNext = dx <= -THRESHOLD && nextMonthVal;
+            var goPrev = dx >= THRESHOLD && prevMonthVal;
+
+            if (goNext || goPrev) {
+                timeline.style.transform = 'translateX(' + (goNext ? -width : width) + 'px)';
+                timeline.style.opacity = '0';
+                window.setTimeout(function() {
+                    window.location.href = '?month=' + (goNext ? nextMonthVal : prevMonthVal);
+                }, 240);
+            } else {
+                timeline.style.transform = 'translateX(0)';
+            }
+        }
+        window.addEventListener('pointerup', endDrag);
+        window.addEventListener('pointercancel', endDrag);
+        scroller.addEventListener('click', function(e) {
+            if (dragged) {
+                e.stopPropagation();
+                e.preventDefault();
+            }
+        }, true);
+    })();
 </script>
 
 <?php include 'owner-mobile-footer.php'; ?>
