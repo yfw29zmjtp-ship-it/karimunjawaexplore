@@ -419,8 +419,16 @@ if (isset($dbError)): ?>
 
     // Guest Chart: toggle between monthly (line) and yearly (bar) datasets
     const guestData = {
-        monthly: { labels: <?php echo $monthLabels; ?>, values: <?php echo $monthlyGuests; ?>, sub: 'Total tamu per bulan (12 bulan terakhir)' },
-        yearly: { labels: <?php echo $yearLabels; ?>, values: <?php echo $yearlyGuests; ?>, sub: 'Total tamu per tahun (5 tahun terakhir)' }
+        monthly: {
+            labels: <?php echo $monthLabels; ?>,
+            values: <?php echo $monthlyGuests; ?>,
+            sub: 'Total tamu per bulan (12 bulan terakhir)'
+        },
+        yearly: {
+            labels: <?php echo $yearLabels; ?>,
+            values: <?php echo $yearlyGuests; ?>,
+            sub: 'Total tamu per tahun (5 tahun terakhir)'
+        }
     };
     let guestChartInstance = null;
 
@@ -458,16 +466,33 @@ if (isset($dbError)): ?>
                     legend: {
                         display: true,
                         position: 'top',
-                        labels: { font: { size: 13 }, padding: 15, usePointStyle: true }
+                        labels: {
+                            font: {
+                                size: 13
+                            },
+                            padding: 15,
+                            usePointStyle: true
+                        }
                     }
                 },
                 scales: {
                     y: {
                         beginAtZero: true,
-                        ticks: { stepSize: isMonthly ? 5 : 20, font: { size: 12 } },
-                        grid: { color: 'rgba(0,0,0,0.05)' }
+                        ticks: {
+                            stepSize: isMonthly ? 5 : 20,
+                            font: {
+                                size: 12
+                            }
+                        },
+                        grid: {
+                            color: 'rgba(0,0,0,0.05)'
+                        }
                     },
-                    x: { grid: { display: false } }
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    }
                 }
             }
         });
@@ -503,11 +528,17 @@ if (isset($dbError)): ?>
                     legend: {
                         display: true,
                         position: 'top',
-                        labels: { font: { size: 13 }, padding: 15, usePointStyle: true }
+                        labels: {
+                            font: {
+                                size: 13
+                            },
+                            padding: 15,
+                            usePointStyle: true
+                        }
                     },
                     tooltip: {
                         callbacks: {
-                            label: function (ctx) {
+                            label: function(ctx) {
                                 const val = ctx.parsed || 0;
                                 return ctx.label + ': Rp ' + val.toLocaleString('id-ID');
                             }

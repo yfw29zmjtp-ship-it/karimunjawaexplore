@@ -113,243 +113,187 @@ if (($_GET['print'] ?? '') === '1') {
     if ($tab === 'bulanan') $printTitle = 'Laporan Keuangan Bulanan - ' . date('F Y', strtotime($lapMonthStart));
     if ($tab === 'customer') $printTitle = 'Laporan Finance Customer - ' . ($lapCustomerInfo['name'] ?? '-');
 ?>
-<!DOCTYPE html>
-<html lang="id">
+    <!DOCTYPE html>
+    <html lang="id">
 
-<head>
-    <meta charset="UTF-8">
-    <title><?php echo htmlspecialchars($printTitle); ?></title>
-    <style>
-        * {
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Arial, sans-serif;
-            color: #1e293b;
-            padding: 28px;
-            font-size: 12.5px;
-        }
-
-        .lap-head {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            border-bottom: 3px solid #0C4A6E;
-            padding-bottom: 12px;
-            margin-bottom: 16px;
-        }
-
-        .lap-head img {
-            width: 48px;
-            height: 48px;
-            object-fit: contain;
-        }
-
-        .lap-head .brand-name {
-            font-size: 17px;
-            font-weight: 800;
-            color: #0C4A6E;
-            margin: 0;
-        }
-
-        .lap-head .brand-meta {
-            font-size: 11px;
-            color: #64748b;
-        }
-
-        h1.lap-title {
-            font-size: 15px;
-            margin: 0 0 16px;
-            color: #0C4A6E;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 14px;
-        }
-
-        th,
-        td {
-            border: 1px solid #e2e8f0;
-            padding: 6px 8px;
-            text-align: left;
-            font-size: 11.5px;
-        }
-
-        th {
-            background: #F0F9FF;
-            color: #0C4A6E;
-            font-weight: 700;
-        }
-
-        tfoot td {
-            font-weight: 800;
-            background: #F8FAFC;
-        }
-
-        .lap-summary {
-            display: flex;
-            gap: 14px;
-            margin-bottom: 16px;
-        }
-
-        .lap-summary-box {
-            flex: 1;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 10px 12px;
-        }
-
-        .lap-summary-box .lbl {
-            font-size: 10.5px;
-            color: #64748b;
-            text-transform: uppercase;
-        }
-
-        .lap-summary-box .val {
-            font-size: 15px;
-            font-weight: 800;
-            margin-top: 3px;
-        }
-
-        @media print {
-            body {
-                padding: 10px;
+    <head>
+        <meta charset="UTF-8">
+        <title><?php echo htmlspecialchars($printTitle); ?></title>
+        <style>
+            * {
+                box-sizing: border-box;
             }
-        }
-    </style>
-</head>
 
-<body onload="window.print()">
-    <div class="lap-head">
-        <?php if ($printLogoSrc): ?><img src="<?php echo htmlspecialchars($printLogoSrc); ?>" alt="Logo"><?php endif; ?>
-        <div>
-            <p class="brand-name"><?php echo htmlspecialchars($companyName); ?></p>
-            <div class="brand-meta"><?php echo htmlspecialchars($companyAddress); ?><?php echo ($companyAddress && $companyPhone) ? ' &middot; ' : ''; ?><?php echo htmlspecialchars($companyPhone); ?></div>
+            body {
+                font-family: 'Segoe UI', Arial, sans-serif;
+                color: #1e293b;
+                padding: 28px;
+                font-size: 12.5px;
+            }
+
+            .lap-head {
+                display: flex;
+                align-items: center;
+                gap: 14px;
+                border-bottom: 3px solid #0C4A6E;
+                padding-bottom: 12px;
+                margin-bottom: 16px;
+            }
+
+            .lap-head img {
+                width: 48px;
+                height: 48px;
+                object-fit: contain;
+            }
+
+            .lap-head .brand-name {
+                font-size: 17px;
+                font-weight: 800;
+                color: #0C4A6E;
+                margin: 0;
+            }
+
+            .lap-head .brand-meta {
+                font-size: 11px;
+                color: #64748b;
+            }
+
+            h1.lap-title {
+                font-size: 15px;
+                margin: 0 0 16px;
+                color: #0C4A6E;
+            }
+
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-bottom: 14px;
+            }
+
+            th,
+            td {
+                border: 1px solid #e2e8f0;
+                padding: 6px 8px;
+                text-align: left;
+                font-size: 11.5px;
+            }
+
+            th {
+                background: #F0F9FF;
+                color: #0C4A6E;
+                font-weight: 700;
+            }
+
+            tfoot td {
+                font-weight: 800;
+                background: #F8FAFC;
+            }
+
+            .lap-summary {
+                display: flex;
+                gap: 14px;
+                margin-bottom: 16px;
+            }
+
+            .lap-summary-box {
+                flex: 1;
+                border: 1px solid #e2e8f0;
+                border-radius: 8px;
+                padding: 10px 12px;
+            }
+
+            .lap-summary-box .lbl {
+                font-size: 10.5px;
+                color: #64748b;
+                text-transform: uppercase;
+            }
+
+            .lap-summary-box .val {
+                font-size: 15px;
+                font-weight: 800;
+                margin-top: 3px;
+            }
+
+            @media print {
+                body {
+                    padding: 10px;
+                }
+            }
+        </style>
+    </head>
+
+    <body onload="window.print()">
+        <div class="lap-head">
+            <?php if ($printLogoSrc): ?><img src="<?php echo htmlspecialchars($printLogoSrc); ?>" alt="Logo"><?php endif; ?>
+            <div>
+                <p class="brand-name"><?php echo htmlspecialchars($companyName); ?></p>
+                <div class="brand-meta"><?php echo htmlspecialchars($companyAddress); ?><?php echo ($companyAddress && $companyPhone) ? ' &middot; ' : ''; ?><?php echo htmlspecialchars($companyPhone); ?></div>
+            </div>
         </div>
-    </div>
-    <h1 class="lap-title"><?php echo htmlspecialchars($printTitle); ?></h1>
+        <h1 class="lap-title"><?php echo htmlspecialchars($printTitle); ?></h1>
 
-    <?php if ($tab === 'harian'): ?>
-        <div class="lap-summary">
-            <div class="lap-summary-box">
-                <div class="lbl">Total Pemasukan</div>
-                <div class="val" style="color:#16a34a;"><?php echo sunseaRupiah($lapHarianIncome); ?></div>
-            </div>
-            <div class="lap-summary-box">
-                <div class="lbl">Total Pengeluaran</div>
-                <div class="val" style="color:#dc2626;"><?php echo sunseaRupiah($lapHarianExpense); ?></div>
-            </div>
-            <div class="lap-summary-box">
-                <div class="lbl">Saldo Bersih</div>
-                <div class="val" style="color:#0C4A6E;"><?php echo sunseaRupiah($lapHarianNet); ?></div>
-            </div>
-        </div>
-        <table>
-            <thead>
-                <tr>
-                    <th>Jenis</th>
-                    <th>Keterangan</th>
-                    <th>Tamu / Trip</th>
-                    <th>Kategori</th>
-                    <th>Jumlah</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php if (empty($lapHarianRows)): ?>
-                    <tr>
-                        <td colspan="5" style="text-align:center;color:#94a3b8;">Tidak ada transaksi pada tanggal ini.</td>
-                    </tr>
-                <?php endif; ?>
-                <?php foreach ($lapHarianRows as $r): ?>
-                    <tr>
-                        <td><?php echo $r['type'] === 'income' ? 'Masuk' : 'Keluar'; ?></td>
-                        <td><?php echo htmlspecialchars($r['description']); ?></td>
-                        <td><?php echo htmlspecialchars($r['customer_name'] ?: '-'); ?><?php echo $r['booking_no'] ? ' (' . htmlspecialchars($r['booking_no']) . ')' : ''; ?></td>
-                        <td><?php echo htmlspecialchars($r['category'] ?: '-'); ?></td>
-                        <td><?php echo ($r['type'] === 'income' ? '+ ' : '- ') . sunseaRupiah((float)$r['amount']); ?></td>
-                    </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
-
-    <?php elseif ($tab === 'bulanan'): ?>
-        <div class="lap-summary">
-            <div class="lap-summary-box">
-                <div class="lbl">Total Pemasukan</div>
-                <div class="val" style="color:#16a34a;"><?php echo sunseaRupiah($lapBulananTotalIn); ?></div>
-            </div>
-            <div class="lap-summary-box">
-                <div class="lbl">Total Pengeluaran</div>
-                <div class="val" style="color:#dc2626;"><?php echo sunseaRupiah($lapBulananTotalOut); ?></div>
-            </div>
-            <div class="lap-summary-box">
-                <div class="lbl">Total Margin</div>
-                <div class="val" style="color:#0C4A6E;"><?php echo sunseaRupiah($lapBulananTotalMargin); ?></div>
-            </div>
-        </div>
-        <table>
-            <thead>
-                <tr>
-                    <th>Nama Tamu</th>
-                    <th>Paket</th>
-                    <th>Pemasukan</th>
-                    <th>Pengeluaran</th>
-                    <th>Margin</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php if (empty($lapBulananRows)): ?>
-                    <tr>
-                        <td colspan="5" style="text-align:center;color:#94a3b8;">Tidak ada trip pada bulan ini.</td>
-                    </tr>
-                <?php endif; ?>
-                <?php foreach ($lapBulananRows as $r): ?>
-                    <tr>
-                        <td><?php echo htmlspecialchars($r['customer_name']); ?></td>
-                        <td><?php echo htmlspecialchars($r['package_name'] ?: '-'); ?></td>
-                        <td><?php echo sunseaRupiah((float)$r['pemasukan']); ?></td>
-                        <td><?php echo sunseaRupiah((float)$r['pengeluaran']); ?></td>
-                        <td><?php echo sunseaRupiah((float)$r['margin']); ?></td>
-                    </tr>
-                <?php endforeach; ?>
-            </tbody>
-            <tfoot>
-                <tr>
-                    <td colspan="2">Total Semua</td>
-                    <td><?php echo sunseaRupiah($lapBulananTotalIn); ?></td>
-                    <td><?php echo sunseaRupiah($lapBulananTotalOut); ?></td>
-                    <td><?php echo sunseaRupiah($lapBulananTotalMargin); ?></td>
-                </tr>
-            </tfoot>
-        </table>
-
-    <?php elseif ($tab === 'customer'): ?>
-        <?php if (!$lapCustomerInfo): ?>
-            <p style="color:#94a3b8;">Pilih tamu terlebih dahulu.</p>
-        <?php else: ?>
-            <p style="margin:-8px 0 14px;color:#64748b;"><?php echo htmlspecialchars($lapCustomerInfo['phone'] ?: ''); ?><?php echo ($lapCustomerInfo['phone'] && $lapCustomerInfo['email']) ? ' &middot; ' : ''; ?><?php echo htmlspecialchars($lapCustomerInfo['email'] ?: ''); ?></p>
+        <?php if ($tab === 'harian'): ?>
             <div class="lap-summary">
                 <div class="lap-summary-box">
                     <div class="lbl">Total Pemasukan</div>
-                    <div class="val" style="color:#16a34a;"><?php echo sunseaRupiah($lapCustomerTotalIn); ?></div>
+                    <div class="val" style="color:#16a34a;"><?php echo sunseaRupiah($lapHarianIncome); ?></div>
                 </div>
                 <div class="lap-summary-box">
                     <div class="lbl">Total Pengeluaran</div>
-                    <div class="val" style="color:#dc2626;"><?php echo sunseaRupiah($lapCustomerTotalOut); ?></div>
+                    <div class="val" style="color:#dc2626;"><?php echo sunseaRupiah($lapHarianExpense); ?></div>
                 </div>
                 <div class="lap-summary-box">
-                    <div class="lbl">Net Margin</div>
-                    <div class="val" style="color:#0C4A6E;"><?php echo sunseaRupiah($lapCustomerTotalMargin); ?></div>
+                    <div class="lbl">Saldo Bersih</div>
+                    <div class="val" style="color:#0C4A6E;"><?php echo sunseaRupiah($lapHarianNet); ?></div>
                 </div>
             </div>
             <table>
                 <thead>
                     <tr>
-                        <th>No. Booking</th>
-                        <th>Tanggal Trip</th>
+                        <th>Jenis</th>
+                        <th>Keterangan</th>
+                        <th>Tamu / Trip</th>
+                        <th>Kategori</th>
+                        <th>Jumlah</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (empty($lapHarianRows)): ?>
+                        <tr>
+                            <td colspan="5" style="text-align:center;color:#94a3b8;">Tidak ada transaksi pada tanggal ini.</td>
+                        </tr>
+                    <?php endif; ?>
+                    <?php foreach ($lapHarianRows as $r): ?>
+                        <tr>
+                            <td><?php echo $r['type'] === 'income' ? 'Masuk' : 'Keluar'; ?></td>
+                            <td><?php echo htmlspecialchars($r['description']); ?></td>
+                            <td><?php echo htmlspecialchars($r['customer_name'] ?: '-'); ?><?php echo $r['booking_no'] ? ' (' . htmlspecialchars($r['booking_no']) . ')' : ''; ?></td>
+                            <td><?php echo htmlspecialchars($r['category'] ?: '-'); ?></td>
+                            <td><?php echo ($r['type'] === 'income' ? '+ ' : '- ') . sunseaRupiah((float)$r['amount']); ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+
+        <?php elseif ($tab === 'bulanan'): ?>
+            <div class="lap-summary">
+                <div class="lap-summary-box">
+                    <div class="lbl">Total Pemasukan</div>
+                    <div class="val" style="color:#16a34a;"><?php echo sunseaRupiah($lapBulananTotalIn); ?></div>
+                </div>
+                <div class="lap-summary-box">
+                    <div class="lbl">Total Pengeluaran</div>
+                    <div class="val" style="color:#dc2626;"><?php echo sunseaRupiah($lapBulananTotalOut); ?></div>
+                </div>
+                <div class="lap-summary-box">
+                    <div class="lbl">Total Margin</div>
+                    <div class="val" style="color:#0C4A6E;"><?php echo sunseaRupiah($lapBulananTotalMargin); ?></div>
+                </div>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Nama Tamu</th>
                         <th>Paket</th>
                         <th>Pemasukan</th>
                         <th>Pengeluaran</th>
@@ -357,15 +301,14 @@ if (($_GET['print'] ?? '') === '1') {
                     </tr>
                 </thead>
                 <tbody>
-                    <?php if (empty($lapCustomerRows)): ?>
+                    <?php if (empty($lapBulananRows)): ?>
                         <tr>
-                            <td colspan="6" style="text-align:center;color:#94a3b8;">Belum ada booking untuk tamu ini.</td>
+                            <td colspan="5" style="text-align:center;color:#94a3b8;">Tidak ada trip pada bulan ini.</td>
                         </tr>
                     <?php endif; ?>
-                    <?php foreach ($lapCustomerRows as $r): ?>
+                    <?php foreach ($lapBulananRows as $r): ?>
                         <tr>
-                            <td><?php echo htmlspecialchars($r['booking_no']); ?></td>
-                            <td><?php echo date('d M Y', strtotime($r['start_date'])); ?></td>
+                            <td><?php echo htmlspecialchars($r['customer_name']); ?></td>
                             <td><?php echo htmlspecialchars($r['package_name'] ?: '-'); ?></td>
                             <td><?php echo sunseaRupiah((float)$r['pemasukan']); ?></td>
                             <td><?php echo sunseaRupiah((float)$r['pengeluaran']); ?></td>
@@ -375,18 +318,75 @@ if (($_GET['print'] ?? '') === '1') {
                 </tbody>
                 <tfoot>
                     <tr>
-                        <td colspan="3">Total Semua</td>
-                        <td><?php echo sunseaRupiah($lapCustomerTotalIn); ?></td>
-                        <td><?php echo sunseaRupiah($lapCustomerTotalOut); ?></td>
-                        <td><?php echo sunseaRupiah($lapCustomerTotalMargin); ?></td>
+                        <td colspan="2">Total Semua</td>
+                        <td><?php echo sunseaRupiah($lapBulananTotalIn); ?></td>
+                        <td><?php echo sunseaRupiah($lapBulananTotalOut); ?></td>
+                        <td><?php echo sunseaRupiah($lapBulananTotalMargin); ?></td>
                     </tr>
                 </tfoot>
             </table>
-        <?php endif; ?>
-    <?php endif; ?>
-</body>
 
-</html>
+        <?php elseif ($tab === 'customer'): ?>
+            <?php if (!$lapCustomerInfo): ?>
+                <p style="color:#94a3b8;">Pilih tamu terlebih dahulu.</p>
+            <?php else: ?>
+                <p style="margin:-8px 0 14px;color:#64748b;"><?php echo htmlspecialchars($lapCustomerInfo['phone'] ?: ''); ?><?php echo ($lapCustomerInfo['phone'] && $lapCustomerInfo['email']) ? ' &middot; ' : ''; ?><?php echo htmlspecialchars($lapCustomerInfo['email'] ?: ''); ?></p>
+                <div class="lap-summary">
+                    <div class="lap-summary-box">
+                        <div class="lbl">Total Pemasukan</div>
+                        <div class="val" style="color:#16a34a;"><?php echo sunseaRupiah($lapCustomerTotalIn); ?></div>
+                    </div>
+                    <div class="lap-summary-box">
+                        <div class="lbl">Total Pengeluaran</div>
+                        <div class="val" style="color:#dc2626;"><?php echo sunseaRupiah($lapCustomerTotalOut); ?></div>
+                    </div>
+                    <div class="lap-summary-box">
+                        <div class="lbl">Net Margin</div>
+                        <div class="val" style="color:#0C4A6E;"><?php echo sunseaRupiah($lapCustomerTotalMargin); ?></div>
+                    </div>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>No. Booking</th>
+                            <th>Tanggal Trip</th>
+                            <th>Paket</th>
+                            <th>Pemasukan</th>
+                            <th>Pengeluaran</th>
+                            <th>Margin</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if (empty($lapCustomerRows)): ?>
+                            <tr>
+                                <td colspan="6" style="text-align:center;color:#94a3b8;">Belum ada booking untuk tamu ini.</td>
+                            </tr>
+                        <?php endif; ?>
+                        <?php foreach ($lapCustomerRows as $r): ?>
+                            <tr>
+                                <td><?php echo htmlspecialchars($r['booking_no']); ?></td>
+                                <td><?php echo date('d M Y', strtotime($r['start_date'])); ?></td>
+                                <td><?php echo htmlspecialchars($r['package_name'] ?: '-'); ?></td>
+                                <td><?php echo sunseaRupiah((float)$r['pemasukan']); ?></td>
+                                <td><?php echo sunseaRupiah((float)$r['pengeluaran']); ?></td>
+                                <td><?php echo sunseaRupiah((float)$r['margin']); ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="3">Total Semua</td>
+                            <td><?php echo sunseaRupiah($lapCustomerTotalIn); ?></td>
+                            <td><?php echo sunseaRupiah($lapCustomerTotalOut); ?></td>
+                            <td><?php echo sunseaRupiah($lapCustomerTotalMargin); ?></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            <?php endif; ?>
+        <?php endif; ?>
+    </body>
+
+    </html>
 <?php
     exit;
 }

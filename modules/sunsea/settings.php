@@ -632,7 +632,7 @@ $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : '
                 <div style="font-size:12px;color:#888;margin-top:4px;">📞 <?php echo htmlspecialchars($cfg['company_phone']); ?></div>
             <?php endif; ?>
             <?php if (trim($cfg['company_phone_extra'])): foreach (preg_split('/\r\n|\r|\n/', trim($cfg['company_phone_extra'])) as $extraPhoneLine): if (trim($extraPhoneLine) === '') continue; ?>
-                <div style="font-size:12px;color:#888;margin-top:2px;">📞 <?php echo htmlspecialchars(trim($extraPhoneLine)); ?></div>
+                    <div style="font-size:12px;color:#888;margin-top:2px;">📞 <?php echo htmlspecialchars(trim($extraPhoneLine)); ?></div>
             <?php endforeach;
             endif; ?>
             <?php if ($cfg['company_email']): ?>

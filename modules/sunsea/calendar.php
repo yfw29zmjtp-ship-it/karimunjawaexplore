@@ -682,7 +682,7 @@ include 'layout-header.php';
         border-radius: 50%;
         position: relative;
         margin: 0 auto;
-        box-shadow: 0 10px 22px -8px rgba(0,0,0,.28), inset 0 2px 4px rgba(255,255,255,.35), inset 0 -3px 6px rgba(0,0,0,.15);
+        box-shadow: 0 10px 22px -8px rgba(0, 0, 0, .28), inset 0 2px 4px rgba(255, 255, 255, .35), inset 0 -3px 6px rgba(0, 0, 0, .15);
     }
 
     #bookingDetailBody .bd-donut-center {
@@ -694,7 +694,7 @@ include 'layout-header.php';
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        box-shadow: 0 3px 10px rgba(0,0,0,.14), inset 0 1px 2px rgba(255,255,255,.8);
+        box-shadow: 0 3px 10px rgba(0, 0, 0, .14), inset 0 1px 2px rgba(255, 255, 255, .8);
     }
 
     #bookingDetailBody .bd-donut-center .pct {

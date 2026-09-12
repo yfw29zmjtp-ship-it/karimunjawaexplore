@@ -197,12 +197,16 @@ require __DIR__ . '/includes/website-header.php';
         var toast = document.getElementById('weToast');
         if (!toast) return;
         toast.classList.add('we-toast-hide');
-        setTimeout(function() { toast.remove(); }, 300);
+        setTimeout(function() {
+            toast.remove();
+        }, 300);
     }
     (function() {
         var toast = document.getElementById('weToast');
         if (!toast) return;
-        requestAnimationFrame(function() { toast.classList.add('we-toast-show'); });
+        requestAnimationFrame(function() {
+            toast.classList.add('we-toast-show');
+        });
         setTimeout(weCloseToast, 4500);
     })();
 

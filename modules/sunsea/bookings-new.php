@@ -397,16 +397,16 @@ include 'layout-header.php';
             <div style="margin-bottom:6px;font-size:13px;font-weight:600;color:#7C2D12;">👤 1. Data Tamu &amp; Jadwal</div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;">
                 <div style="grid-column:1/-1;">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
-                        <label style="font-weight:500;font-size:12px;">Customer *</label>
-                        <a href="javascript:void(0)" onclick="toggleNewCustomer()" id="newCustomerToggleLink" style="font-size:11.5px;color:#C2410C;font-weight:600;text-decoration:none;">+ Tambah Customer Baru</a>
+                    <label style="display:block;margin-bottom:3px;font-weight:500;font-size:12px;">Customer *</label>
+                    <div style="display:flex;gap:6px;align-items:stretch;">
+                        <select name="customer_id" id="customerSelect" required style="flex:1;min-width:0;padding:5px 7px;border:1px solid #ccc;border-radius:4px;font-family:inherit;font-size:12.5px;box-sizing:border-box;">
+                            <option value="">-- Pilih Customer --</option>
+                            <?php foreach ($customers as $c): ?>
+                                <option value="<?php echo $c['id']; ?>"><?php echo htmlspecialchars($c['name'] . ' (' . $c['phone'] . ')'); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                        <button type="button" onclick="toggleNewCustomer()" id="newCustomerToggleLink" style="flex-shrink:0;display:inline-flex;align-items:center;gap:5px;padding:5px 12px;background:#C2410C;color:#fff;border:1px solid #C2410C;border-radius:4px;font-weight:600;font-size:12px;cursor:pointer;white-space:nowrap;">➕ Customer Baru</button>
                     </div>
-                    <select name="customer_id" id="customerSelect" required style="width:100%;padding:5px 7px;border:1px solid #ccc;border-radius:4px;font-family:inherit;font-size:12.5px;box-sizing:border-box;">
-                        <option value="">-- Pilih Customer --</option>
-                        <?php foreach ($customers as $c): ?>
-                            <option value="<?php echo $c['id']; ?>"><?php echo htmlspecialchars($c['name'] . ' (' . $c['phone'] . ')'); ?></option>
-                        <?php endforeach; ?>
-                    </select>
                     <div id="newCustomerBox" style="display:none;margin-top:6px;padding:8px;background:#FFF7ED;border:1px solid #FDE4CC;border-radius:6px;">
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;">
                             <div style="grid-column:1/-1;">
@@ -762,19 +762,25 @@ include 'layout-header.php';
     function toggleNewCustomer() {
         var box = document.getElementById('newCustomerBox');
         var select = document.getElementById('customerSelect');
-        var link = document.getElementById('newCustomerToggleLink');
+        var btn = document.getElementById('newCustomerToggleLink');
         var showing = box.style.display !== 'none';
         if (showing) {
             box.style.display = 'none';
             select.required = true;
             select.disabled = false;
-            link.textContent = '+ Tambah Customer Baru';
+            btn.innerHTML = '➕ Customer Baru';
+            btn.style.background = '#C2410C';
+            btn.style.borderColor = '#C2410C';
+            btn.style.color = '#fff';
         } else {
             box.style.display = 'block';
             select.value = '';
             select.required = false;
             select.disabled = true;
-            link.textContent = '← Pilih dari Daftar Customer';
+            btn.innerHTML = '← Pilih dari Daftar';
+            btn.style.background = '#fff';
+            btn.style.borderColor = '#C2410C';
+            btn.style.color = '#C2410C';
         }
     }
 
