@@ -329,23 +329,31 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
 
         .ob-quicklinks {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
         }
 
         .ob-qbtn {
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 6px;
+            gap: 4px;
             background: #fff;
             border: 1.5px solid var(--ocean);
             color: var(--ocean);
-            border-radius: 10px;
-            padding: 12px 8px;
+            border-radius: 12px;
+            padding: 9px 4px;
             text-decoration: none;
-            font-size: 12.5px;
+            font-size: 9px;
             font-weight: 700;
+            line-height: 1.2;
+            text-align: center;
+        }
+
+        .ob-qbtn i {
+            width: 16px;
+            height: 16px;
         }
 
         .ob-qbtn svg {
@@ -605,8 +613,8 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
         </div>
 
         <div class="ob-quicklinks" style="margin-bottom:14px;">
-            <a href="owner-bookings.php" class="ob-qbtn"><i data-feather="briefcase"></i> Reservasi Tamu</a>
-            <a href="owner-calendar.php" class="ob-qbtn"><i data-feather="calendar"></i> Kalender Booking</a>
+            <a href="owner-bookings.php" class="ob-qbtn"><i data-feather="briefcase"></i> Reservasi</a>
+            <a href="owner-calendar.php" class="ob-qbtn"><i data-feather="calendar"></i> Kalender</a>
             <a href="owner-invoices.php" class="ob-qbtn"><i data-feather="credit-card"></i> Invoice</a>
             <a href="owner-finance.php" class="ob-qbtn"><i data-feather="dollar-sign"></i> Finance</a>
         </div>
