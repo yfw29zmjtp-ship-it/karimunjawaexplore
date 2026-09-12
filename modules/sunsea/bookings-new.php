@@ -155,10 +155,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
 
             // Pecah detail layanan paket (tiket kapal, penginapan, transport, dll) jadi
             // item modal terpisah supaya tagihan mitra yang belum dibayar bisa dicek akurat.
-            $pkgItemsStmt = $pdo->prepare("SELECT item_type, item_name, cost_basis, estimated_cost FROM trip_package_items WHERE package_id=? ORDER BY sort_order");
+            $pkgItemsStmt = $pdo->prepare("SELECT item_type, item_name, cost_basis, qty, estimated_cost FROM trip_package_items WHERE package_id=? ORDER BY sort_order");
             $pkgItemsStmt->execute([$packageId]);
             foreach ($pkgItemsStmt->fetchAll(PDO::FETCH_ASSOC) as $pi) {
-                $qty = $pi['cost_basis'] === 'flat' ? 1 : $pax;
+                $itemQty = (float)($pi['qty'] ?? 1);
+                if ($itemQty <= 0) $itemQty = 1;
+                $qty = ($pi['cost_basis'] === 'flat' ? 1 : $pax) * $itemQty;
                 // component_code 'pkg_detail' = rincian modal internal paket, disembunyikan dari invoice pelanggan
                 $addComponent('pkg_detail', $pi['item_name'], $qty, $pi['cost_basis'] === 'flat' ? 'paket' : 'pax', (float)$pi['estimated_cost'], 0);
             }

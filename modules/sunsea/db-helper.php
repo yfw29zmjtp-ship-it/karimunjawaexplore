@@ -193,6 +193,12 @@ function sunseaEnsurePackageItemsSchema(PDO $pdo): void
         if ((int)$check->fetchColumn() === 0) {
             $pdo->exec("ALTER TABLE trip_package_items ADD COLUMN estimated_sell DECIMAL(15,2) DEFAULT 0.00 AFTER estimated_cost");
         }
+
+        $checkQty = $pdo->prepare("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'trip_package_items' AND COLUMN_NAME = 'qty'");
+        $checkQty->execute();
+        if ((int)$checkQty->fetchColumn() === 0) {
+            $pdo->exec("ALTER TABLE trip_package_items ADD COLUMN qty DECIMAL(10,2) NOT NULL DEFAULT 1.00 AFTER cost_basis");
+        }
     } catch (Exception $e) {
         error_log('sunseaEnsurePackageItemsSchema error: ' . $e->getMessage());
     }

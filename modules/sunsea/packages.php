@@ -152,13 +152,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $sortStmt->execute([$packageId]);
             $nextSort = (int)$sortStmt->fetchColumn();
             $pdo->prepare("INSERT INTO trip_package_items
-                (package_id, item_type, item_name, cost_basis, estimated_cost, estimated_sell, notes, sort_order)
-                VALUES (?,?,?,?,?,?,?,?)")
+                (package_id, item_type, item_name, cost_basis, qty, estimated_cost, estimated_sell, notes, sort_order)
+                VALUES (?,?,?,?,?,?,?,?,?)")
                 ->execute([
                     $packageId,
                     $_POST['item_type'] ?? 'lainnya',
                     $itemName,
                     ($_POST['cost_basis'] ?? 'per_pax') === 'flat' ? 'flat' : 'per_pax',
+                    max(0.01, (float)str_replace(['.', ','], ['', '.'], $_POST['qty'] ?? '1')),
                     (float)str_replace(['.', ','], ['', '.'], $_POST['estimated_cost'] ?? '0'),
                     (float)str_replace(['.', ','], ['', '.'], $_POST['estimated_sell'] ?? '0'),
                     trim($_POST['notes'] ?? ''),
@@ -175,12 +176,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $itemName  = trim($_POST['item_name'] ?? '');
         if ($packageId > 0 && $itemId > 0 && $itemName !== '') {
             $pdo->prepare("UPDATE trip_package_items
-                SET item_type=?, item_name=?, cost_basis=?, estimated_cost=?, estimated_sell=?, notes=?
+                SET item_type=?, item_name=?, cost_basis=?, qty=?, estimated_cost=?, estimated_sell=?, notes=?
                 WHERE id=? AND package_id=?")
                 ->execute([
                     $_POST['item_type'] ?? 'lainnya',
                     $itemName,
                     ($_POST['cost_basis'] ?? 'per_pax') === 'flat' ? 'flat' : 'per_pax',
+                    max(0.01, (float)str_replace(['.', ','], ['', '.'], $_POST['qty'] ?? '1')),
                     (float)str_replace(['.', ','], ['', '.'], $_POST['estimated_cost'] ?? '0'),
                     (float)str_replace(['.', ','], ['', '.'], $_POST['estimated_sell'] ?? '0'),
                     trim($_POST['notes'] ?? ''),
@@ -272,8 +274,10 @@ if (in_array($action, ['edit', 'view']) && $pkgId > 0) {
 $pkgItemsCostTotal = 0.0;
 $pkgItemsSellTotal = 0.0;
 foreach ($packageItems as $pi) {
-    $pkgItemsCostTotal += (float)$pi['estimated_cost'];
-    $pkgItemsSellTotal += (float)$pi['estimated_sell'];
+    $piQty = (float)($pi['qty'] ?? 1);
+    if ($piQty <= 0) $piQty = 1;
+    $pkgItemsCostTotal += (float)$pi['estimated_cost'] * $piQty;
+    $pkgItemsSellTotal += (float)$pi['estimated_sell'] * $piQty;
 }
 $pkgItemsMargin = $pkgItemsSellTotal - $pkgItemsCostTotal;
 
@@ -564,6 +568,7 @@ include 'layout-header.php';
                                         <th>Tipe</th>
                                         <th>Nama Layanan</th>
                                         <th>Basis Biaya</th>
+                                        <th>Qty</th>
                                         <th>Estimasi Modal</th>
                                         <th>Harga Jual</th>
                                         <th>Margin</th>
@@ -572,13 +577,15 @@ include 'layout-header.php';
                                 </thead>
                                 <tbody>
                                     <?php foreach ($packageItems as $pi): ?>
-                                        <?php $piMargin = (float)$pi['estimated_sell'] - (float)$pi['estimated_cost']; ?>
+                                        <?php $piQty = (float)($pi['qty'] ?? 1); if ($piQty <= 0) $piQty = 1; ?>
+                                        <?php $piMargin = ((float)$pi['estimated_sell'] - (float)$pi['estimated_cost']) * $piQty; ?>
                                         <tr id="pkg-item-row-<?php echo (int)$pi['id']; ?>">
                                             <td><?php echo htmlspecialchars($packageItemTypes[$pi['item_type']] ?? $pi['item_type']); ?></td>
                                             <td><?php echo htmlspecialchars($pi['item_name']); ?><?php if (!empty($pi['notes'])): ?><br><small style="color:var(--ss-muted);"><?php echo htmlspecialchars($pi['notes']); ?></small><?php endif; ?></td>
                                             <td><?php echo $pi['cost_basis'] === 'flat' ? 'Flat (sekali)' : 'Per Pax'; ?></td>
-                                            <td><?php echo sunseaRupiah((float)$pi['estimated_cost']); ?></td>
-                                            <td><?php echo sunseaRupiah((float)$pi['estimated_sell']); ?></td>
+                                            <td><?php echo rtrim(rtrim(number_format($piQty, 2, ',', '.'), '0'), ','); ?></td>
+                                            <td><?php echo sunseaRupiah((float)$pi['estimated_cost'] * $piQty); ?></td>
+                                            <td><?php echo sunseaRupiah((float)$pi['estimated_sell'] * $piQty); ?></td>
                                             <td style="color:<?php echo $piMargin < 0 ? '#dc2626' : '#16a34a'; ?>;font-weight:700;"><?php echo sunseaRupiah($piMargin); ?></td>
                                             <td style="white-space:nowrap;">
                                                 <button type="button" class="ss-btn ss-btn-outline ss-btn-sm" onclick="togglePkgItemEdit(<?php echo (int)$pi['id']; ?>)"><i data-feather="edit-2"></i></button>
@@ -591,7 +598,7 @@ include 'layout-header.php';
                                             </td>
                                         </tr>
                                         <tr id="pkg-item-edit-<?php echo (int)$pi['id']; ?>" style="display:none;background:#fffbeb;">
-                                            <td colspan="7">
+                                            <td colspan="8">
                                                 <form method="POST" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;padding:8px 2px;">
                                                     <input type="hidden" name="action" value="update_package_item">
                                                     <input type="hidden" name="package_id" value="<?php echo (int)$editPkg['id']; ?>">
@@ -621,6 +628,10 @@ include 'layout-header.php';
                                                             <option value="flat" <?php echo $pi['cost_basis'] === 'flat' ? 'selected' : ''; ?>>Flat (sekali)</option>
                                                         </select>
                                                     </div>
+                                                    <div class="ss-form-group" style="margin:0;width:90px;">
+                                                        <label class="ss-label">Qty</label>
+                                                        <input type="text" name="qty" class="ss-input" value="<?php echo rtrim(rtrim(number_format((float)($pi['qty'] ?? 1), 2, ',', '.'), '0'), ','); ?>">
+                                                    </div>
                                                     <div class="ss-form-group" style="margin:0;width:120px;">
                                                         <label class="ss-label">Modal (Rp)</label>
                                                         <input type="text" name="estimated_cost" id="edit<?php echo (int)$pi['id']; ?>_item_cost" class="ss-input" value="<?php echo (float)$pi['estimated_cost']; ?>">
@@ -642,7 +653,7 @@ include 'layout-header.php';
                                 </tbody>
                                 <tfoot>
                                     <tr style="font-weight:700;">
-                                        <td colspan="3" style="text-align:right;">Total Rincian Layanan</td>
+                                        <td colspan="4" style="text-align:right;">Total Rincian Layanan</td>
                                         <td><?php echo sunseaRupiah($pkgItemsCostTotal); ?></td>
                                         <td><?php echo sunseaRupiah($pkgItemsSellTotal); ?></td>
                                         <td style="color:<?php echo $pkgItemsMargin < 0 ? '#dc2626' : '#16a34a'; ?>;"><?php echo sunseaRupiah($pkgItemsMargin); ?></td>
@@ -684,8 +695,10 @@ include 'layout-header.php';
                                     <option value="flat">Flat (sekali per booking)</option>
                                 </select>
                             </div>
-                            <div class="ss-form-group">
-                                <label class="ss-label">Estimasi Modal (Rp)</label>
+                            <div class="ss-form-group">                                <label class="ss-label">Qty</label>
+                                <input type="text" name="qty" class="ss-input" value="1" placeholder="Contoh: 2 malam">
+                            </div>
+                            <div class="ss-form-group">                                <label class="ss-label">Estimasi Modal (Rp)</label>
                                 <input type="text" name="estimated_cost" id="add_item_cost" class="ss-input" placeholder="0">
                             </div>
                             <div class="ss-form-group">
