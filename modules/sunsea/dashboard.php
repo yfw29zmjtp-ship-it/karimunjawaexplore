@@ -126,6 +126,38 @@ try {
     }
     $yearLabels = json_encode($yearLabels);
     $yearlyGuests = json_encode($yearlyGuests);
+
+    // Total pax bulanan (12 bulan terakhir) - semua booking yang tidak dibatalkan,
+    // beda dengan chart "Tamu Reservasi" di atas yang hanya menghitung status confirmed.
+    $paxMonthLabels = [];
+    $paxMonthlyTotals = [];
+    for ($m = 11; $m >= 0; $m--) {
+        $date = new DateTime();
+        $date->modify("-{$m} months");
+        $monthKey = $date->format('Y-m');
+        $paxMonthLabels[] = $date->format('M Y');
+
+        $count = (int)$pdo->query("
+            SELECT COALESCE(SUM(pax_count),0) FROM booking_orders
+            WHERE status <> 'cancelled'
+              AND DATE_FORMAT(start_date,'%Y-%m')='{$monthKey}'
+        ")->fetchColumn();
+        $paxMonthlyTotals[] = $count;
+    }
+    $paxMonthLabels = json_encode($paxMonthLabels);
+    $paxMonthlyTotals = json_encode($paxMonthlyTotals);
+
+    // Pax per paket (jumlah tamu yang booking di tiap paket wisata yang aktif)
+    $paxByPackage = $pdo->query("
+        SELECT p.name, COALESCE(SUM(b.pax_count),0) AS total_pax
+        FROM trip_packages p
+        LEFT JOIN booking_orders b ON b.package_id = p.id AND b.status <> 'cancelled'
+        WHERE p.is_active = 1
+        GROUP BY p.id, p.name
+        ORDER BY total_pax DESC, p.name
+    ")->fetchAll();
+    $packageLabels = json_encode(array_column($paxByPackage, 'name'));
+    $packagePaxValues = json_encode(array_map('intval', array_column($paxByPackage, 'total_pax')));
 } catch (Exception $e) {
     $dbError = $e->getMessage();
     $qStats = ['total' => 0, 'draft' => 0, 'sent' => 0, 'approved' => 0];
@@ -140,6 +172,10 @@ try {
     $monthlyGuests = json_encode([]);
     $yearLabels = json_encode([]);
     $yearlyGuests = json_encode([]);
+    $paxMonthLabels = json_encode([]);
+    $paxMonthlyTotals = json_encode([]);
+    $packageLabels = json_encode([]);
+    $packagePaxValues = json_encode([]);
 }
 
 include 'layout-header.php';
@@ -303,6 +339,39 @@ if (isset($dbError)): ?>
         </div>
         <div style="position:relative;height:300px;padding:10px;">
             <canvas id="financePieChart"></canvas>
+        </div>
+    </div>
+
+</div>
+
+<!-- ============================
+     PAX CHARTS: Total Pax Bulanan & Pax per Paket
+============================= -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px;">
+
+    <!-- Total Pax Bulanan -->
+    <div class="ss-card">
+        <div class="ss-card-header">
+            <div>
+                <div class="ss-card-title">Total Pax Bulanan</div>
+                <div class="ss-card-sub">Jumlah tamu (pax) per bulan, 12 bulan terakhir</div>
+            </div>
+        </div>
+        <div style="position:relative;height:300px;padding:10px;">
+            <canvas id="paxMonthlyChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Pax per Paket -->
+    <div class="ss-card">
+        <div class="ss-card-header">
+            <div>
+                <div class="ss-card-title">Pax per Paket Wisata</div>
+                <div class="ss-card-sub">Jumlah tamu yang booking di tiap paket aktif</div>
+            </div>
+        </div>
+        <div style="position:relative;height:300px;padding:10px;">
+            <canvas id="paxByPackageChart"></canvas>
         </div>
     </div>
 
@@ -548,6 +617,110 @@ if (isset($dbError)): ?>
                 }
             }
         });
+    }
+
+    // Total Pax Bulanan (bar chart, 12 bulan terakhir)
+    const paxMonthlyCtx = document.getElementById('paxMonthlyChart');
+    if (paxMonthlyCtx) {
+        new Chart(paxMonthlyCtx, {
+            type: 'bar',
+            data: {
+                labels: <?php echo $paxMonthLabels; ?>,
+                datasets: [{
+                    label: 'Total Pax',
+                    data: <?php echo $paxMonthlyTotals; ?>,
+                    backgroundColor: oceanColors.primary + 'cc',
+                    borderRadius: 8,
+                    maxBarThickness: 36
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0,
+                            font: {
+                                size: 12
+                            }
+                        },
+                        grid: {
+                            color: 'rgba(0,0,0,0.05)'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Pax per Paket Wisata (horizontal bar, urut dari yang paling banyak dipesan)
+    const paxByPackageCtx = document.getElementById('paxByPackageChart');
+    if (paxByPackageCtx) {
+        const packageLabels = <?php echo $packageLabels; ?>;
+        const packagePalette = [oceanColors.primary, oceanColors.secondary, oceanColors.success, oceanColors.warning, oceanColors.danger, '#8b5cf6', '#0891b2', '#db2777'];
+        if (packageLabels.length === 0) {
+            paxByPackageCtx.parentElement.insertAdjacentHTML('beforeend', '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:13px;">Belum ada paket wisata aktif.</div>');
+        } else {
+            new Chart(paxByPackageCtx, {
+                type: 'bar',
+                data: {
+                    labels: packageLabels,
+                    datasets: [{
+                        label: 'Total Pax',
+                        data: <?php echo $packagePaxValues; ?>,
+                        backgroundColor: packageLabels.map((_, i) => packagePalette[i % packagePalette.length]),
+                        borderRadius: 8,
+                        maxBarThickness: 28
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            ticks: {
+                                precision: 0,
+                                font: {
+                                    size: 12
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(0,0,0,0.05)'
+                            }
+                        },
+                        y: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                font: {
+                                    size: 12
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
     }
 
     // Quick Action Settings
