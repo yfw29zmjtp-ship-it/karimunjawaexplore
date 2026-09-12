@@ -286,6 +286,10 @@ include 'owner-mobile-header.php';
         border-radius: 6px 6px 0 0;
     }
 
+    .cal-row-placeholder {
+        opacity: .6;
+    }
+
     .cal-month-label-row {
         background: var(--sky);
     }
@@ -510,6 +514,28 @@ include 'owner-mobile-header.php';
                     <?php endforeach; ?>
                 </div>
             <?php endforeach; ?>
+
+            <?php
+            // Selalu tampilkan minimal 5 baris tamu supaya tinggi timeline stabil (tidak "lompat"/menciut)
+            // walau booking masih sedikit/kosong - baris kosong ini otomatis terisi begitu ada booking baru.
+            $calPlaceholderRows = max(0, 5 - count($bookings));
+            for ($pr = 0; $pr < $calPlaceholderRows; $pr++):
+            ?>
+                <div class="cal-row cal-row-placeholder">
+                    <div class="cal-guest">
+                        <div style="display:flex;align-items:center;">
+                            <span class="cal-guest-avatar" style="background:#E2E8F0;color:#94A3B8;">-</span>
+                            <div style="min-width:0;">
+                                <div class="cal-guest-name" style="color:#94A3B8;">Belum ada tamu</div>
+                                <div class="cal-guest-meta">&nbsp;</div>
+                            </div>
+                        </div>
+                    </div>
+                    <?php foreach ($calDates as $cd): ?>
+                        <div class="cal-cell<?php echo $cd['dow'] >= 6 ? ' is-weekend' : ''; ?><?php echo $cd['date'] === date('Y-m-d') ? ' is-today' : ''; ?><?php echo $cd['isMonthStart'] ? ' cal-month-boundary' : ''; ?>"></div>
+                    <?php endforeach; ?>
+                </div>
+            <?php endfor; ?>
         </div>
     </div>
     <div class="ob-cal-legend">
