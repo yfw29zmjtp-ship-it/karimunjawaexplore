@@ -158,7 +158,7 @@ function sunseaEnsureBookingSchema(PDO $pdo): void
         try {
             $pdo->exec("UPDATE booking_order_items boi
                 JOIN booking_orders bo ON bo.id = boi.booking_id
-                JOIN trip_package_items tpi ON tpi.package_id = bo.package_id AND tpi.item_name = boi.component_name
+                JOIN trip_package_items tpi ON tpi.package_id = bo.package_id AND tpi.item_name = boi.component_name COLLATE utf8mb4_general_ci
                 SET boi.item_type = tpi.item_type
                 WHERE boi.component_code = 'pkg_detail' AND boi.item_type IS NULL");
         } catch (Exception $e) {

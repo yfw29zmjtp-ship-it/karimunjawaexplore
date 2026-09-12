@@ -345,7 +345,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'repla
             // (3) belum ke-backfill tapi masih bisa dikenali live lewat trip_package_items milik paket booking ini.
             $delStmt = $pdo->prepare("DELETE boi FROM booking_order_items boi
                 LEFT JOIN booking_orders bo ON bo.id = boi.booking_id
-                LEFT JOIN trip_package_items tpi ON tpi.package_id = bo.package_id AND tpi.item_name = boi.component_name
+                LEFT JOIN trip_package_items tpi ON tpi.package_id = bo.package_id AND tpi.item_name = boi.component_name COLLATE utf8mb4_general_ci
                 WHERE boi.booking_id = ?
                 AND (boi.component_code = ? OR boi.item_type = ? OR (boi.component_code = 'pkg_detail' AND tpi.item_type = ?))");
             $delStmt->execute([$bookingId, $componentCode, $componentCode, $componentCode]);
