@@ -340,9 +340,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'repla
                 $priceSell = (float)$trans['price_sell'];
             }
 
-            // "Ganti" = hapus item lama kategori yang sama (baik dari mode ecer maupun pecahan detail paket) lalu pasang yang baru, supaya tidak dobel.
-            $pdo->prepare("DELETE FROM booking_order_items WHERE booking_id=? AND (component_code=? OR item_type=?)")
-                ->execute([$bookingId, $componentCode, $componentCode]);
+            // "Ganti" = hapus item lama kategori yang sama. Cek 3 kemungkinan sekaligus supaya tidak dobel:
+            // (1) mode ecer (component_code cocok langsung), (2) sudah ke-backfill item_type,
+            // (3) belum ke-backfill tapi masih bisa dikenali live lewat trip_package_items milik paket booking ini.
+            $delStmt = $pdo->prepare("DELETE boi FROM booking_order_items boi
+                LEFT JOIN booking_orders bo ON bo.id = boi.booking_id
+                LEFT JOIN trip_package_items tpi ON tpi.package_id = bo.package_id AND tpi.item_name = boi.component_name
+                WHERE boi.booking_id = ?
+                AND (boi.component_code = ? OR boi.item_type = ? OR (boi.component_code = 'pkg_detail' AND tpi.item_type = ?))");
+            $delStmt->execute([$bookingId, $componentCode, $componentCode, $componentCode]);
+            $deletedOldCount = $delStmt->rowCount();
 
             $sortStmt = $pdo->prepare("SELECT COALESCE(MAX(sort_order),-1)+1 FROM booking_order_items WHERE booking_id=?");
             $sortStmt->execute([$bookingId]);
@@ -354,7 +361,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'repla
                 ->execute([$bookingId, $componentCode, $componentCode, $name, $qty, $unit, $priceCost, $priceSell, $qty * $priceCost, $qty * $priceSell, $nextSort]);
 
             recalcBookingTotals($pdo, $bookingId);
-            $_SESSION['flash_message'] = ($refType === 'room' ? 'Penginapan' : 'Layanan transport') . ' berhasil diganti, harga otomatis menyesuaikan.';
+            $_SESSION['flash_message'] = ($refType === 'room' ? 'Penginapan' : 'Layanan transport') . ' berhasil diganti, harga otomatis menyesuaikan. (item lama terhapus: ' . $deletedOldCount . ')';
             $_SESSION['flash_type'] = 'success';
         } catch (Exception $e) {
             $_SESSION['flash_message'] = 'Gagal mengganti layanan: ' . $e->getMessage();
