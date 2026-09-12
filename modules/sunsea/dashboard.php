@@ -127,8 +127,23 @@ try {
     $yearLabels = json_encode($yearLabels);
     $yearlyGuests = json_encode($yearlyGuests);
 
-    // Total pax bulanan (12 bulan terakhir) - semua booking yang tidak dibatalkan,
-    // beda dengan chart "Tamu Reservasi" di atas yang hanya menghitung status confirmed.
+    // Total Pax: harian (30 hari terakhir), bulanan (12 bulan terakhir), tahunan (5 tahun terakhir).
+    // Semua booking yang tidak dibatalkan, beda dengan chart "Tamu Reservasi" di atas yang hanya status confirmed.
+    $paxDailyLabels = [];
+    $paxDailyTotals = [];
+    for ($d = 29; $d >= 0; $d--) {
+        $date = new DateTime();
+        $date->modify("-{$d} days");
+        $dayKey = $date->format('Y-m-d');
+        $paxDailyLabels[] = $date->format('d M');
+
+        $count = (int)$pdo->query("
+            SELECT COALESCE(SUM(pax_count),0) FROM booking_orders
+            WHERE status <> 'cancelled' AND start_date = '{$dayKey}'
+        ")->fetchColumn();
+        $paxDailyTotals[] = $count;
+    }
+
     $paxMonthLabels = [];
     $paxMonthlyTotals = [];
     for ($m = 11; $m >= 0; $m--) {
@@ -144,20 +159,47 @@ try {
         ")->fetchColumn();
         $paxMonthlyTotals[] = $count;
     }
+
+    $paxYearLabels = [];
+    $paxYearlyTotals = [];
+    for ($y = 4; $y >= 0; $y--) {
+        $year = $currentYear - $y;
+        $paxYearLabels[] = (string)$year;
+
+        $count = (int)$pdo->query("
+            SELECT COALESCE(SUM(pax_count),0) FROM booking_orders
+            WHERE status <> 'cancelled' AND YEAR(start_date) = {$year}
+        ")->fetchColumn();
+        $paxYearlyTotals[] = $count;
+    }
+
+    $paxDailyLabels = json_encode($paxDailyLabels);
+    $paxDailyTotals = json_encode($paxDailyTotals);
     $paxMonthLabels = json_encode($paxMonthLabels);
     $paxMonthlyTotals = json_encode($paxMonthlyTotals);
+    $paxYearLabels = json_encode($paxYearLabels);
+    $paxYearlyTotals = json_encode($paxYearlyTotals);
 
-    // Pax per paket (jumlah tamu yang booking di tiap paket wisata yang aktif)
-    $paxByPackage = $pdo->query("
-        SELECT p.name, COALESCE(SUM(b.pax_count),0) AS total_pax
-        FROM trip_packages p
-        LEFT JOIN booking_orders b ON b.package_id = p.id AND b.status <> 'cancelled'
-        WHERE p.is_active = 1
-        GROUP BY p.id, p.name
-        ORDER BY total_pax DESC, p.name
-    ")->fetchAll();
-    $packageLabels = json_encode(array_column($paxByPackage, 'name'));
-    $packagePaxValues = json_encode(array_map('intval', array_column($paxByPackage, 'total_pax')));
+    // Pax per paket wisata aktif, dengan periode harian (hari ini) / bulanan (bulan ini) / tahunan (tahun ini)
+    $activePackages = $pdo->query("SELECT id, name FROM trip_packages WHERE is_active = 1 ORDER BY display_order, name")->fetchAll();
+    $packageLabels = json_encode(array_column($activePackages, 'name'));
+
+    $paxPkgPeriodSql = function (string $dateCondition) use ($pdo, $activePackages) {
+        $stmt = $pdo->prepare("
+            SELECT COALESCE(SUM(b.pax_count),0) AS total_pax
+            FROM booking_orders b
+            WHERE b.package_id = ? AND b.status <> 'cancelled' AND $dateCondition
+        ");
+        $values = [];
+        foreach ($activePackages as $pkg) {
+            $stmt->execute([$pkg['id']]);
+            $values[] = (int)$stmt->fetchColumn();
+        }
+        return $values;
+    };
+    $packagePaxDaily = json_encode($paxPkgPeriodSql('b.start_date = CURDATE()'));
+    $packagePaxMonthly = json_encode($paxPkgPeriodSql("DATE_FORMAT(b.start_date,'%Y-%m') = DATE_FORMAT(CURDATE(),'%Y-%m')"));
+    $packagePaxYearly = json_encode($paxPkgPeriodSql('YEAR(b.start_date) = YEAR(CURDATE())'));
 } catch (Exception $e) {
     $dbError = $e->getMessage();
     $qStats = ['total' => 0, 'draft' => 0, 'sent' => 0, 'approved' => 0];
@@ -172,10 +214,16 @@ try {
     $monthlyGuests = json_encode([]);
     $yearLabels = json_encode([]);
     $yearlyGuests = json_encode([]);
+    $paxDailyLabels = json_encode([]);
+    $paxDailyTotals = json_encode([]);
     $paxMonthLabels = json_encode([]);
     $paxMonthlyTotals = json_encode([]);
+    $paxYearLabels = json_encode([]);
+    $paxYearlyTotals = json_encode([]);
     $packageLabels = json_encode([]);
-    $packagePaxValues = json_encode([]);
+    $packagePaxDaily = json_encode([]);
+    $packagePaxMonthly = json_encode([]);
+    $packagePaxYearly = json_encode([]);
 }
 
 include 'layout-header.php';
@@ -351,10 +399,15 @@ if (isset($dbError)): ?>
 
     <!-- Total Pax Bulanan -->
     <div class="ss-card">
-        <div class="ss-card-header">
+        <div class="ss-card-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">
             <div>
-                <div class="ss-card-title">Total Pax Bulanan</div>
-                <div class="ss-card-sub">Jumlah tamu (pax) per bulan, 12 bulan terakhir</div>
+                <div class="ss-card-title">Total Pax</div>
+                <div class="ss-card-sub" id="paxChartSub">Jumlah tamu (pax) per bulan, 12 bulan terakhir</div>
+            </div>
+            <div style="display:flex;gap:6px;">
+                <button type="button" id="paxChartBtnDaily" class="ss-btn ss-btn-sm ss-btn-outline" onclick="switchPaxChart('daily')">Harian</button>
+                <button type="button" id="paxChartBtnMonthly" class="ss-btn ss-btn-sm ss-btn-outline" onclick="switchPaxChart('monthly')">Bulanan</button>
+                <button type="button" id="paxChartBtnYearly" class="ss-btn ss-btn-sm ss-btn-outline" onclick="switchPaxChart('yearly')">Tahunan</button>
             </div>
         </div>
         <div style="position:relative;height:300px;padding:10px;">
@@ -364,10 +417,15 @@ if (isset($dbError)): ?>
 
     <!-- Pax per Paket -->
     <div class="ss-card">
-        <div class="ss-card-header">
+        <div class="ss-card-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">
             <div>
                 <div class="ss-card-title">Pax per Paket Wisata</div>
-                <div class="ss-card-sub">Jumlah tamu yang booking di tiap paket aktif</div>
+                <div class="ss-card-sub" id="paxPkgChartSub">Jumlah tamu yang booking di tiap paket, bulan ini</div>
+            </div>
+            <div style="display:flex;gap:6px;">
+                <button type="button" id="paxPkgChartBtnDaily" class="ss-btn ss-btn-sm ss-btn-outline" onclick="switchPaxPkgChart('daily')">Harian</button>
+                <button type="button" id="paxPkgChartBtnMonthly" class="ss-btn ss-btn-sm ss-btn-outline" onclick="switchPaxPkgChart('monthly')">Bulanan</button>
+                <button type="button" id="paxPkgChartBtnYearly" class="ss-btn ss-btn-sm ss-btn-outline" onclick="switchPaxPkgChart('yearly')">Tahunan</button>
             </div>
         </div>
         <div style="position:relative;height:300px;padding:10px;">
@@ -619,17 +677,41 @@ if (isset($dbError)): ?>
         });
     }
 
-    // Total Pax Bulanan (bar chart, 12 bulan terakhir)
-    const paxMonthlyCtx = document.getElementById('paxMonthlyChart');
-    if (paxMonthlyCtx) {
-        new Chart(paxMonthlyCtx, {
+    // Total Pax Chart: toggle Harian / Bulanan / Tahunan (same elegant design as Tamu Reservasi, beda warna)
+    const paxAccent = '#0891b2'; // teal/cyan accent, membedakan dari chart Tamu Reservasi (ocean blue)
+    const paxData = {
+        daily: {
+            labels: <?php echo $paxDailyLabels; ?>,
+            values: <?php echo $paxDailyTotals; ?>,
+            sub: 'Jumlah tamu (pax) per hari, 30 hari terakhir'
+        },
+        monthly: {
+            labels: <?php echo $paxMonthLabels; ?>,
+            values: <?php echo $paxMonthlyTotals; ?>,
+            sub: 'Jumlah tamu (pax) per bulan, 12 bulan terakhir'
+        },
+        yearly: {
+            labels: <?php echo $paxYearLabels; ?>,
+            values: <?php echo $paxYearlyTotals; ?>,
+            sub: 'Jumlah tamu (pax) per tahun, 5 tahun terakhir'
+        }
+    };
+    let paxChartInstance = null;
+
+    function switchPaxChart(mode) {
+        const ctx = document.getElementById('paxMonthlyChart');
+        if (!ctx) return;
+        const src = paxData[mode];
+
+        if (paxChartInstance) paxChartInstance.destroy();
+        paxChartInstance = new Chart(ctx, {
             type: 'bar',
             data: {
-                labels: <?php echo $paxMonthLabels; ?>,
+                labels: src.labels,
                 datasets: [{
                     label: 'Total Pax',
-                    data: <?php echo $paxMonthlyTotals; ?>,
-                    backgroundColor: oceanColors.primary + 'cc',
+                    data: src.values,
+                    backgroundColor: paxAccent + 'cc',
                     borderRadius: 8,
                     maxBarThickness: 36
                 }]
@@ -663,65 +745,106 @@ if (isset($dbError)): ?>
                 }
             }
         });
-    }
 
-    // Pax per Paket Wisata (horizontal bar, urut dari yang paling banyak dipesan)
-    const paxByPackageCtx = document.getElementById('paxByPackageChart');
-    if (paxByPackageCtx) {
-        const packageLabels = <?php echo $packageLabels; ?>;
-        const packagePalette = [oceanColors.primary, oceanColors.secondary, oceanColors.success, oceanColors.warning, oceanColors.danger, '#8b5cf6', '#0891b2', '#db2777'];
-        if (packageLabels.length === 0) {
-            paxByPackageCtx.parentElement.insertAdjacentHTML('beforeend', '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:13px;">Belum ada paket wisata aktif.</div>');
-        } else {
-            new Chart(paxByPackageCtx, {
-                type: 'bar',
-                data: {
-                    labels: packageLabels,
-                    datasets: [{
-                        label: 'Total Pax',
-                        data: <?php echo $packagePaxValues; ?>,
-                        backgroundColor: packageLabels.map((_, i) => packagePalette[i % packagePalette.length]),
-                        borderRadius: 8,
-                        maxBarThickness: 28
-                    }]
+        document.getElementById('paxChartSub').textContent = src.sub;
+        ['daily', 'monthly', 'yearly'].forEach(m => {
+            const btn = document.getElementById('paxChartBtn' + m.charAt(0).toUpperCase() + m.slice(1));
+            const active = m === mode;
+            btn.style.background = active ? paxAccent : '';
+            btn.style.color = active ? '#fff' : '';
+            btn.style.borderColor = active ? paxAccent : '';
+        });
+    }
+    switchPaxChart('monthly');
+
+    // Pax per Paket Wisata: toggle Harian / Bulanan / Tahunan
+    const paxPkgPalette = ['#0891b2', '#F59E0B', '#10b981', '#8b5cf6', '#ef4444', '#0369a1', '#db2777', '#65a30d'];
+    const paxPkgLabels = <?php echo $packageLabels; ?>;
+    const paxPkgData = {
+        daily: {
+            values: <?php echo $packagePaxDaily; ?>,
+            sub: 'Jumlah tamu yang booking di tiap paket, hari ini'
+        },
+        monthly: {
+            values: <?php echo $packagePaxMonthly; ?>,
+            sub: 'Jumlah tamu yang booking di tiap paket, bulan ini'
+        },
+        yearly: {
+            values: <?php echo $packagePaxYearly; ?>,
+            sub: 'Jumlah tamu yang booking di tiap paket, tahun ini'
+        }
+    };
+    let paxPkgChartInstance = null;
+
+    function switchPaxPkgChart(mode) {
+        const ctx = document.getElementById('paxByPackageChart');
+        if (!ctx) return;
+        const src = paxPkgData[mode];
+
+        if (paxPkgLabels.length === 0) {
+            ctx.parentElement.insertAdjacentHTML('beforeend', '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:13px;">Belum ada paket wisata aktif.</div>');
+            return;
+        }
+
+        if (paxPkgChartInstance) paxPkgChartInstance.destroy();
+        paxPkgChartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: paxPkgLabels,
+                datasets: [{
+                    label: 'Total Pax',
+                    data: src.values,
+                    backgroundColor: paxPkgLabels.map((_, i) => paxPkgPalette[i % paxPkgPalette.length]),
+                    borderRadius: 8,
+                    maxBarThickness: 28
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
                 },
-                options: {
-                    indexAxis: 'y',
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: false
-                        }
-                    },
-                    scales: {
-                        x: {
-                            beginAtZero: true,
-                            ticks: {
-                                precision: 0,
-                                font: {
-                                    size: 12
-                                }
-                            },
-                            grid: {
-                                color: 'rgba(0,0,0,0.05)'
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0,
+                            font: {
+                                size: 12
                             }
                         },
-                        y: {
-                            grid: {
-                                display: false
-                            },
-                            ticks: {
-                                font: {
-                                    size: 12
-                                }
+                        grid: {
+                            color: 'rgba(0,0,0,0.05)'
+                        }
+                    },
+                    y: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            font: {
+                                size: 12
                             }
                         }
                     }
                 }
-            });
-        }
+            }
+        });
+
+        document.getElementById('paxPkgChartSub').textContent = src.sub;
+        ['daily', 'monthly', 'yearly'].forEach(m => {
+            const btn = document.getElementById('paxPkgChartBtn' + m.charAt(0).toUpperCase() + m.slice(1));
+            const active = m === mode;
+            btn.style.background = active ? paxAccent : '';
+            btn.style.color = active ? '#fff' : '';
+            btn.style.borderColor = active ? paxAccent : '';
+        });
     }
+    switchPaxPkgChart('monthly');
 
     // Quick Action Settings
     function openQuickActionSettings() {
