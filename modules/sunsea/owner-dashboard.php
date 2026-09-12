@@ -85,13 +85,29 @@ $userName = $currentUser['full_name'] ?? $currentUser['username'] ?? 'Owner';
 $companyLogoPath = sunseaSetting($pdo, 'company_logo', '');
 $companyLogoSrc  = $companyLogoPath ? sunseaAssetUrl($companyLogoPath) : '';
 
-// Pie 1: status booking (confirmed vs pending)
+// Pie 1: status booking (confirmed vs pending) - sudah tidak dipakai, diganti grafik Total Pax Bulan Ini
 $bookingPieTotal = $pendingCount + $confirmedCount;
 $confirmedPct = $bookingPieTotal > 0 ? round($confirmedCount / $bookingPieTotal * 100) : 0;
 
 // Pie 2: keuangan bulan ini (masuk vs keluar)
 $financePieTotal = $monthIncome + $monthExpense;
 $monthIncomePct = $financePieTotal > 0 ? round($monthIncome / $financePieTotal * 100) : 0;
+$monthProfit = max(0, $monthIncome - $monthExpense);
+
+// Total Pax dalam 1 bulan ini (per hari), pengganti donut Status Booking
+$paxDaysInMonth = (int)date('t');
+$paxDayLabels = [];
+$paxDayTotals = [];
+for ($pd = 1; $pd <= $paxDaysInMonth; $pd++) {
+    $paxDayKey = date('Y-m-') . str_pad((string)$pd, 2, '0', STR_PAD_LEFT);
+    $paxDayLabels[] = (string)$pd;
+    $paxDayTotals[] = (int)$pdo->query("
+        SELECT COALESCE(SUM(pax_count),0) FROM booking_orders
+        WHERE status <> 'cancelled' AND start_date = '{$paxDayKey}'
+    ")->fetchColumn();
+}
+$paxDayLabelsJson = json_encode($paxDayLabels);
+$paxDayTotalsJson = json_encode($paxDayTotals);
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -104,6 +120,7 @@ $monthIncomePct = $financePieTotal > 0 ? round($monthIncome / $financePieTotal *
     <link rel="manifest" href="owner-manifest.php">
     <link rel="apple-touch-icon" href="<?php echo htmlspecialchars($companyLogoSrc ?: (BASE_URL . '/img/favicon.png')); ?>">
     <script src="https://unpkg.com/feather-icons"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -566,23 +583,15 @@ $monthIncomePct = $financePieTotal > 0 ? round($monthIncome / $financePieTotal *
         <div class="ob-pies-panel">
             <div class="ob-pies-row">
                 <div class="ob-pie-card">
-                    <div class="ob-pie-title">Status Booking</div>
-                    <div class="ob-donut" style="background:conic-gradient(var(--success) 0% <?php echo $confirmedPct; ?>%, var(--ocean) <?php echo $confirmedPct; ?>% 100%);">
-                        <div class="ob-donut-label"><?php echo $confirmedPct; ?>%</div>
-                    </div>
-                    <div class="ob-pie-legend">
-                        <span><span class="ob-pie-dot" style="background:var(--success);"></span> Confirmed</span>
-                        <span><span class="ob-pie-dot" style="background:var(--ocean);"></span> Pending</span>
+                    <div class="ob-pie-title">Total Pax Bulan Ini</div>
+                    <div style="position:relative;height:150px;">
+                        <canvas id="obPaxMonthChart"></canvas>
                     </div>
                 </div>
                 <div class="ob-pie-card">
                     <div class="ob-pie-title">Keuangan Bulan Ini</div>
-                    <div class="ob-donut" style="background:conic-gradient(var(--success) 0% <?php echo $monthIncomePct; ?>%, var(--danger) <?php echo $monthIncomePct; ?>% 100%);">
-                        <div class="ob-donut-label"><?php echo $monthIncomePct; ?>%</div>
-                    </div>
-                    <div class="ob-pie-legend">
-                        <span><span class="ob-pie-dot" style="background:var(--success);"></span> Masuk</span>
-                        <span><span class="ob-pie-dot" style="background:var(--danger);"></span> Keluar</span>
+                    <div style="position:relative;height:150px;">
+                        <canvas id="obFinancePieChart"></canvas>
                     </div>
                 </div>
             </div>
@@ -684,6 +693,101 @@ $monthIncomePct = $financePieTotal > 0 ? round($monthIncome / $financePieTotal *
 
     <script>
         if (window.feather) feather.replace();
+    </script>
+    <script>
+        // Total Pax Bulan Ini (per hari), pengganti donut Status Booking
+        const obPaxCtx = document.getElementById('obPaxMonthChart');
+        if (obPaxCtx) {
+            new Chart(obPaxCtx, {
+                type: 'bar',
+                data: {
+                    labels: <?php echo $paxDayLabelsJson; ?>,
+                    datasets: [{
+                        label: 'Total Pax',
+                        data: <?php echo $paxDayTotalsJson; ?>,
+                        backgroundColor: '#0891b2cc',
+                        borderRadius: 6,
+                        maxBarThickness: 14
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                precision: 0,
+                                font: {
+                                    size: 9
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(0,0,0,.05)'
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                font: {
+                                    size: 8
+                                }
+                            },
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Keuangan Bulan Ini: Pemasukan vs Pengeluaran vs Profit Margin (sama seperti dashboard system)
+        const obFinanceCtx = document.getElementById('obFinancePieChart');
+        if (obFinanceCtx) {
+            new Chart(obFinanceCtx, {
+                type: 'pie',
+                data: {
+                    labels: ['Pemasukan', 'Pengeluaran', 'Profit Margin'],
+                    datasets: [{
+                        data: [<?php echo (float)$monthIncome; ?>, <?php echo (float)$monthExpense; ?>, <?php echo (float)$monthProfit; ?>],
+                        backgroundColor: ['#10b981', '#ef4444', '#0369A1'],
+                        borderColor: '#fff',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'bottom',
+                            labels: {
+                                font: {
+                                    size: 9.5
+                                },
+                                padding: 8,
+                                usePointStyle: true,
+                                boxWidth: 8
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(ctx) {
+                                    const val = ctx.parsed || 0;
+                                    return ctx.label + ': Rp ' + val.toLocaleString('id-ID');
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
     </script>
     <script>
         (function() {
