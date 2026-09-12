@@ -858,7 +858,7 @@ $facilities = [];
 
 $list = safeFetchAll(
     $pdo,
-    "SELECT b.*, c.name as customer_name, p.name as package_name,
+    "SELECT b.*, c.name as customer_name, c.phone as customer_phone, p.name as package_name,
         COALESCE((SELECT SUM(i.paid_amount) FROM invoices i WHERE i.internal_notes = CONCAT('booking_id:', b.id)), 0) AS paid_amount_total,
         (SELECT component_name FROM booking_order_items WHERE booking_id=b.id AND component_code IN ('penginapan','accommodation') ORDER BY sort_order LIMIT 1) AS accommodation_item
     FROM booking_orders b
@@ -1618,7 +1618,15 @@ include 'layout-header.php';
                                 <?php endif; ?>
                             </td>
                             <td>
-                                <div style="font-weight:700;"><?php echo htmlspecialchars($r['customer_name']); ?></div>
+                                <div style="display:flex;align-items:center;gap:6px;">
+                                    <span style="font-weight:700;"><?php echo htmlspecialchars($r['customer_name']); ?></span>
+                                    <?php if (!empty($r['customer_phone'])):
+                                        $waNumberRow = preg_replace('/\D/', '', $r['customer_phone']);
+                                        if (substr($waNumberRow, 0, 1) === '0') $waNumberRow = '62' . substr($waNumberRow, 1);
+                                    ?>
+                                        <a href="https://wa.me/<?php echo $waNumberRow; ?>" target="_blank" title="Chat WhatsApp" style="display:inline-flex;color:#25D366;"><i data-feather="message-circle" style="width:14px;height:14px;"></i></a>
+                                    <?php endif; ?>
+                                </div>
                                 <div style="font-size:11px;color:var(--ss-muted);margin-top:1px;"><?php echo htmlspecialchars($r['booking_no']); ?></div>
                             </td>
                             <td><?php echo strpos((string)$r['notes'], '✍️ Booking Manual') === 0 ? 'MANUAL' : strtoupper($r['booking_mode']); ?></td>
