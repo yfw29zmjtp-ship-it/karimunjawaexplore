@@ -14,6 +14,8 @@ $auth = new Auth();
 $auth->requireLogin();
 $pdo = getSunseaConnection();
 sunseaEnsureBookingSchema($pdo);
+sunseaEnsureAccommodationSchema($pdo);
+sunseaEnsureMasterDataSchema($pdo);
 
 function postNum(string $key): float
 {
@@ -301,6 +303,64 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delet
             $_SESSION['flash_message'] = 'Gagal menghapus layanan: ' . $e->getMessage();
             $_SESSION['flash_type'] = 'error';
         }
+    }
+
+    header('Location: bookings.php?view=' . $bookingId);
+    exit;
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'replace_room_transport') {
+    $bookingId = (int)($_POST['booking_id'] ?? 0);
+    $refType = $_POST['ref_type'] ?? '';
+    $refId = (int)($_POST['ref_id'] ?? 0);
+    $qty = (float)str_replace(['.', ','], ['', '.'], $_POST['qty'] ?? '1') ?: 1;
+
+    if ($bookingId > 0 && $refId > 0 && in_array($refType, ['room', 'transport'], true)) {
+        try {
+            if ($refType === 'room') {
+                $ref = $pdo->prepare("SELECT r.room_type, r.price_cost, r.price_sell, p.name as partner_name FROM accommodation_rooms r JOIN accommodation_partners p ON p.id=r.partner_id WHERE r.id=?");
+                $ref->execute([$refId]);
+                $room = $ref->fetch(PDO::FETCH_ASSOC);
+                if (!$room) throw new Exception('Kamar tidak ditemukan.');
+                $componentCode = 'penginapan';
+                $name = 'Penginapan: ' . $room['partner_name'] . ' - ' . $room['room_type'];
+                $unit = 'room-night';
+                $priceCost = (float)$room['price_cost'];
+                $priceSell = (float)$room['price_sell'];
+            } else {
+                $ref = $pdo->prepare("SELECT name, unit, price_cost, price_sell FROM transport_items WHERE id=?");
+                $ref->execute([$refId]);
+                $trans = $ref->fetch(PDO::FETCH_ASSOC);
+                if (!$trans) throw new Exception('Layanan transport tidak ditemukan.');
+                $componentCode = 'transport';
+                $name = 'Transportasi: ' . $trans['name'];
+                $unit = $trans['unit'] ?: 'trip';
+                $priceCost = (float)$trans['price_cost'];
+                $priceSell = (float)$trans['price_sell'];
+            }
+
+            // "Ganti" = hapus item lama kategori yang sama lalu pasang yang baru, supaya tidak dobel.
+            $pdo->prepare("DELETE FROM booking_order_items WHERE booking_id=? AND component_code=?")->execute([$bookingId, $componentCode]);
+
+            $sortStmt = $pdo->prepare("SELECT COALESCE(MAX(sort_order),-1)+1 FROM booking_order_items WHERE booking_id=?");
+            $sortStmt->execute([$bookingId]);
+            $nextSort = (int)$sortStmt->fetchColumn();
+
+            $pdo->prepare("INSERT INTO booking_order_items
+                (booking_id, component_code, component_name, qty, unit, price_cost, price_sell, total_cost, total_sell, sort_order)
+                VALUES (?,?,?,?,?,?,?,?,?,?)")
+                ->execute([$bookingId, $componentCode, $name, $qty, $unit, $priceCost, $priceSell, $qty * $priceCost, $qty * $priceSell, $nextSort]);
+
+            recalcBookingTotals($pdo, $bookingId);
+            $_SESSION['flash_message'] = ($refType === 'room' ? 'Penginapan' : 'Layanan transport') . ' berhasil diganti, harga otomatis menyesuaikan.';
+            $_SESSION['flash_type'] = 'success';
+        } catch (Exception $e) {
+            $_SESSION['flash_message'] = 'Gagal mengganti layanan: ' . $e->getMessage();
+            $_SESSION['flash_type'] = 'error';
+        }
+    } else {
+        $_SESSION['flash_message'] = 'Pilih penginapan/transport dari daftar terlebih dahulu.';
+        $_SESSION['flash_type'] = 'error';
     }
 
     header('Location: bookings.php?view=' . $bookingId);
@@ -803,7 +863,12 @@ $list = safeFetchAll(
 
 $detail = null;
 $detailItems = [];
+$roomMasterOptions = [];
+$transportMasterOptions = [];
 if ($viewId > 0) {
+    $roomMasterOptions = safeFetchAll($pdo, "SELECT r.id, r.room_type, r.price_cost, r.price_sell, p.name as partner_name FROM accommodation_rooms r JOIN accommodation_partners p ON p.id=r.partner_id WHERE r.is_active=1 AND p.is_active=1 ORDER BY p.name, r.room_type", [], 'kamar penginapan');
+    $transportMasterOptions = safeFetchAll($pdo, "SELECT id, name, unit, price_cost, price_sell FROM transport_items WHERE is_active=1 ORDER BY transport_type, name", [], 'transportasi');
+
     $detail = safeFetchOne($pdo, "SELECT b.*, c.name as customer_name, c.phone as customer_phone,
         p.name as package_name,
         cd.name as coordinator_name,
@@ -1116,6 +1181,60 @@ include 'layout-header.php';
                         </div>
                         <button class="ss-btn ss-btn-primary ss-btn-sm" type="submit" style="margin-top:6px;"><i data-feather="save"></i> Simpan Tanggal</button>
                     </form>
+                </div>
+
+                <div style="background:#F8FAFC;border:1px solid var(--ss-gray-2);border-radius:10px;padding:14px 16px;margin-bottom:14px;">
+                    <div class="ss-card-title" style="margin:0 0 10px;font-size:13px;display:flex;align-items:center;gap:6px;"><i data-feather="refresh-cw" style="width:15px;height:15px;"></i> Ganti Penginapan / Transport</div>
+                    <div style="font-size:11.5px;color:var(--ss-muted);margin:-4px 0 10px;">Pilih dari database, harga modal &amp; jual otomatis menyesuaikan. Item lama dengan kategori yang sama akan diganti otomatis.</div>
+                    <div class="ss-form-grid cols-2">
+                        <form method="POST" style="display:contents;">
+                            <input type="hidden" name="action" value="replace_room_transport">
+                            <input type="hidden" name="ref_type" value="room">
+                            <input type="hidden" name="booking_id" value="<?php echo (int)$detail['id']; ?>">
+                            <div class="ss-form-group" style="grid-column:1/-1;">
+                                <label class="ss-label">Penginapan</label>
+                                <select name="ref_id" class="ss-select" required>
+                                    <option value="">-- pilih kamar/homestay --</option>
+                                    <?php foreach ($roomMasterOptions as $rm): ?>
+                                        <option value="<?php echo (int)$rm['id']; ?>">
+                                            <?php echo htmlspecialchars($rm['partner_name'] . ' - ' . $rm['room_type']); ?>
+                                            (Modal <?php echo sunseaRupiah((float)$rm['price_cost']); ?> / Jual <?php echo sunseaRupiah((float)$rm['price_sell']); ?>)
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="ss-form-group"><label class="ss-label">Qty (kamar × malam)</label><input class="ss-input" name="qty" type="number" min="1" step="1" value="1"></div>
+                            <div class="ss-form-group" style="display:flex;align-items:flex-end;">
+                                <button class="ss-btn ss-btn-primary ss-btn-sm" type="submit" style="width:100%;"><i data-feather="check"></i> Ganti Penginapan</button>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="ss-form-grid cols-2" style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--ss-gray-2);">
+                        <form method="POST" style="display:contents;">
+                            <input type="hidden" name="action" value="replace_room_transport">
+                            <input type="hidden" name="ref_type" value="transport">
+                            <input type="hidden" name="booking_id" value="<?php echo (int)$detail['id']; ?>">
+                            <div class="ss-form-group" style="grid-column:1/-1;">
+                                <label class="ss-label">Layanan Transport</label>
+                                <select name="ref_id" class="ss-select" required>
+                                    <option value="">-- pilih layanan transport --</option>
+                                    <?php foreach ($transportMasterOptions as $tr): ?>
+                                        <option value="<?php echo (int)$tr['id']; ?>">
+                                            <?php echo htmlspecialchars($tr['name']); ?>
+                                            (Modal <?php echo sunseaRupiah((float)$tr['price_cost']); ?> / Jual <?php echo sunseaRupiah((float)$tr['price_sell']); ?> per <?php echo htmlspecialchars($tr['unit']); ?>)
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="ss-form-group"><label class="ss-label">Qty</label><input class="ss-input" name="qty" type="number" min="1" step="1" value="1"></div>
+                            <div class="ss-form-group" style="display:flex;align-items:flex-end;">
+                                <button class="ss-btn ss-btn-primary ss-btn-sm" type="submit" style="width:100%;"><i data-feather="check"></i> Ganti Transport</button>
+                            </div>
+                        </form>
+                    </div>
+                    <?php if (empty($roomMasterOptions) && empty($transportMasterOptions)): ?>
+                        <div style="font-size:11.5px;color:var(--ss-muted);margin-top:8px;">Belum ada data penginapan/transport di master data. Tambahkan dulu di menu Pengaturan.</div>
+                    <?php endif; ?>
                 </div>
 
                 <div style="background:#F8FAFC;border:1px solid var(--ss-gray-2);border-radius:10px;padding:14px 16px;margin-bottom:14px;">
