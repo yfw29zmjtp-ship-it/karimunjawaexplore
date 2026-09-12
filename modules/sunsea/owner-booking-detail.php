@@ -53,9 +53,28 @@ foreach ($items as $it) {
 
 // Info pembayaran/DP: invoice booking ditautkan lewat internal_notes 'booking_id:<id>'
 // (jalur normal) atau 'Generated from Reservasi: <no>' (jalur konversi invoice manual).
-$invStmt = $pdo->prepare("SELECT invoice_no, status, total_amount, paid_amount FROM invoices WHERE internal_notes=? OR internal_notes=? ORDER BY id DESC LIMIT 1");
+// Bisa ada LEBIH DARI SATU invoice tertaut ke booking yang sama (mis. invoice lama +
+// invoice duplikat) - jumlahkan semuanya (sama seperti detail booking di system utama),
+// jangan ambil satu (LIMIT 1) saja krn bisa kepilih invoice duplikat yang belum dibayar.
+$invStmt = $pdo->prepare("SELECT invoice_no, status, total_amount, paid_amount FROM invoices WHERE internal_notes=? OR internal_notes=? ORDER BY id ASC");
 $invStmt->execute(['booking_id:' . $id, 'Generated from Reservasi: ' . $booking['booking_no']]);
-$linkedInvoice = $invStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+$bookingInvoices = $invStmt->fetchAll(PDO::FETCH_ASSOC);
+
+$linkedInvoice = null;
+if ($bookingInvoices) {
+    $invoiceNos = array_column($bookingInvoices, 'invoice_no');
+    $sumTotal = 0.0;
+    $sumPaid = 0.0;
+    foreach ($bookingInvoices as $bi) {
+        $sumTotal += (float)$bi['total_amount'];
+        $sumPaid += (float)$bi['paid_amount'];
+    }
+    $linkedInvoice = [
+        'invoice_no' => implode(', ', $invoiceNos),
+        'total_amount' => $sumTotal,
+        'paid_amount' => $sumPaid,
+    ];
+}
 if ($linkedInvoice) {
     // Hitung ulang sisa tagihan dari total - terbayar, jangan percaya kolom remaining_amount yang bisa basi.
     $linkedInvoice['remaining_amount'] = max(0, (float)$linkedInvoice['total_amount'] - (float)$linkedInvoice['paid_amount']);
