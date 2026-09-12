@@ -147,6 +147,24 @@ function sunseaEnsureBookingSchema(PDO $pdo): void
         if ((int)$itemColumnCheck->fetchColumn() === 0) {
             $pdo->exec("ALTER TABLE booking_order_items ADD COLUMN is_paid_mitra TINYINT(1) DEFAULT 0 AFTER is_done");
         }
+        $itemColumnCheck->execute(['item_type']);
+        if ((int)$itemColumnCheck->fetchColumn() === 0) {
+            $pdo->exec("ALTER TABLE booking_order_items ADD COLUMN item_type VARCHAR(30) NULL AFTER component_code");
+        }
+
+        // Backfill item_type utk baris pkg_detail lama (sebelum kolom ini ada) supaya fitur
+        // "Ganti Penginapan/Transport" bisa mengenali & menghapus baris lama dari paket, bukan cuma dari mode ecer.
+        // Terpisah dari try/catch utama: kalau trip_package_items belum ada, jangan gagalkan setup tabel lain di bawah.
+        try {
+            $pdo->exec("UPDATE booking_order_items boi
+                JOIN booking_orders bo ON bo.id = boi.booking_id
+                JOIN trip_package_items tpi ON tpi.package_id = bo.package_id AND tpi.item_name = boi.component_name
+                SET boi.item_type = tpi.item_type
+                WHERE boi.component_code = 'pkg_detail' AND boi.item_type IS NULL");
+        } catch (Exception $e) {
+            error_log('sunseaEnsureBookingSchema backfill item_type error: ' . $e->getMessage());
+        }
+
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS booking_schedule (
             id INT AUTO_INCREMENT PRIMARY KEY,

@@ -127,13 +127,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
     $sellTotal = 0.0;
 
     // Helper function untuk tambah komponen
-    $addComponent = function ($code, $name, $qty, $unit, $costPrice, $sellPrice) use (&$components, &$costTotal, &$sellTotal) {
+    $addComponent = function ($code, $name, $qty, $unit, $costPrice, $sellPrice, $itemType = null) use (&$components, &$costTotal, &$sellTotal) {
         $totalCost = $qty * $costPrice;
         $totalSell = $qty * $sellPrice;
         $costTotal += $totalCost;
         $sellTotal += $totalSell;
         $components[] = [
             'component_code' => $code,
+            'item_type' => $itemType,
             'component_name' => $name,
             'qty' => $qty,
             'unit' => $unit,
@@ -162,7 +163,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
                 if ($itemQty <= 0) $itemQty = 1;
                 $qty = ($pi['cost_basis'] === 'flat' ? 1 : $pax) * $itemQty;
                 // component_code 'pkg_detail' = rincian modal internal paket, disembunyikan dari invoice pelanggan
-                $addComponent('pkg_detail', $pi['item_name'], $qty, $pi['cost_basis'] === 'flat' ? 'paket' : 'pax', (float)$pi['estimated_cost'], 0);
+                // item_type dibawa dari trip_package_items supaya fitur ganti penginapan/transport bisa mengenali baris ini walau berasal dari paket.
+                $addComponent('pkg_detail', $pi['item_name'], $qty, $pi['cost_basis'] === 'flat' ? 'paket' : 'pax', (float)$pi['estimated_cost'], 0, $pi['item_type']);
             }
         }
     }
@@ -190,7 +192,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
         $tkt = $tktStmt->fetch(PDO::FETCH_ASSOC);
         if ($tkt) {
             $label = 'Tiket: ' . $tkt['ticket_name'] . ($tripType === 'pp' ? ' (PP)' : ' (Sekali Jalan)');
-            $addComponent('ticket', $label, $ticketQty, 'pax', (float)$tkt['price_cost'], (float)$tkt['price_sell']);
+            $addComponent('ticket', $label, $ticketQty, 'pax', (float)$tkt['price_cost'], (float)$tkt['price_sell'], 'tiket_kapal');
         }
     }
 
@@ -202,7 +204,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
         $trStmt->execute([$transportId]);
         $tr = $trStmt->fetch(PDO::FETCH_ASSOC);
         if ($tr) {
-            $addComponent('transport', 'Transportasi: ' . $tr['name'], $transportQty, $tr['unit'] ?: 'trip', (float)$tr['price_cost'], (float)$tr['price_sell']);
+            $addComponent('transport', 'Transportasi: ' . $tr['name'], $transportQty, $tr['unit'] ?: 'trip', (float)$tr['price_cost'], (float)$tr['price_sell'], 'transport');
         }
     }
 
@@ -216,7 +218,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
         $rm = $rmStmt->fetch(PDO::FETCH_ASSOC);
         if ($rm) {
             $unitQty = $nights * $roomQty;
-            $addComponent('penginapan', 'Penginapan: ' . $rm['name'] . ' - ' . $rm['room_type'], $unitQty, 'room-night', (float)$rm['price_cost'], (float)$rm['price_sell']);
+            $addComponent('penginapan', 'Penginapan: ' . $rm['name'] . ' - ' . $rm['room_type'], $unitQty, 'room-night', (float)$rm['price_cost'], (float)$rm['price_sell'], 'penginapan');
         }
     }
 
@@ -228,7 +230,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
         $catStmt->execute([$cateringId]);
         $cat = $catStmt->fetch(PDO::FETCH_ASSOC);
         if ($cat) {
-            $addComponent('catering', 'Catering: ' . $cat['vendor_name'] . ' - ' . $cat['menu_name'], $cateringQty, $cat['portion_unit'], (float)$cat['price_cost'], (float)$cat['price_sell']);
+            $addComponent('catering', 'Catering: ' . $cat['vendor_name'] . ' - ' . $cat['menu_name'], $cateringQty, $cat['portion_unit'], (float)$cat['price_cost'], (float)$cat['price_sell'], 'catering');
         }
     }
 
@@ -241,7 +243,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
         $gdStmt->execute([$guideId]);
         $gd = $gdStmt->fetch(PDO::FETCH_ASSOC);
         if ($gd) {
-            $addComponent('guide_darat', 'Guide Darat: ' . $gd['name'] . $tripType, $days, 'hari', (float)$gd['daily_rate_cost'], (float)$gd['daily_rate_sell']);
+            $addComponent('guide_darat', 'Guide Darat: ' . $gd['name'] . $tripType, $days, 'hari', (float)$gd['daily_rate_cost'], (float)$gd['daily_rate_sell'], 'guide');
         }
     }
 
@@ -254,7 +256,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
         $glStmt->execute([$guideId]);
         $gl = $glStmt->fetch(PDO::FETCH_ASSOC);
         if ($gl) {
-            $addComponent('guide_laut', 'Guide Laut: ' . $gl['name'] . $tripType, $days, 'hari', (float)$gl['daily_rate_cost'], (float)$gl['daily_rate_sell']);
+            $addComponent('guide_laut', 'Guide Laut: ' . $gl['name'] . $tripType, $days, 'hari', (float)$gl['daily_rate_cost'], (float)$gl['daily_rate_sell'], 'guide');
         }
     }
 
@@ -267,7 +269,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
             $facStmt->execute([$fid]);
             if ($fac = $facStmt->fetch()) {
                 $qty = max(1, (float)($_POST['facility_qty_' . $fid] ?? 1));
-                $addComponent('fasilitas', 'Fasilitas: ' . $fac['name'], $qty, $fac['unit'], (float)$fac['price_cost'], (float)$fac['price_sell']);
+                $addComponent('fasilitas', 'Fasilitas: ' . $fac['name'], $qty, $fac['unit'], (float)$fac['price_cost'], (float)$fac['price_sell'], 'fasilitas');
             }
         }
     }
@@ -333,13 +335,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
         $bookingId = (int)$pdo->lastInsertId();
 
         $ins = $pdo->prepare("INSERT INTO booking_order_items
-            (booking_id, component_code, component_name, qty, unit, price_cost, price_sell, total_cost, total_sell, sort_order)
-            VALUES (?,?,?,?,?,?,?,?,?,?)");
+            (booking_id, component_code, item_type, component_name, qty, unit, price_cost, price_sell, total_cost, total_sell, sort_order)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?)");
 
         foreach ($components as $idx => $c) {
             $ins->execute([
                 $bookingId,
                 $c['component_code'],
+                $c['item_type'],
                 $c['component_name'],
                 $c['qty'],
                 $c['unit'],

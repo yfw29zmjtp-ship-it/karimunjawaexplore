@@ -13,6 +13,7 @@ require_once 'db-helper.php';
 $auth = new Auth();
 $auth->requireLogin();
 $pdo = getSunseaConnection();
+sunseaEnsurePackageItemsSchema($pdo);
 sunseaEnsureBookingSchema($pdo);
 sunseaEnsureAccommodationSchema($pdo);
 sunseaEnsureMasterDataSchema($pdo);
@@ -339,17 +340,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'repla
                 $priceSell = (float)$trans['price_sell'];
             }
 
-            // "Ganti" = hapus item lama kategori yang sama lalu pasang yang baru, supaya tidak dobel.
-            $pdo->prepare("DELETE FROM booking_order_items WHERE booking_id=? AND component_code=?")->execute([$bookingId, $componentCode]);
+            // "Ganti" = hapus item lama kategori yang sama (baik dari mode ecer maupun pecahan detail paket) lalu pasang yang baru, supaya tidak dobel.
+            $pdo->prepare("DELETE FROM booking_order_items WHERE booking_id=? AND (component_code=? OR item_type=?)")
+                ->execute([$bookingId, $componentCode, $componentCode]);
 
             $sortStmt = $pdo->prepare("SELECT COALESCE(MAX(sort_order),-1)+1 FROM booking_order_items WHERE booking_id=?");
             $sortStmt->execute([$bookingId]);
             $nextSort = (int)$sortStmt->fetchColumn();
 
             $pdo->prepare("INSERT INTO booking_order_items
-                (booking_id, component_code, component_name, qty, unit, price_cost, price_sell, total_cost, total_sell, sort_order)
-                VALUES (?,?,?,?,?,?,?,?,?,?)")
-                ->execute([$bookingId, $componentCode, $name, $qty, $unit, $priceCost, $priceSell, $qty * $priceCost, $qty * $priceSell, $nextSort]);
+                (booking_id, component_code, item_type, component_name, qty, unit, price_cost, price_sell, total_cost, total_sell, sort_order)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?)")
+                ->execute([$bookingId, $componentCode, $componentCode, $name, $qty, $unit, $priceCost, $priceSell, $qty * $priceCost, $qty * $priceSell, $nextSort]);
 
             recalcBookingTotals($pdo, $bookingId);
             $_SESSION['flash_message'] = ($refType === 'room' ? 'Penginapan' : 'Layanan transport') . ' berhasil diganti, harga otomatis menyesuaikan.';
