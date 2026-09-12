@@ -838,6 +838,8 @@ include 'layout-header.php';
         if (empty($it['is_done'])) $pendingCount++;
     }
     $mitraItems = array_values(array_filter($detailItems, fn($it) => $it['component_code'] !== 'paket'));
+    // 'pkg_detail' = rincian modal internal paket (sudah tampil di Rekap Pengeluaran Mitra di atas), jangan dobel di tabel Harga Jual.
+    $sellItems = array_values(array_filter($detailItems, fn($it) => $it['component_code'] !== 'pkg_detail'));
     $mitraUnpaidCount = 0;
     $mitraPaidTotal = 0;
     foreach ($mitraItems as $it) {
@@ -1081,7 +1083,7 @@ include 'layout-header.php';
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach ($detailItems as $it): ?>
+                        <?php foreach ($sellItems as $it): ?>
                             <tr>
                                 <td><?php echo htmlspecialchars($it['component_name']); ?></td>
                                 <td><?php echo rtrim(rtrim(number_format((float)$it['qty'], 2, '.', ''), '0'), '.'); ?> <?php echo htmlspecialchars($it['unit']); ?></td>
@@ -1090,9 +1092,15 @@ include 'layout-header.php';
                                 <td><strong><?php echo sunseaRupiah((float)$it['total_sell']); ?></strong></td>
                             </tr>
                         <?php endforeach; ?>
+                        <?php if (empty($sellItems)): ?>
+                            <tr>
+                                <td colspan="5" style="color:var(--ss-muted);">Belum ada layanan yang dijual pada pesanan ini.</td>
+                            </tr>
+                        <?php endif; ?>
                     </tbody>
                 </table>
             </div>
+            <div style="font-size:11px;color:var(--ss-muted);margin-top:6px;">* Rincian modal per komponen paket (tiket kapal, penginapan, transport, dll) ada di kartu "Rekap Pengeluaran (Pembayaran ke Mitra)" di atas.</div>
 
             <div id="editItemsPanel" style="display:none;margin-top:14px;padding-top:4px;">
                 <div style="background:#F8FAFC;border:1px solid var(--ss-gray-2);border-radius:10px;padding:14px 16px;margin-bottom:14px;">
