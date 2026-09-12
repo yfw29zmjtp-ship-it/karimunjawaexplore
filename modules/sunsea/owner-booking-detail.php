@@ -51,6 +51,26 @@ foreach ($items as $it) {
     $totalSell += (float)$it['total_sell'];
 }
 
+// Info pembayaran/DP: invoice booking ditautkan lewat internal_notes 'booking_id:<id>'
+// (jalur normal) atau 'Generated from Reservasi: <no>' (jalur konversi invoice manual).
+$invStmt = $pdo->prepare("SELECT invoice_no, status, total_amount, paid_amount FROM invoices WHERE internal_notes=? OR internal_notes=? ORDER BY id DESC LIMIT 1");
+$invStmt->execute(['booking_id:' . $id, 'Generated from Reservasi: ' . $booking['booking_no']]);
+$linkedInvoice = $invStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+if ($linkedInvoice) {
+    // Hitung ulang sisa tagihan dari total - terbayar, jangan percaya kolom remaining_amount yang bisa basi.
+    $linkedInvoice['remaining_amount'] = max(0, (float)$linkedInvoice['total_amount'] - (float)$linkedInvoice['paid_amount']);
+    if ($linkedInvoice['remaining_amount'] <= 0.01) {
+        $paymentStatusLabel = 'Lunas';
+        $paymentStatusColor = 'var(--success)';
+    } elseif ((float)$linkedInvoice['paid_amount'] > 0) {
+        $paymentStatusLabel = 'DP';
+        $paymentStatusColor = '#C2410C';
+    } else {
+        $paymentStatusLabel = 'Belum Bayar';
+        $paymentStatusColor = 'var(--danger)';
+    }
+}
+
 $statusBadge = [
     'draft'     => ['ob-badge-draft', 'Pending'],
     'confirmed' => ['ob-badge-confirmed', 'Confirmed'],
@@ -84,6 +104,19 @@ include 'owner-mobile-header.php';
 
     <div class="ob-detail-label">Jumlah Pax</div>
     <div class="ob-detail-value"><?php echo (int)$booking['pax_count']; ?> orang</div>
+
+    <?php if ($linkedInvoice): ?>
+        <div class="ob-detail-label">Status Pembayaran</div>
+        <div class="ob-detail-value">
+            <span style="color:<?php echo $paymentStatusColor; ?>;"><?php echo $paymentStatusLabel; ?></span>
+            <span style="font-weight:400;color:var(--muted);font-size:11px;">
+                · Terbayar <?php echo sunseaRupiah((float)$linkedInvoice['paid_amount']); ?>
+                <?php if ($linkedInvoice['remaining_amount'] > 0.01): ?>
+                    · Sisa <?php echo sunseaRupiah((float)$linkedInvoice['remaining_amount']); ?>
+                <?php endif; ?>
+            </span>
+        </div>
+    <?php endif; ?>
 
     <?php if (!empty($booking['notes'])): ?>
         <div class="ob-detail-label">Catatan</div>
