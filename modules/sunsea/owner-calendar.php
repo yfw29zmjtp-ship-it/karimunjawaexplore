@@ -219,7 +219,7 @@ include 'owner-mobile-header.php';
 
     .cal-day-row {
         display: grid;
-        grid-template-columns: 130px repeat(var(--cal-days), minmax(16px, 1fr));
+        grid-template-columns: 118px repeat(var(--cal-days), minmax(16px, 1fr));
     }
 
     .cal-name-col {
@@ -261,7 +261,7 @@ include 'owner-mobile-header.php';
 
     .cal-row {
         display: grid;
-        grid-template-columns: 130px repeat(var(--cal-days), minmax(16px, 1fr));
+        grid-template-columns: 118px repeat(var(--cal-days), minmax(16px, 1fr));
         align-items: center;
         cursor: pointer;
         transition: background .15s ease;
@@ -277,26 +277,26 @@ include 'owner-mobile-header.php';
         z-index: 1;
         background: #fff;
         border-right: 1px solid var(--border);
-        padding: 8px 10px;
+        padding: 8px 6px;
         overflow: hidden;
     }
 
     .cal-guest-avatar {
-        width: 22px;
-        height: 22px;
+        width: 18px;
+        height: 18px;
         border-radius: 50%;
         color: #fff;
-        font-size: 10px;
+        font-size: 8.5px;
         font-weight: 800;
         display: inline-flex;
         align-items: center;
         justify-content: center;
         flex-shrink: 0;
-        margin-right: 6px;
+        margin-right: 5px;
     }
 
     .cal-guest-name {
-        font-size: 11.5px;
+        font-size: 10px;
         font-weight: 700;
         color: var(--text);
         white-space: nowrap;
@@ -305,10 +305,12 @@ include 'owner-mobile-header.php';
     }
 
     .cal-guest-meta {
-        font-size: 9px;
+        font-size: 8px;
         font-weight: 500;
         color: var(--muted);
         white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     .cal-cell {
