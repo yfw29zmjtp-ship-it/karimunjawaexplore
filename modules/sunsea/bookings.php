@@ -840,6 +840,8 @@ include 'layout-header.php';
     $mitraItems = array_values(array_filter($detailItems, fn($it) => $it['component_code'] !== 'paket'));
     // 'pkg_detail' = rincian modal internal paket (sudah tampil di Rekap Pengeluaran Mitra di atas), jangan dobel di tabel Harga Jual.
     $sellItems = array_values(array_filter($detailItems, fn($it) => $it['component_code'] !== 'pkg_detail'));
+    $mitraCostTotal = 0;
+    foreach ($mitraItems as $it) $mitraCostTotal += (float)$it['total_cost'];
     $mitraUnpaidCount = 0;
     $mitraPaidTotal = 0;
     foreach ($mitraItems as $it) {
@@ -1087,7 +1089,7 @@ include 'layout-header.php';
                             <tr>
                                 <td><?php echo htmlspecialchars($it['component_name']); ?></td>
                                 <td><?php echo rtrim(rtrim(number_format((float)$it['qty'], 2, '.', ''), '0'), '.'); ?> <?php echo htmlspecialchars($it['unit']); ?></td>
-                                <td><?php echo sunseaRupiah((float)$it['total_cost']); ?></td>
+                                <td><?php echo sunseaRupiah($it['component_code'] === 'paket' ? $mitraCostTotal : (float)$it['total_cost']); ?></td>
                                 <td><?php echo sunseaRupiah((float)$it['price_sell']); ?></td>
                                 <td><strong><?php echo sunseaRupiah((float)$it['total_sell']); ?></strong></td>
                             </tr>
