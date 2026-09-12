@@ -137,9 +137,13 @@ $calDurationColors = [
 ];
 $calHoneymoonColor = '#DB2777';
 $calDefaultColor = '#64748B';
+$calCompletedColor = '#94A3B8';
 
-function obCalBarColor(string $durationLabel, ?string $packageName, array $durationColors, string $honeymoonColor, string $defaultColor): string
+function obCalBarColor(string $durationLabel, ?string $packageName, array $durationColors, string $honeymoonColor, string $defaultColor, bool $isCompleted = false, string $completedColor = '#94A3B8'): string
 {
+    if ($isCompleted) {
+        return $completedColor;
+    }
     if ($packageName && stripos($packageName, 'honeymoon') !== false) {
         return $honeymoonColor;
     }
@@ -388,6 +392,7 @@ include 'owner-mobile-header.php';
         '4H3M'      => $calDurationColors['4H3M'],
         '5H4M'      => $calDurationColors['5H4M'],
         'Lainnya'   => $calDefaultColor,
+        'Selesai'   => $calCompletedColor,
     ];
     ?>
     <?php if (empty($bookings)): ?>
@@ -411,7 +416,8 @@ include 'owner-mobile-header.php';
                     $e = min($daysInMonth, (int)date('j', strtotime(min($b['end_date'], $endMonth))));
                     $nights = max(0, (int)round((strtotime($b['end_date']) - strtotime($b['start_date'])) / 86400));
                     $durationLabel = ($nights + 1) . 'H' . $nights . 'M';
-                    $barColor = obCalBarColor($durationLabel, $b['package_name'], $calDurationColors, $calHoneymoonColor, $calDefaultColor);
+                    $isCompletedTrip = strtotime($b['end_date']) < strtotime(date('Y-m-d'));
+                    $barColor = obCalBarColor($durationLabel, $b['package_name'], $calDurationColors, $calHoneymoonColor, $calDefaultColor, $isCompletedTrip, $calCompletedColor);
                     $initial = mb_strtoupper(mb_substr($b['customer_name'], 0, 1));
                     $clippedLeft = strtotime($b['start_date']) < strtotime($startMonth);
                     $clippedRight = strtotime($b['end_date']) > strtotime($endMonth);
