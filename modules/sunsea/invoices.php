@@ -421,6 +421,7 @@ $customers = $pdo->query("SELECT id, name FROM customers WHERE is_active=1 ORDER
 
 // List
 $statusFilter = $_GET['status'] ?? '';
+$outstandingFilter = ($_GET['filter'] ?? '') === 'outstanding';
 $wh = $statusFilter ? "WHERE i.status=?" : "";
 $lp = $statusFilter ? [$statusFilter] : [];
 $invoiceList = $pdo->prepare("
@@ -436,6 +437,9 @@ foreach ($invoiceList as &$_invRow) {
     $_invRow['remaining_amount'] = max(0, (float)$_invRow['total_amount'] - (float)$_invRow['paid_amount']);
 }
 unset($_invRow);
+if ($outstandingFilter) {
+    $invoiceList = array_values(array_filter($invoiceList, fn($r) => $r['remaining_amount'] > 0 && $r['status'] !== 'cancelled'));
+}
 
 $invoiceLogoPath = sunseaSetting($pdo, 'invoice_logo', '') ?: sunseaSetting($pdo, 'company_logo', '');
 $invoiceLogoSrc = sunseaAssetUrl($invoiceLogoPath);
@@ -1459,7 +1463,7 @@ $prefillPaxCount = max(1, (int)($_GET['pax_count'] ?? 1));
         <div class="ss-card invoice-list-card">
             <div class="ss-card-header">
                 <div>
-                    <div class="ss-card-title">Semua Invoice</div>
+                    <div class="ss-card-title">Semua Invoice<?php echo $outstandingFilter ? ' — Piutang Belum Lunas' : ''; ?></div>
                     <div class="ss-card-sub"><?php echo count($invoiceList); ?> invoice</div>
                 </div>
                 <button type="button" id="bulkDeleteInvoiceBtn" class="ss-btn ss-btn-outline" style="display:none;color:#dc2626;border-color:#dc2626;" onclick="submitBulkDeleteInvoice()">
@@ -1471,8 +1475,9 @@ $prefillPaxCount = max(1, (int)($_GET['pax_count'] ?? 1));
             </form>
             <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
                 <?php foreach (['' => 'Semua', 'issued' => 'Issued', 'partial' => 'Partial', 'paid' => 'Lunas', 'overdue' => 'Overdue'] as $st => $lbl): ?>
-                    <a href="invoices.php?status=<?php echo $st; ?>" class="ss-btn ss-btn-sm <?php echo $statusFilter === $st ? 'ss-btn-primary' : 'ss-btn-outline'; ?>"><?php echo $lbl; ?></a>
+                    <a href="invoices.php?status=<?php echo $st; ?>" class="ss-btn ss-btn-sm <?php echo (!$outstandingFilter && $statusFilter === $st) ? 'ss-btn-primary' : 'ss-btn-outline'; ?>"><?php echo $lbl; ?></a>
                 <?php endforeach; ?>
+                <a href="invoices.php?filter=outstanding" class="ss-btn ss-btn-sm <?php echo $outstandingFilter ? 'ss-btn-primary' : 'ss-btn-outline'; ?>" style="<?php echo $outstandingFilter ? '' : 'color:#dc2626;border-color:#dc2626;'; ?>">Piutang Belum Lunas</a>
             </div>
             <?php if (empty($invoiceList)): ?>
                 <div class="ss-empty">

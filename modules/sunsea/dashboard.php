@@ -38,8 +38,9 @@ try {
             SUM(CASE WHEN status='partial'  THEN 1 ELSE 0 END) as partial,
             SUM(CASE WHEN status='paid'     THEN 1 ELSE 0 END) as paid,
             SUM(CASE WHEN status='overdue'  THEN 1 ELSE 0 END) as overdue,
-            COALESCE(SUM(CASE WHEN status IN ('issued','partial') THEN remaining_amount ELSE 0 END), 0) as outstanding
+            COALESCE(SUM(GREATEST(total_amount - paid_amount, 0)), 0) as outstanding
         FROM invoices
+        WHERE status NOT IN ('cancelled')
     ")->fetch();
 
     // Stats: Customers
@@ -254,13 +255,13 @@ if (isset($dbError)): ?>
             <div class="ss-stat-label">Profit Margin Bulan Ini</div>
         </div>
     </div>
-    <div class="ss-stat-card">
+    <a href="invoices.php?filter=outstanding" class="ss-stat-card" style="text-decoration:none;color:inherit;">
         <div class="ss-stat-icon danger"><i data-feather="alert-triangle"></i></div>
         <div>
             <div class="ss-stat-value" style="font-size:16px;"><?php echo sunseaRupiah((float)($iStats['outstanding'] ?? 0), true); ?></div>
             <div class="ss-stat-label">Piutang Belum Lunas</div>
         </div>
-    </div>
+    </a>
     <div class="ss-stat-card">
         <div class="ss-stat-icon cyan"><i data-feather="briefcase"></i></div>
         <div>
