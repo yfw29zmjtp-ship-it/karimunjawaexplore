@@ -84,7 +84,8 @@ if ($lapCustomerId > 0) {
     $lapCustomerRows = lapFetchAll($pdo, "
         SELECT b.id, b.booking_no, b.start_date, b.end_date, p.name AS package_name,
             COALESCE((SELECT SUM(i.total_sell) FROM booking_order_items i WHERE i.booking_id=b.id), 0) AS pemasukan,
-            COALESCE((SELECT SUM(cb.amount) FROM cash_book cb WHERE cb.booking_id=b.id AND cb.type='expense'), 0) AS pengeluaran
+            COALESCE((SELECT SUM(cb.amount) FROM cash_book cb WHERE cb.booking_id=b.id AND cb.type='expense'), 0) AS pengeluaran,
+            COALESCE((SELECT SUM(inv.paid_amount) FROM invoices inv WHERE inv.internal_notes = CONCAT('booking_id:', b.id) OR inv.internal_notes = CONCAT('Generated from Reservasi: ', b.booking_no)), 0) AS terbayar
         FROM booking_orders b
         LEFT JOIN trip_packages p ON p.id = b.package_id
         WHERE b.customer_id = ?
@@ -93,10 +94,15 @@ if ($lapCustomerId > 0) {
 }
 $lapCustomerTotalIn = 0;
 $lapCustomerTotalOut = 0;
+$lapCustomerTotalTerbayar = 0;
 foreach ($lapCustomerRows as &$row) {
     $row['margin'] = (float)$row['pemasukan'] - (float)$row['pengeluaran'];
+    $row['status_bayar'] = (float)$row['terbayar'] <= 0
+        ? 'Belum Bayar'
+        : ((float)$row['terbayar'] >= (float)$row['pemasukan'] ? 'Lunas' : 'DP');
     $lapCustomerTotalIn += (float)$row['pemasukan'];
     $lapCustomerTotalOut += (float)$row['pengeluaran'];
+    $lapCustomerTotalTerbayar += (float)$row['terbayar'];
 }
 unset($row);
 $lapCustomerTotalMargin = $lapCustomerTotalIn - $lapCustomerTotalOut;
@@ -352,6 +358,8 @@ if (($_GET['print'] ?? '') === '1') {
                             <th>Tanggal Trip</th>
                             <th>Paket</th>
                             <th>Pemasukan</th>
+                            <th>Terbayar</th>
+                            <th>Status Bayar</th>
                             <th>Pengeluaran</th>
                             <th>Margin</th>
                         </tr>
@@ -359,7 +367,7 @@ if (($_GET['print'] ?? '') === '1') {
                     <tbody>
                         <?php if (empty($lapCustomerRows)): ?>
                             <tr>
-                                <td colspan="6" style="text-align:center;color:#94a3b8;">Belum ada booking untuk tamu ini.</td>
+                                <td colspan="8" style="text-align:center;color:#94a3b8;">Belum ada booking untuk tamu ini.</td>
                             </tr>
                         <?php endif; ?>
                         <?php foreach ($lapCustomerRows as $r): ?>
@@ -368,6 +376,8 @@ if (($_GET['print'] ?? '') === '1') {
                                 <td><?php echo date('d M Y', strtotime($r['start_date'])); ?></td>
                                 <td><?php echo htmlspecialchars($r['package_name'] ?: '-'); ?></td>
                                 <td><?php echo sunseaRupiah((float)$r['pemasukan']); ?></td>
+                                <td><?php echo sunseaRupiah((float)$r['terbayar']); ?></td>
+                                <td><?php echo htmlspecialchars($r['status_bayar']); ?></td>
                                 <td><?php echo sunseaRupiah((float)$r['pengeluaran']); ?></td>
                                 <td><?php echo sunseaRupiah((float)$r['margin']); ?></td>
                             </tr>
@@ -375,8 +385,9 @@ if (($_GET['print'] ?? '') === '1') {
                     </tbody>
                     <tfoot>
                         <tr>
-                            <td colspan="3">Total Semua</td>
-                            <td><?php echo sunseaRupiah($lapCustomerTotalIn); ?></td>
+                            <td colspan="4">Total Semua</td>
+                            <td><?php echo sunseaRupiah($lapCustomerTotalTerbayar); ?></td>
+                            <td></td>
                             <td><?php echo sunseaRupiah($lapCustomerTotalOut); ?></td>
                             <td><?php echo sunseaRupiah($lapCustomerTotalMargin); ?></td>
                         </tr>
@@ -607,6 +618,8 @@ function lapPrintUrl(string $tab, array $extra = []): string
                             <th>Tanggal Trip</th>
                             <th>Paket</th>
                             <th style="width:130px;">Pemasukan</th>
+                            <th style="width:130px;">Terbayar</th>
+                            <th style="width:100px;">Status Bayar</th>
                             <th style="width:130px;">Pengeluaran</th>
                             <th style="width:130px;">Margin</th>
                         </tr>
@@ -614,15 +627,20 @@ function lapPrintUrl(string $tab, array $extra = []): string
                     <tbody>
                         <?php if (empty($lapCustomerRows)): ?>
                             <tr>
-                                <td colspan="6" style="text-align:center;color:var(--ss-muted);padding:20px;">Belum ada booking untuk tamu ini.</td>
+                                <td colspan="8" style="text-align:center;color:var(--ss-muted);padding:20px;">Belum ada booking untuk tamu ini.</td>
                             </tr>
                         <?php endif; ?>
                         <?php foreach ($lapCustomerRows as $r): ?>
+                            <?php
+                                $statusColor = $r['status_bayar'] === 'Lunas' ? '#16a34a' : ($r['status_bayar'] === 'DP' ? '#d97706' : '#dc2626');
+                            ?>
                             <tr>
                                 <td><?php echo htmlspecialchars($r['booking_no']); ?></td>
                                 <td><?php echo date('d M Y', strtotime($r['start_date'])); ?></td>
                                 <td><?php echo htmlspecialchars($r['package_name'] ?: '-'); ?></td>
                                 <td style="color:var(--ss-success);font-weight:600;"><?php echo sunseaRupiah((float)$r['pemasukan']); ?></td>
+                                <td style="font-weight:600;"><?php echo sunseaRupiah((float)$r['terbayar']); ?></td>
+                                <td><span style="font-weight:700;color:<?php echo $statusColor; ?>;"><?php echo htmlspecialchars($r['status_bayar']); ?></span></td>
                                 <td style="color:var(--ss-danger);font-weight:600;"><?php echo sunseaRupiah((float)$r['pengeluaran']); ?></td>
                                 <td style="font-weight:700;"><?php echo sunseaRupiah((float)$r['margin']); ?></td>
                             </tr>
@@ -630,8 +648,9 @@ function lapPrintUrl(string $tab, array $extra = []): string
                     </tbody>
                     <tfoot>
                         <tr style="border-top:2px solid var(--ss-gray-2);">
-                            <td colspan="3"><strong>Total Semua</strong></td>
-                            <td style="color:var(--ss-success);"><strong><?php echo sunseaRupiah($lapCustomerTotalIn); ?></strong></td>
+                            <td colspan="4"><strong>Total Semua</strong></td>
+                            <td><strong><?php echo sunseaRupiah($lapCustomerTotalTerbayar); ?></strong></td>
+                            <td></td>
                             <td style="color:var(--ss-danger);"><strong><?php echo sunseaRupiah($lapCustomerTotalOut); ?></strong></td>
                             <td><strong><?php echo sunseaRupiah($lapCustomerTotalMargin); ?></strong></td>
                         </tr>
