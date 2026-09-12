@@ -112,6 +112,32 @@ $endMonth = date('Y-m-t', strtotime($month . '-01'));
 $daysInMonth = (int)date('t', strtotime($startMonth));
 $todayDay = (date('Y-m') === $month) ? (int)date('j') : 0;
 
+$prevMonth = date('Y-m', strtotime($startMonth . ' -1 month'));
+$nextMonth = date('Y-m', strtotime($startMonth . ' +1 month'));
+
+// Timeline ditampilkan menyambung 2 bulan sekaligus (bulan ini + bulan depan) supaya geser/drag
+// tidak "lompat" ke halaman kosong saat bulan depan belum ada booking - tanggalnya tetap kelihatan,
+// dengan garis batas + nama bulan di atas kolom bulan berikutnya.
+$nextMonthEnd = date('Y-m-t', strtotime($nextMonth . '-01'));
+$daysInNextMonth = (int)date('t', strtotime($nextMonth . '-01'));
+$calTotalDays = $daysInMonth + $daysInNextMonth;
+
+$calDates = [];
+$calDateIndex = [];
+$curDate = strtotime($startMonth);
+for ($i = 1; $i <= $calTotalDays; $i++) {
+    $dateStr = date('Y-m-d', $curDate);
+    $calDates[] = [
+        'date' => $dateStr,
+        'day' => (int)date('j', $curDate),
+        'dow' => (int)date('N', $curDate),
+        'isMonthStart' => $i > 1 && (int)date('j', $curDate) === 1,
+    ];
+    $calDateIndex[$dateStr] = $i;
+    $curDate = strtotime('+1 day', $curDate);
+}
+$todayIndex = $calDateIndex[date('Y-m-d')] ?? 0;
+
 $bookings = $pdo->prepare("
     SELECT b.id, b.booking_no, b.start_date, b.end_date, b.pax_count, c.name AS customer_name, p.name AS package_name,
         (SELECT COUNT(*) FROM booking_order_items i WHERE i.booking_id=b.id AND i.is_done=0) as pending_count
@@ -121,11 +147,8 @@ $bookings = $pdo->prepare("
     WHERE b.end_date >= ? AND b.start_date <= ? AND b.status = 'confirmed'
     ORDER BY b.start_date, b.id
 ");
-$bookings->execute([$startMonth, $endMonth]);
+$bookings->execute([$startMonth, $nextMonthEnd]);
 $bookings = $bookings->fetchAll();
-
-$prevMonth = date('Y-m', strtotime($startMonth . ' -1 month'));
-$nextMonth = date('Y-m', strtotime($startMonth . ' +1 month'));
 
 // Warna balok reservasi jadi penanda durasi/tipe trip (samakan dengan kalender di system).
 $calDurationColors = [
@@ -263,6 +286,25 @@ include 'owner-mobile-header.php';
         border-radius: 6px 6px 0 0;
     }
 
+    .cal-month-label-row {
+        background: var(--sky);
+    }
+
+    .cal-month-label {
+        text-align: center;
+        padding: 4px;
+        font-size: 9.5px;
+        font-weight: 800;
+        color: var(--text);
+        text-transform: uppercase;
+        letter-spacing: .03em;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .cal-month-boundary {
+        border-left: 2px solid var(--ocean) !important;
+    }
+
     .cal-row {
         display: grid;
         grid-template-columns: 118px repeat(var(--cal-days), minmax(16px, 1fr));
@@ -396,86 +438,89 @@ include 'owner-mobile-header.php';
     ];
     ?>
     <?php if (empty($bookings)): ?>
-        <div class="ob-empty">Tidak ada reservasi confirmed pada bulan ini.</div>
-    <?php else: ?>
-        <div class="cal-timeline-scroll" id="calTimelineScroll" data-prev-month="<?php echo $prevMonth; ?>" data-next-month="<?php echo $nextMonth; ?>">
-            <div class="cal-timeline" id="calTimeline" style="--cal-days:<?php echo $daysInMonth; ?>;">
-                <div class="cal-day-row">
-                    <div class="cal-name-col">Tamu</div>
-                    <?php for ($d = 1; $d <= $daysInMonth; $d++):
-                        $dow = (int)date('N', strtotime("$month-" . str_pad($d, 2, '0', STR_PAD_LEFT)));
-                        $isWeekend = $dow >= 6;
-                        $isToday = $d === $todayDay;
-                    ?>
-                        <div class="cal-day-col<?php echo $isWeekend ? ' is-weekend' : ''; ?><?php echo $isToday ? ' is-today' : ''; ?>"><?php echo $d; ?></div>
-                    <?php endfor; ?>
-                </div>
-
-                <?php foreach ($bookings as $b):
-                    $s = max(1, (int)date('j', strtotime(max($b['start_date'], $startMonth))));
-                    $e = min($daysInMonth, (int)date('j', strtotime(min($b['end_date'], $endMonth))));
-                    $nights = max(0, (int)round((strtotime($b['end_date']) - strtotime($b['start_date'])) / 86400));
-                    $durationLabel = ($nights + 1) . 'H' . $nights . 'M';
-                    $isCompletedTrip = strtotime($b['end_date']) < strtotime(date('Y-m-d'));
-                    $barColor = obCalBarColor($durationLabel, $b['package_name'], $calDurationColors, $calHoneymoonColor, $calDefaultColor, $isCompletedTrip, $calCompletedColor);
-                    $initial = mb_strtoupper(mb_substr($b['customer_name'], 0, 1));
-                    $clippedLeft = strtotime($b['start_date']) < strtotime($startMonth);
-                    $clippedRight = strtotime($b['end_date']) > strtotime($endMonth);
-                    $barTitle = htmlspecialchars(date('d M Y', strtotime($b['start_date'])) . ' - ' . date('d M Y', strtotime($b['end_date'])) . ' (' . $durationLabel . ')');
+        <div class="ob-empty" style="margin-bottom:6px;">Tidak ada reservasi confirmed pada bulan ini.</div>
+    <?php endif; ?>
+    <div class="cal-timeline-scroll" id="calTimelineScroll" data-prev-month="<?php echo $prevMonth; ?>" data-next-month="<?php echo $nextMonth; ?>">
+        <div class="cal-timeline" id="calTimeline" style="--cal-days:<?php echo $calTotalDays; ?>;">
+            <div class="cal-day-row cal-month-label-row">
+                <div class="cal-name-col" style="background:transparent;border-right:1px solid var(--border);"></div>
+                <div class="cal-month-label" style="grid-column: 2 / span <?php echo $daysInMonth; ?>;"><?php echo date('F Y', strtotime($startMonth)); ?></div>
+                <div class="cal-month-label cal-month-boundary" style="grid-column: <?php echo 2 + $daysInMonth; ?> / span <?php echo $daysInNextMonth; ?>;"><?php echo date('F Y', strtotime($nextMonth . '-01')); ?></div>
+            </div>
+            <div class="cal-day-row">
+                <div class="cal-name-col">Tamu</div>
+                <?php foreach ($calDates as $cd):
+                    $isWeekend = $cd['dow'] >= 6;
+                    $isToday = $cd['date'] === date('Y-m-d');
                 ?>
-                    <div class="cal-row" onclick="openBookingDetail(<?php echo (int)$b['id']; ?>)">
-                        <div class="cal-guest">
-                            <div style="display:flex;align-items:center;">
-                                <span class="cal-guest-avatar" style="background:linear-gradient(135deg,<?php echo $barColor; ?>,#0EA5E9);"><?php echo htmlspecialchars($initial); ?></span>
-                                <div style="min-width:0;">
-                                    <div class="cal-guest-name">
-                                        <?php if ((int)$b['pending_count'] > 0): ?>
-                                            <span title="Ada layanan belum selesai" style="display:inline-block;width:5px;height:5px;border-radius:50%;background:#dc2626;margin-right:3px;"></span>
-                                        <?php endif; ?>
-                                        <?php echo htmlspecialchars($b['customer_name']); ?>
-                                    </div>
-                                    <div class="cal-guest-meta"><?php echo htmlspecialchars($b['booking_no']); ?> · <?php echo (int)$b['pax_count']; ?> pax</div>
-                                </div>
-                            </div>
-                        </div>
-                        <?php for ($d = 1; $d <= $daysInMonth; $d++):
-                            $dow = (int)date('N', strtotime("$month-" . str_pad($d, 2, '0', STR_PAD_LEFT)));
-                            $isWeekend = $dow >= 6;
-                            $isTodayCol = $d === $todayDay;
-                        ?>
-                            <?php if ($d >= $s && $d <= $e): ?>
-                                <?php
-                                $isLeftEdge = $d === $s;
-                                $isRightEdge = $d === $e;
-                                $roundLeft = $isLeftEdge && !$clippedLeft;
-                                $roundRight = $isRightEdge && !$clippedRight;
-                                $radius = ($roundLeft ? '999px' : '0') . ' ' . ($roundRight ? '999px' : '0') . ' ' . ($roundRight ? '999px' : '0') . ' ' . ($roundLeft ? '999px' : '0');
-                                ?>
-                                <div class="cal-cell<?php echo $isTodayCol ? ' is-today' : ''; ?>" style="padding:3px 0;" title="<?php echo $barTitle; ?>">
-                                    <div class="cal-bar" style="background:linear-gradient(90deg,<?php echo $barColor; ?>,<?php echo $barColor; ?>cc);border-radius:<?php echo $radius; ?>;<?php echo !$isLeftEdge ? 'margin-left:-1px;' : ''; ?><?php echo !$isRightEdge ? 'margin-right:-1px;' : ''; ?>">
-                                        <?php if ($isLeftEdge && $clippedLeft): ?><span class="cal-bar-continue" title="Lanjutan dari bulan sebelumnya">&laquo;</span><?php endif; ?>
-                                        <?php if ($isLeftEdge): ?><span class="cal-bar-label"><?php echo (int)$b['pax_count']; ?> pax</span><?php endif; ?>
-                                        <?php if ($isRightEdge && $clippedRight): ?><span class="cal-bar-continue" title="Lanjut ke bulan berikutnya">&raquo;</span><?php endif; ?>
-                                    </div>
-                                </div>
-                            <?php else: ?>
-                                <div class="cal-cell<?php echo $isWeekend ? ' is-weekend' : ''; ?><?php echo $isTodayCol ? ' is-today' : ''; ?>"></div>
-                            <?php endif; ?>
-                        <?php endfor; ?>
-                    </div>
+                    <div class="cal-day-col<?php echo $isWeekend ? ' is-weekend' : ''; ?><?php echo $isToday ? ' is-today' : ''; ?><?php echo $cd['isMonthStart'] ? ' cal-month-boundary' : ''; ?>"><?php echo $cd['day']; ?></div>
                 <?php endforeach; ?>
             </div>
-        </div>
-        <div class="ob-cal-legend">
-            <?php foreach ($obCalLegend as $label => $color): ?>
-                <span style="display:inline-flex;align-items:center;gap:4px;">
-                    <span class="dot" style="background:<?php echo $color; ?>;"></span>
-                    <?php echo htmlspecialchars($label); ?>
-                </span>
+
+            <?php foreach ($bookings as $b):
+                $s = $calDateIndex[max($b['start_date'], $startMonth)] ?? 1;
+                $e = $calDateIndex[min($b['end_date'], $nextMonthEnd)] ?? $calTotalDays;
+                $nights = max(0, (int)round((strtotime($b['end_date']) - strtotime($b['start_date'])) / 86400));
+                $durationLabel = ($nights + 1) . 'H' . $nights . 'M';
+                $isCompletedTrip = strtotime($b['end_date']) < strtotime(date('Y-m-d'));
+                $barColor = obCalBarColor($durationLabel, $b['package_name'], $calDurationColors, $calHoneymoonColor, $calDefaultColor, $isCompletedTrip, $calCompletedColor);
+                $initial = mb_strtoupper(mb_substr($b['customer_name'], 0, 1));
+                $clippedLeft = strtotime($b['start_date']) < strtotime($startMonth);
+                $clippedRight = strtotime($b['end_date']) > strtotime($nextMonthEnd);
+                $barTitle = htmlspecialchars(date('d M Y', strtotime($b['start_date'])) . ' - ' . date('d M Y', strtotime($b['end_date'])) . ' (' . $durationLabel . ')');
+            ?>
+                <div class="cal-row" onclick="openBookingDetail(<?php echo (int)$b['id']; ?>)">
+                    <div class="cal-guest">
+                        <div style="display:flex;align-items:center;">
+                            <span class="cal-guest-avatar" style="background:linear-gradient(135deg,<?php echo $barColor; ?>,#0EA5E9);"><?php echo htmlspecialchars($initial); ?></span>
+                            <div style="min-width:0;">
+                                <div class="cal-guest-name">
+                                    <?php if ((int)$b['pending_count'] > 0): ?>
+                                        <span title="Ada layanan belum selesai" style="display:inline-block;width:5px;height:5px;border-radius:50%;background:#dc2626;margin-right:3px;"></span>
+                                    <?php endif; ?>
+                                    <?php echo htmlspecialchars($b['customer_name']); ?>
+                                </div>
+                                <div class="cal-guest-meta"><?php echo htmlspecialchars($b['booking_no']); ?> · <?php echo (int)$b['pax_count']; ?> pax</div>
+                            </div>
+                        </div>
+                    </div>
+                    <?php foreach ($calDates as $ci => $cd):
+                        $d = $ci + 1;
+                        $isWeekend = $cd['dow'] >= 6;
+                        $isTodayCol = $d === $todayIndex;
+                    ?>
+                        <?php if ($d >= $s && $d <= $e): ?>
+                            <?php
+                            $isLeftEdge = $d === $s;
+                            $isRightEdge = $d === $e;
+                            $roundLeft = $isLeftEdge && !$clippedLeft;
+                            $roundRight = $isRightEdge && !$clippedRight;
+                            $radius = ($roundLeft ? '999px' : '0') . ' ' . ($roundRight ? '999px' : '0') . ' ' . ($roundRight ? '999px' : '0') . ' ' . ($roundLeft ? '999px' : '0');
+                            ?>
+                            <div class="cal-cell<?php echo $isTodayCol ? ' is-today' : ''; ?><?php echo $cd['isMonthStart'] ? ' cal-month-boundary' : ''; ?>" style="padding:3px 0;" title="<?php echo $barTitle; ?>">
+                                <div class="cal-bar" style="background:linear-gradient(90deg,<?php echo $barColor; ?>,<?php echo $barColor; ?>cc);border-radius:<?php echo $radius; ?>;<?php echo !$isLeftEdge ? 'margin-left:-1px;' : ''; ?><?php echo !$isRightEdge ? 'margin-right:-1px;' : ''; ?>">
+                                    <?php if ($isLeftEdge && $clippedLeft): ?><span class="cal-bar-continue" title="Lanjutan dari bulan sebelumnya">&laquo;</span><?php endif; ?>
+                                    <?php if ($isLeftEdge): ?><span class="cal-bar-label"><?php echo (int)$b['pax_count']; ?> pax</span><?php endif; ?>
+                                    <?php if ($isRightEdge && $clippedRight): ?><span class="cal-bar-continue" title="Lanjut ke bulan berikutnya">&raquo;</span><?php endif; ?>
+                                </div>
+                            </div>
+                        <?php else: ?>
+                            <div class="cal-cell<?php echo $isWeekend ? ' is-weekend' : ''; ?><?php echo $isTodayCol ? ' is-today' : ''; ?><?php echo $cd['isMonthStart'] ? ' cal-month-boundary' : ''; ?>"></div>
+                        <?php endif; ?>
+                    <?php endforeach; ?>
+                </div>
             <?php endforeach; ?>
-            <span style="color:var(--muted);">&middot; Geser ke samping untuk lihat tanggal lain</span>
         </div>
-    <?php endif; ?>
+    </div>
+    <div class="ob-cal-legend">
+        <?php foreach ($obCalLegend as $label => $color): ?>
+            <span style="display:inline-flex;align-items:center;gap:4px;">
+                <span class="dot" style="background:<?php echo $color; ?>;"></span>
+                <?php echo htmlspecialchars($label); ?>
+            </span>
+        <?php endforeach; ?>
+        <span style="color:var(--muted);">&middot; Geser ke samping untuk lihat tanggal lain (bulan depan tetap tersambung)</span>
+    </div>
 </div>
 
 
