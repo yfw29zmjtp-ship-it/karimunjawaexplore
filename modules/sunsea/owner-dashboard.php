@@ -452,6 +452,7 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
             font-size: 9px;
             color: var(--muted);
             font-weight: 500;
+            margin-top: 6px;
         }
 
         .ob-pie-legend span {
@@ -584,14 +585,22 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
             <div class="ob-pies-row">
                 <div class="ob-pie-card">
                     <div class="ob-pie-title">Total Pax Bulan Ini</div>
-                    <div style="position:relative;height:150px;">
+                    <div style="position:relative;height:100px;">
                         <canvas id="obPaxMonthChart"></canvas>
+                    </div>
+                    <div class="ob-pie-legend" style="visibility:hidden;">
+                        <span><span class="ob-pie-dot"></span> -</span>
                     </div>
                 </div>
                 <div class="ob-pie-card">
                     <div class="ob-pie-title">Keuangan Bulan Ini</div>
-                    <div style="position:relative;height:150px;">
+                    <div style="position:relative;height:100px;">
                         <canvas id="obFinancePieChart"></canvas>
+                    </div>
+                    <div class="ob-pie-legend">
+                        <span><span class="ob-pie-dot" style="background:#10b981;"></span> Masuk</span>
+                        <span><span class="ob-pie-dot" style="background:#ef4444;"></span> Keluar</span>
+                        <span><span class="ob-pie-dot" style="background:#0369A1;"></span> Profit</span>
                     </div>
                 </div>
             </div>
@@ -765,16 +774,7 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
                     maintainAspectRatio: false,
                     plugins: {
                         legend: {
-                            display: true,
-                            position: 'bottom',
-                            labels: {
-                                font: {
-                                    size: 9.5
-                                },
-                                padding: 8,
-                                usePointStyle: true,
-                                boxWidth: 8
-                            }
+                            display: false
                         },
                         tooltip: {
                             callbacks: {
