@@ -380,6 +380,7 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
 
         .ob-pies-row {
             display: flex;
+            flex-direction: column;
             gap: 10px;
         }
 
@@ -585,16 +586,13 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
             <div class="ob-pies-row">
                 <div class="ob-pie-card">
                     <div class="ob-pie-title">Total Pax Bulan Ini</div>
-                    <div style="position:relative;height:100px;">
+                    <div style="position:relative;height:130px;">
                         <canvas id="obPaxMonthChart"></canvas>
-                    </div>
-                    <div class="ob-pie-legend" style="visibility:hidden;">
-                        <span><span class="ob-pie-dot"></span> -</span>
                     </div>
                 </div>
                 <div class="ob-pie-card">
                     <div class="ob-pie-title">Keuangan Bulan Ini</div>
-                    <div style="position:relative;height:100px;">
+                    <div style="position:relative;height:130px;">
                         <canvas id="obFinancePieChart"></canvas>
                     </div>
                     <div class="ob-pie-legend">
