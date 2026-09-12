@@ -422,7 +422,8 @@ $customers = $pdo->query("SELECT id, name FROM customers WHERE is_active=1 ORDER
 // List
 $statusFilter = $_GET['status'] ?? '';
 $outstandingFilter = ($_GET['filter'] ?? '') === 'outstanding';
-$wh = $statusFilter ? "WHERE i.status=?" : "";
+// Invoice cancelled (mis. duplikat lama) selalu disembunyikan dari daftar utama.
+$wh = $statusFilter ? "WHERE i.status=?" : "WHERE i.status != 'cancelled'";
 $lp = $statusFilter ? [$statusFilter] : [];
 $invoiceList = $pdo->prepare("
     SELECT i.id, i.invoice_no, i.status, i.total_amount, i.paid_amount, i.remaining_amount, i.due_date, i.created_at,

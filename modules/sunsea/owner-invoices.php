@@ -27,10 +27,11 @@ $pdo = getSunseaConnection();
 sunseaEnsureFinanceSchema($pdo);
 
 $statusFilter = $_GET['status'] ?? '';
-$where = '';
+// Invoice cancelled (mis. duplikat lama yang sudah dibereskan) selalu disembunyikan dari daftar.
+$where = "WHERE i.status != 'cancelled'";
 $params = [];
 if (in_array($statusFilter, ['issued', 'partial', 'paid'], true)) {
-    $where = 'WHERE i.status = ?';
+    $where .= ' AND i.status = ?';
     $params[] = $statusFilter;
 }
 
