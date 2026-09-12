@@ -85,10 +85,6 @@ $pageTitle = 'Finance';
 include 'owner-mobile-header.php';
 ?>
 
-<a href="owner-finance-add.php" class="ob-qbtn" style="width:100%;margin-bottom:12px;">
-    <i data-feather="plus-circle"></i> Input Transaksi
-</a>
-
 <style>
     .ob-charts-panel {
         background: linear-gradient(135deg, #e0f2fe 0%, #ede9fe 50%, #fce7f3 100%);
@@ -368,6 +364,10 @@ include 'owner-mobile-header.php';
         </div>
     </div>
 </div>
+
+<a href="owner-finance-add.php" class="ob-qbtn" style="width:100%;margin-bottom:12px;">
+    <i data-feather="plus-circle"></i> Input Transaksi
+</a>
 
 <div class="ob-section">
     <div class="ob-section-head">

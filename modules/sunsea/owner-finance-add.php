@@ -49,15 +49,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $description = trim($_POST['description'] ?? '');
     $amount      = (float)str_replace(['.', ','], ['', '.'], $_POST['amount'] ?? '0');
     $reference   = trim($_POST['reference'] ?? '');
+    $customerId  = (int)($_POST['customer_id'] ?? 0) ?: null;
 
     if ($description === '' || $amount <= 0) {
         $errorMsg = 'Keterangan dan jumlah wajib diisi (jumlah harus lebih dari 0).';
     } else {
         try {
             $pdo->prepare("
-                INSERT INTO cash_book (transaction_date, type, category, description, amount, reference, created_by)
-                VALUES (?,?,?,?,?,?,?)
-            ")->execute([$date, $type, $category, $description, $amount, $reference, $username]);
+                INSERT INTO cash_book (transaction_date, type, category, description, amount, reference, customer_id, created_by)
+                VALUES (?,?,?,?,?,?,?,?)
+            ")->execute([$date, $type, $category, $description, $amount, $reference, $customerId, $username]);
             header('Location: owner-finance.php');
             exit;
         } catch (Exception $e) {
@@ -65,6 +66,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
+
+$customers = $pdo->query("SELECT id, name, phone FROM customers WHERE is_active=1 ORDER BY name")->fetchAll();
 
 $pageTitle = 'Input Transaksi';
 $backUrl = 'owner-finance.php';
@@ -168,6 +171,17 @@ include 'owner-mobile-header.php';
     <div class="ob-form-group">
         <label class="ob-form-label">Tanggal</label>
         <input type="date" name="transaction_date" class="ob-form-input" value="<?php echo date('Y-m-d'); ?>" required>
+    </div>
+
+    <div class="ob-form-group">
+        <label class="ob-form-label">Tamu / Customer</label>
+        <select name="customer_id" class="ob-form-input">
+            <option value="">-- Operasional Perusahaan (bukan tamu tertentu) --</option>
+            <?php foreach ($customers as $c): ?>
+                <option value="<?php echo (int)$c['id']; ?>"><?php echo htmlspecialchars($c['name']); ?><?php echo $c['phone'] ? ' - ' . htmlspecialchars($c['phone']) : ''; ?></option>
+            <?php endforeach; ?>
+        </select>
+        <div style="font-size:10.5px;color:var(--muted);margin-top:4px;">* Pilih tamu supaya pengeluaran ini tercatat sebagai pengeluaran trip tamu tsb. Biarkan default kalau ini pengeluaran operasional perusahaan.</div>
     </div>
 
     <div class="ob-form-group">

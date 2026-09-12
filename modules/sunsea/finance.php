@@ -364,7 +364,7 @@ include 'layout-header.php';
                     <div class="ss-form-group" style="margin:0;">
                         <label class="ss-label" style="font-size:11px;">Tamu / Customer</label>
                         <select name="customer_id" class="ss-select" id="customerSelect" style="font-size:12px;">
-                            <option value="">-- Tidak terkait tamu tertentu --</option>
+                            <option value="">-- Operasional Perusahaan (bukan tamu tertentu) --</option>
                             <?php foreach ($customers as $c): ?>
                                 <option value="<?php echo $c['id']; ?>"><?php echo htmlspecialchars($c['name']); ?><?php echo $c['phone'] ? ' - ' . htmlspecialchars($c['phone']) : ''; ?></option>
                             <?php endforeach; ?>
