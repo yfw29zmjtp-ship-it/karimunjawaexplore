@@ -1064,29 +1064,42 @@ include 'layout-header.php';
             startScroll = 0,
             dragged = false;
 
-        scroller.addEventListener('mousedown', function(e) {
-            if (e.button !== 0) return;
+        function beginDrag(pageX) {
             isDown = true;
             dragged = false;
-            startX = e.clientX;
+            startX = pageX - scroller.offsetLeft;
             startScroll = scroller.scrollLeft;
             scroller.classList.add('is-dragging');
-            e.preventDefault();
-        });
-        document.addEventListener('mousemove', function(e) {
+        }
+
+        function moveDrag(pageX) {
             if (!isDown) return;
-            var dx = e.clientX - startX;
-            if (Math.abs(dx) > 4) dragged = true;
-            scroller.scrollLeft = startScroll - dx;
-        });
+            var x = pageX - scroller.offsetLeft;
+            var walk = x - startX;
+            if (Math.abs(walk) > 4) dragged = true;
+            scroller.scrollLeft = startScroll - walk;
+        }
+
         function endDrag() {
             if (!isDown) return;
             isDown = false;
             scroller.classList.remove('is-dragging');
         }
-        document.addEventListener('mouseup', endDrag);
-        document.addEventListener('mouseleave', endDrag);
+
+        scroller.addEventListener('mousedown', function(e) {
+            if (e.button !== 0) return;
+            beginDrag(e.pageX);
+        });
+        window.addEventListener('mousemove', function(e) {
+            if (!isDown) return;
+            e.preventDefault();
+            moveDrag(e.pageX);
+        });
+        window.addEventListener('mouseup', endDrag);
+        window.addEventListener('mouseleave', endDrag);
+
         // Cegah klik baris terbuka modal detail kalau baru saja dipakai untuk drag mouse.
+        // (Swipe di HP tetap pakai scroll native browser, tidak lewat JS ini.)
         scroller.addEventListener('click', function(e) {
             if (dragged) {
                 e.stopPropagation();
