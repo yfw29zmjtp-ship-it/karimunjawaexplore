@@ -110,6 +110,16 @@ $dateTo     = $_GET['date_to'] ?? date('Y-m-d');
 $filterType = $_GET['type'] ?? '';
 $filterCust = (int)($_GET['customer_id'] ?? 0);
 
+// Untuk tombol navigasi bulan (Bulan Sebelumnya / Bulan Ini / Bulan Berikutnya), dihitung dari bulan date_from yang aktif.
+$finMonthBase      = strtotime($dateFrom) ?: time();
+$finPrevMonthStart = date('Y-m-01', strtotime('-1 month', $finMonthBase));
+$finPrevMonthEnd   = date('Y-m-t', strtotime('-1 month', $finMonthBase));
+$finThisMonthStart = date('Y-m-01');
+$finThisMonthEnd   = date('Y-m-d');
+$finNextMonthStart = date('Y-m-01', strtotime('+1 month', $finMonthBase));
+$finNextMonthEnd   = date('Y-m-t', strtotime('+1 month', $finMonthBase));
+$finMonthQs = ($filterType ? '&type=' . urlencode($filterType) : '') . ($filterCust > 0 ? '&customer_id=' . $filterCust : '');
+
 $where  = ['cb.transaction_date BETWEEN ? AND ?'];
 $params = [$dateFrom, $dateTo];
 if (in_array($filterType, ['income', 'expense'], true)) {
@@ -224,6 +234,11 @@ include 'layout-header.php';
             <?php if ($filterCust > 0): ?>
                 <a href="finance.php?date_from=<?php echo urlencode($dateFrom); ?>&date_to=<?php echo urlencode($dateTo); ?>" class="ss-btn ss-btn-outline ss-btn-sm">Reset Tamu</a>
             <?php endif; ?>
+            <div style="display:flex;gap:6px;margin-left:auto;">
+                <a href="finance.php?date_from=<?php echo $finPrevMonthStart; ?>&date_to=<?php echo $finPrevMonthEnd . $finMonthQs; ?>" class="ss-btn ss-btn-outline ss-btn-sm" title="<?php echo date('F Y', strtotime($finPrevMonthStart)); ?>"><i data-feather="chevron-left"></i> Bulan Sebelumnya</a>
+                <a href="finance.php?date_from=<?php echo $finThisMonthStart; ?>&date_to=<?php echo $finThisMonthEnd . $finMonthQs; ?>" class="ss-btn ss-btn-outline ss-btn-sm">Bulan Ini</a>
+                <a href="finance.php?date_from=<?php echo $finNextMonthStart; ?>&date_to=<?php echo $finNextMonthEnd . $finMonthQs; ?>" class="ss-btn ss-btn-outline ss-btn-sm" title="<?php echo date('F Y', strtotime($finNextMonthStart)); ?>">Bulan Berikutnya <i data-feather="chevron-right"></i></a>
+            </div>
         </form>
 
         <div class="ss-table-wrap">
