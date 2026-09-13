@@ -1083,12 +1083,47 @@ if (empty($sunseaNavItemsVisible)) {
 
             .ss-form-grid.cols-2,
             .ss-form-grid.cols-3 {
-                grid-template-columns: 1fr;
+                grid-template-columns: minmax(0, 1fr);
             }
 
             div[style*="grid-template-columns:1fr 320px"],
             div[style*="grid-template-columns:1fr 300px"] {
-                grid-template-columns: 1fr !important;
+                grid-template-columns: minmax(0, 1fr) !important;
+            }
+
+            /* Any inline 3/4-column stat-card grid: shrink to 2 columns so numbers/labels don't get squeezed off-screen */
+            div[style*="grid-template-columns:repeat(3"],
+            div[style*="grid-template-columns:repeat(4"] {
+                grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+            }
+
+            /* Any inline 2-column grid (e.g. dashboard chart cards) stacks to 1 column on mobile.
+               minmax(0,1fr) (not bare 1fr) is required so the track actually respects the
+               container width instead of growing to fit a wide child's min-content (e.g. a table
+               or chart canvas), same underlying issue as flex items needing min-width:0. */
+            div[style*="grid-template-columns:1fr 1fr"] {
+                grid-template-columns: minmax(0, 1fr) !important;
+            }
+
+            /* Chart.js / canvas widgets must not force their container wider than the viewport */
+            canvas {
+                max-width: 100% !important;
+                height: auto !important;
+            }
+
+            /* Safety net: force any table wrapper to actually scroll horizontally on mobile,
+               even if a page explicitly set overflow:visible (e.g. to avoid clipping an
+               actions dropdown) — without this, wide tables blow up the whole page width. */
+            .ss-table-wrap {
+                overflow-x: auto !important;
+            }
+        }
+
+        @media (max-width: 480px) {
+            /* On very small phones, drop stat-card grids to a single column for legibility */
+            div[style*="grid-template-columns:repeat(3"],
+            div[style*="grid-template-columns:repeat(4"] {
+                grid-template-columns: minmax(0, 1fr) !important;
             }
         }
     </style>
