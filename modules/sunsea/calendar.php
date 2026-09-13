@@ -380,6 +380,15 @@ include 'layout-header.php';
         display: flex;
         align-items: center;
         transition: transform .12s ease, box-shadow .12s ease;
+        position: relative;
+        z-index: 1;
+    }
+
+    /* Bar segment holding the pax-count label: needs to sit above the following
+       day segments so the label can overflow visually without being covered. */
+    .cal-bar-labeled {
+        z-index: 3;
+        overflow: visible;
     }
 
     .cal-row:hover .cal-bar {
@@ -392,7 +401,7 @@ include 'layout-header.php';
         font-weight: 700;
         color: #fff;
         white-space: nowrap;
-        overflow: hidden;
+        overflow: visible;
         padding-left: 8px;
         letter-spacing: .01em;
     }
@@ -505,7 +514,7 @@ include 'layout-header.php';
                             $radius = ($roundLeft ? '999px' : '0') . ' ' . ($roundRight ? '999px' : '0') . ' ' . ($roundRight ? '999px' : '0') . ' ' . ($roundLeft ? '999px' : '0');
                             ?>
                             <div class="cal-cell<?php echo $isTodayCol ? ' is-today' : ''; ?><?php echo $cd['isMonthStart'] ? ' cal-month-boundary' : ''; ?>" style="padding:4px 0;" title="<?php echo $barTitle; ?>">
-                                <div class="cal-bar" style="background:linear-gradient(90deg,<?php echo $barColor; ?>,<?php echo $barColor; ?>cc);border-radius:<?php echo $radius; ?>;<?php echo !$isLeftEdge ? 'margin-left:-1px;' : ''; ?><?php echo !$isRightEdge ? 'margin-right:-1px;' : ''; ?>">
+                                <div class="cal-bar<?php echo $isLeftEdge ? ' cal-bar-labeled' : ''; ?>" style="background:linear-gradient(90deg,<?php echo $barColor; ?>,<?php echo $barColor; ?>cc);border-radius:<?php echo $radius; ?>;<?php echo !$isLeftEdge ? 'margin-left:-1px;' : ''; ?><?php echo !$isRightEdge ? 'margin-right:-1px;' : ''; ?>">
                                     <?php if ($isLeftEdge && $clippedLeft): ?><span class="cal-bar-continue" title="Lanjutan dari bulan sebelumnya">&laquo;</span><?php endif; ?>
                                     <?php if ($isLeftEdge): ?><span class="cal-bar-label"><?php echo (int)$b['pax_count']; ?> pax</span><?php endif; ?>
                                     <?php if ($isRightEdge && $clippedRight): ?><span class="cal-bar-continue" title="Lanjut ke bulan berikutnya">&raquo;</span><?php endif; ?>
