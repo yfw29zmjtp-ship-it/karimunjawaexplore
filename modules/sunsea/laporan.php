@@ -54,13 +54,21 @@ $lapMonthEnd = date('Y-m-t', strtotime($lapMonth . '-01'));
 $lapBulananRows = lapFetchAll($pdo, "
     SELECT COALESCE(c.id, 0) AS customer_id, COALESCE(c.name, 'Operasional / Lainnya') AS customer_name,
         SUM(CASE WHEN cb.type='income' THEN cb.amount ELSE 0 END) AS diterima,
-        SUM(CASE WHEN cb.type='expense' THEN cb.amount ELSE 0 END) AS pengeluaran
+        SUM(CASE WHEN cb.type='expense' THEN cb.amount ELSE 0 END) AS pengeluaran,
+        COALESCE((
+            SELECT SUM(cb2.amount) FROM cash_book cb2
+            WHERE cb2.customer_id = c.id AND cb2.type='income' AND (cb2.transaction_date < ? OR cb2.transaction_date > ?)
+        ), 0) AS diterima_bulan_lain,
+        (
+            SELECT MIN(cb3.transaction_date) FROM cash_book cb3
+            WHERE cb3.customer_id = c.id AND cb3.type='income' AND (cb3.transaction_date < ? OR cb3.transaction_date > ?)
+        ) AS diterima_bulan_lain_tanggal
     FROM cash_book cb
     LEFT JOIN customers c ON c.id = cb.customer_id
     WHERE cb.transaction_date BETWEEN ? AND ?
     GROUP BY COALESCE(c.id, 0), COALESCE(c.name, 'Operasional / Lainnya')
     ORDER BY customer_name
-", [$lapMonthStart, $lapMonthEnd]);
+", [$lapMonthStart, $lapMonthEnd, $lapMonthStart, $lapMonthEnd, $lapMonthStart, $lapMonthEnd]);
 $lapBulananTotalIn = 0;
 $lapBulananTotalOut = 0;
 foreach ($lapBulananRows as &$row) {
@@ -330,7 +338,11 @@ if (($_GET['print'] ?? '') === '1') {
                     <?php foreach ($lapBulananRows as $r): ?>
                         <tr>
                             <td><?php echo htmlspecialchars($r['customer_name']); ?></td>
-                            <td><?php echo sunseaRupiah((float)$r['diterima']); ?></td>
+                            <td><?php echo sunseaRupiah((float)$r['diterima']); ?>
+                                <?php if ((float)$r['diterima_bulan_lain'] > 0): ?>
+                                    <br><small style="color:#64748b;">*sudah DP <?php echo sunseaRupiah((float)$r['diterima_bulan_lain']); ?> pada <?php echo date('d M Y', strtotime($r['diterima_bulan_lain_tanggal'])); ?> (bulan lain)</small>
+                                <?php endif; ?>
+                            </td>
                             <td><?php echo sunseaRupiah((float)$r['pengeluaran']); ?></td>
                             <td><?php echo sunseaRupiah((float)$r['saldo']); ?></td>
                         </tr>
@@ -598,7 +610,11 @@ function lapPrintUrl(string $tab, array $extra = []): string
                     <?php foreach ($lapBulananRows as $r): ?>
                         <tr>
                             <td><?php echo htmlspecialchars($r['customer_name']); ?></td>
-                            <td style="color:var(--ss-success);font-weight:600;"><?php echo sunseaRupiah((float)$r['diterima']); ?></td>
+                            <td style="color:var(--ss-success);font-weight:600;"><?php echo sunseaRupiah((float)$r['diterima']); ?>
+                                <?php if ((float)$r['diterima_bulan_lain'] > 0): ?>
+                                    <br><small style="color:var(--ss-muted);font-weight:400;">*sudah DP <?php echo sunseaRupiah((float)$r['diterima_bulan_lain']); ?> pada <?php echo date('d M Y', strtotime($r['diterima_bulan_lain_tanggal'])); ?> (bulan lain)</small>
+                                <?php endif; ?>
+                            </td>
                             <td style="color:var(--ss-danger);font-weight:600;"><?php echo sunseaRupiah((float)$r['pengeluaran']); ?></td>
                             <td style="font-weight:700;"><?php echo sunseaRupiah((float)$r['saldo']); ?></td>
                         </tr>
