@@ -454,6 +454,7 @@ if (empty($sunseaNavItemsVisible)) {
         .ss-main {
             margin-left: var(--sidebar-w);
             flex: 1;
+            min-width: 0;
             display: flex;
             flex-direction: column;
             min-height: 100vh;
