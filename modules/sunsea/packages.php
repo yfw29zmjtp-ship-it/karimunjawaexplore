@@ -577,7 +577,8 @@ include 'layout-header.php';
                                 </thead>
                                 <tbody>
                                     <?php foreach ($packageItems as $pi): ?>
-                                        <?php $piQty = (float)($pi['qty'] ?? 1); if ($piQty <= 0) $piQty = 1; ?>
+                                        <?php $piQty = (float)($pi['qty'] ?? 1);
+                                        if ($piQty <= 0) $piQty = 1; ?>
                                         <?php $piMargin = ((float)$pi['estimated_sell'] - (float)$pi['estimated_cost']) * $piQty; ?>
                                         <tr id="pkg-item-row-<?php echo (int)$pi['id']; ?>">
                                             <td><?php echo htmlspecialchars($packageItemTypes[$pi['item_type']] ?? $pi['item_type']); ?></td>
@@ -695,10 +696,10 @@ include 'layout-header.php';
                                     <option value="flat">Flat (sekali per booking)</option>
                                 </select>
                             </div>
-                            <div class="ss-form-group">                                <label class="ss-label">Qty</label>
+                            <div class="ss-form-group"> <label class="ss-label">Qty</label>
                                 <input type="text" name="qty" class="ss-input" value="1" placeholder="Contoh: 2 malam">
                             </div>
-                            <div class="ss-form-group">                                <label class="ss-label">Estimasi Modal (Rp)</label>
+                            <div class="ss-form-group"> <label class="ss-label">Estimasi Modal (Rp)</label>
                                 <input type="text" name="estimated_cost" id="add_item_cost" class="ss-input" placeholder="0">
                             </div>
                             <div class="ss-form-group">

@@ -861,7 +861,7 @@ $facilities = [];
 $list = safeFetchAll(
     $pdo,
     "SELECT b.*, c.name as customer_name, c.phone as customer_phone, p.name as package_name,
-        COALESCE((SELECT SUM(i.paid_amount) FROM invoices i WHERE i.internal_notes = CONCAT('booking_id:', b.id)), 0) AS paid_amount_total,
+        COALESCE((SELECT SUM(i.paid_amount) FROM invoices i WHERE i.status != 'cancelled' AND (i.internal_notes = CONCAT('booking_id:', b.id) OR i.internal_notes = CONCAT('Generated from Reservasi: ', b.booking_no))), 0) AS paid_amount_total,
         (SELECT component_name FROM booking_order_items WHERE booking_id=b.id AND component_code IN ('penginapan','accommodation') ORDER BY sort_order LIMIT 1) AS accommodation_item
     FROM booking_orders b
     JOIN customers c ON c.id=b.customer_id
@@ -1672,19 +1672,19 @@ include 'layout-header.php';
                                     <?php endif; ?>
                                     <details class="ss-actions-dropdown">
                                         <summary class="ss-btn ss-btn-outline ss-btn-sm">Aksi <i data-feather="chevron-down"></i></summary>
-                                    <div class="ss-actions-menu">
-                                        <a href="bookings.php?view=<?php echo $r['id']; ?>">Lihat Detail</a>
-                                        <a href="bookings.php?action=print_invoice&id=<?php echo $r['id']; ?>">Cetak Invoice</a>
-                                        <a href="bookings.php?action=pay_invoice&id=<?php echo $r['id']; ?>&pay_mode=dp">Bayar DP</a>
-                                        <a href="bookings.php?action=pay_invoice&id=<?php echo $r['id']; ?>&pay_mode=full">Pelunasan</a>
-                                        <?php if ($r['status'] === 'cancelled'): ?>
-                                            <form method="POST" onsubmit="return confirm('Hapus reservasi <?php echo htmlspecialchars(addslashes($r['booking_no'])); ?>? Tindakan ini tidak bisa dibatalkan.');">
-                                                <input type="hidden" name="action" value="delete_booking">
-                                                <input type="hidden" name="booking_id" value="<?php echo (int)$r['id']; ?>">
-                                                <button type="submit" style="color:#dc2626;">Hapus</button>
-                                            </form>
-                                        <?php endif; ?>
-                                    </div>
+                                        <div class="ss-actions-menu">
+                                            <a href="bookings.php?view=<?php echo $r['id']; ?>">Lihat Detail</a>
+                                            <a href="bookings.php?action=print_invoice&id=<?php echo $r['id']; ?>">Cetak Invoice</a>
+                                            <a href="bookings.php?action=pay_invoice&id=<?php echo $r['id']; ?>&pay_mode=dp">Bayar DP</a>
+                                            <a href="bookings.php?action=pay_invoice&id=<?php echo $r['id']; ?>&pay_mode=full">Pelunasan</a>
+                                            <?php if ($r['status'] === 'cancelled'): ?>
+                                                <form method="POST" onsubmit="return confirm('Hapus reservasi <?php echo htmlspecialchars(addslashes($r['booking_no'])); ?>? Tindakan ini tidak bisa dibatalkan.');">
+                                                    <input type="hidden" name="action" value="delete_booking">
+                                                    <input type="hidden" name="booking_id" value="<?php echo (int)$r['id']; ?>">
+                                                    <button type="submit" style="color:#dc2626;">Hapus</button>
+                                                </form>
+                                            <?php endif; ?>
+                                        </div>
                                     </details>
                                 </div>
                             </td>

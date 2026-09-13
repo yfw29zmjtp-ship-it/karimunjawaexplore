@@ -15,6 +15,25 @@ $auth = new Auth();
 $auth->requireLogin();
 
 $pdo    = getSunseaConnection();
+
+// Self-heal: status/remaining_amount kadang jadi stale (mis. invoice di-edit setelah dibayar,
+// atau proses lama yang belum sempat recalc) - selalu samakan dengan paid_amount vs total_amount
+// tiap kali halaman ini dibuka, supaya "Lunas"/"Partial" di layar selalu benar tanpa perlu tool manual.
+try {
+    $pdo->exec("
+        UPDATE invoices
+        SET remaining_amount = GREATEST(total_amount - paid_amount, 0),
+            status = CASE
+                WHEN paid_amount >= total_amount THEN 'paid'
+                WHEN paid_amount > 0 THEN 'partial'
+                ELSE 'issued'
+            END
+        WHERE status IN ('issued','partial','paid')
+    ");
+} catch (Exception $e) {
+    error_log('invoices.php status self-heal error: ' . $e->getMessage());
+}
+
 $action = $_GET['action'] ?? 'list';
 $invId  = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
@@ -166,10 +185,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $remaining = $total;
 
         if ($id > 0) {
+            // Total bisa berubah (edit item/diskon) setelah invoice sudah sebagian/lunas dibayar,
+            // jadi sisa tagihan & status harus dihitung ulang dari paid_amount yang SUDAH ada,
+            // bukan cuma disamakan dengan total baru (itu bug lama - bikin invoice yang sudah
+            // lunas balik kelihatan "belum dibayar sama sekali").
+            $paidChk = $pdo->prepare("SELECT paid_amount FROM invoices WHERE id=?");
+            $paidChk->execute([$id]);
+            $alreadyPaid = (float)$paidChk->fetchColumn();
+            $remaining = max(0, $total - $alreadyPaid);
+            $newStatus = $remaining <= 0.01 ? 'paid' : ($alreadyPaid > 0 ? 'partial' : 'issued');
+
             $pdo->prepare("
                 UPDATE invoices SET customer_id=?, trip_date=?, trip_end_date=?, pax_count=?,
                 subtotal=?, tax_pct=?, tax_amount=?, discount_amount=?, total_amount=?,
-                remaining_amount=?, due_date=?, notes=?, issued_at=?, updated_at=NOW() WHERE id=?
+                remaining_amount=?, status=?, due_date=?, notes=?, issued_at=?, updated_at=NOW() WHERE id=?
             ")->execute([
                 $customerId,
                 $tripDate,
@@ -181,6 +210,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $discount,
                 $total,
                 $remaining,
+                $newStatus,
                 $dueDate,
                 $notes,
                 $invoiceDate,
