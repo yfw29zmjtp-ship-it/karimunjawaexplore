@@ -619,12 +619,12 @@ function lapPrintUrl(string $tab, array $extra = []): string
                     <?php endforeach; ?>
                 </tbody>
                 <tfoot>
-                    <tr style="border-top:2px solid var(--ss-gray-2);">
-                        <td><strong>Total Semua</strong></td>
-                        <td style="color:var(--ss-success);"><strong><?php echo sunseaRupiah($lapBulananTotalIn); ?></strong></td>
-                        <td style="color:var(--ss-danger);"><strong><?php echo sunseaRupiah($lapBulananTotalOut); ?></strong></td>
-                        <td><strong><?php echo sunseaRupiah($lapBulananSaldoRiil); ?></strong></td>
-                        <td></td>
+                    <tr style="border-top:2px solid var(--ss-gray-2);background:#f1f5f9;">
+                        <td style="padding:10px 8px;"><strong>Total Semua</strong></td>
+                        <td style="padding:10px 8px;color:var(--ss-success);"><strong><?php echo sunseaRupiah($lapBulananTotalIn); ?></strong></td>
+                        <td style="padding:10px 8px;color:var(--ss-danger);"><strong><?php echo sunseaRupiah($lapBulananTotalOut); ?></strong></td>
+                        <td style="padding:10px 8px;"><strong><?php echo sunseaRupiah($lapBulananSaldoRiil); ?></strong></td>
+                        <td style="padding:10px 8px;"></td>
                     </tr>
                 </tfoot>
             </table>
@@ -711,12 +711,12 @@ function lapPrintUrl(string $tab, array $extra = []): string
                         <?php endforeach; ?>
                     </tbody>
                     <tfoot>
-                        <tr style="border-top:2px solid var(--ss-gray-2);">
-                            <td colspan="4"><strong>Total Semua</strong></td>
-                            <td><strong><?php echo sunseaRupiah($lapCustomerTotalTerbayar); ?></strong></td>
-                            <td></td>
-                            <td style="color:var(--ss-danger);"><strong><?php echo sunseaRupiah($lapCustomerTotalOut); ?></strong></td>
-                            <td><strong><?php echo sunseaRupiah($lapCustomerTotalMargin); ?></strong></td>
+                        <tr style="border-top:2px solid var(--ss-gray-2);background:#f1f5f9;">
+                            <td colspan="4" style="padding:10px 8px;"><strong>Total Semua</strong></td>
+                            <td style="padding:10px 8px;"><strong><?php echo sunseaRupiah($lapCustomerTotalTerbayar); ?></strong></td>
+                            <td style="padding:10px 8px;"></td>
+                            <td style="padding:10px 8px;color:var(--ss-danger);"><strong><?php echo sunseaRupiah($lapCustomerTotalOut); ?></strong></td>
+                            <td style="padding:10px 8px;"><strong><?php echo sunseaRupiah($lapCustomerTotalMargin); ?></strong></td>
                         </tr>
                     </tfoot>
                 </table>
@@ -757,9 +757,9 @@ function lapPrintUrl(string $tab, array $extra = []): string
                     </tbody>
                     <tfoot>
                         <?php $lapCustomerKasSaldo = $lapCustomerTotalTerbayar - $lapCustomerTxExpense; ?>
-                        <tr style="border-top:2px solid var(--ss-gray-2);">
-                            <td colspan="5"><strong>Saldo Kas</strong> <span style="color:var(--ss-muted);font-weight:400;">(Uang Diterima <?php echo sunseaRupiah($lapCustomerTotalTerbayar); ?> &minus; Pengeluaran <?php echo sunseaRupiah($lapCustomerTxExpense); ?>)</span></td>
-                            <td><strong style="color:<?php echo $lapCustomerKasSaldo < 0 ? 'var(--ss-danger)' : 'var(--ss-success)'; ?>;"><?php echo sunseaRupiah($lapCustomerKasSaldo); ?></strong></td>
+                        <tr style="border-top:2px solid var(--ss-gray-2);background:#f1f5f9;">
+                            <td colspan="5" style="padding:10px 8px;"><strong>Saldo Kas</strong> <span style="color:var(--ss-muted);font-weight:400;">(Uang Diterima <?php echo sunseaRupiah($lapCustomerTotalTerbayar); ?> &minus; Pengeluaran <?php echo sunseaRupiah($lapCustomerTxExpense); ?>)</span></td>
+                            <td style="padding:10px 8px;"><strong style="color:<?php echo $lapCustomerKasSaldo < 0 ? 'var(--ss-danger)' : 'var(--ss-success)'; ?>;"><?php echo sunseaRupiah($lapCustomerKasSaldo); ?></strong></td>
                         </tr>
                     </tfoot>
                 </table>
