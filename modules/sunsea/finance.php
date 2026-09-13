@@ -31,12 +31,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save'
     $editId      = (int)($_POST['edit_id'] ?? 0);
     $type        = ($_POST['type'] ?? 'expense') === 'income' ? 'income' : 'expense';
     $date        = $_POST['transaction_date'] ?: date('Y-m-d');
+    $time        = $_POST['transaction_time'] ?: date('H:i');
     $category    = trim($_POST['category'] ?? '');
     $description = trim($_POST['description'] ?? '');
     $amount      = (float)str_replace(['.', ','], ['', '.'], $_POST['amount'] ?? '0');
     $customerId  = (int)($_POST['customer_id'] ?? 0) ?: null;
     $bookingId   = (int)($_POST['booking_id'] ?? 0) ?: null;
     $reference   = trim($_POST['reference'] ?? '');
+    $inputBy     = trim($_POST['input_by'] ?? '') ?: $user;
 
     if ($description === '' || $amount <= 0) {
         $_SESSION['flash_message'] = 'Keterangan dan jumlah wajib diisi (jumlah harus lebih dari 0).';
@@ -54,9 +56,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save'
         } else {
             try {
                 $pdo->prepare("
-                    UPDATE cash_book SET transaction_date=?, type=?, category=?, description=?, amount=?, reference=?, customer_id=?, booking_id=?
+                    UPDATE cash_book SET transaction_date=?, transaction_time=?, type=?, category=?, description=?, amount=?, reference=?, customer_id=?, booking_id=?, created_by=?
                     WHERE id=?
-                ")->execute([$date, $type, $category, $description, $amount, $reference, $customerId, $bookingId, $editId]);
+                ")->execute([$date, $time, $type, $category, $description, $amount, $reference, $customerId, $bookingId, $inputBy, $editId]);
                 $_SESSION['flash_message'] = 'Transaksi kas berhasil diperbarui.';
                 $_SESSION['flash_type']    = 'success';
             } catch (Exception $e) {
@@ -67,9 +69,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save'
     } else {
         try {
             $pdo->prepare("
-                INSERT INTO cash_book (transaction_date, type, category, description, amount, reference, customer_id, booking_id, created_by)
-                VALUES (?,?,?,?,?,?,?,?,?)
-            ")->execute([$date, $type, $category, $description, $amount, $reference, $customerId, $bookingId, $user]);
+                INSERT INTO cash_book (transaction_date, transaction_time, type, category, description, amount, reference, customer_id, booking_id, created_by)
+                VALUES (?,?,?,?,?,?,?,?,?,?)
+            ")->execute([$date, $time, $type, $category, $description, $amount, $reference, $customerId, $bookingId, $inputBy]);
             $_SESSION['flash_message'] = 'Transaksi kas berhasil dicatat.';
             $_SESSION['flash_type']    = 'success';
         } catch (Exception $e) {
@@ -229,23 +231,34 @@ include 'layout-header.php';
                 <thead>
                     <tr>
                         <th style="width:100px;font-size:11px;">Tanggal</th>
+                        <th style="width:60px;font-size:11px;">Jam</th>
                         <th style="width:90px;font-size:11px;">Jenis</th>
                         <th style="font-size:11px;">Keterangan</th>
                         <th style="font-size:11px;">Tamu / Trip</th>
                         <th style="font-size:11px;">Kategori</th>
                         <th style="width:130px;font-size:11px;">Jumlah</th>
+                        <th style="width:110px;font-size:11px;">Diinput Oleh</th>
                         <th style="width:40px;"></th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($rows)): ?>
                         <tr>
-                            <td colspan="7" style="text-align:center;color:var(--ss-muted);padding:20px;font-size:12px;">Belum ada transaksi pada periode ini.</td>
+                            <td colspan="9" style="text-align:center;color:var(--ss-muted);padding:20px;font-size:12px;">Belum ada transaksi pada periode ini.</td>
                         </tr>
                     <?php endif; ?>
+                    <?php $finLastDate = null; ?>
                     <?php foreach ($rows as $r): ?>
+                        <?php if ($r['transaction_date'] !== $finLastDate): $finLastDate = $r['transaction_date']; ?>
+                            <tr>
+                                <td colspan="9" style="background:var(--ss-gray-1);font-weight:700;font-size:11.5px;padding:6px 10px;color:var(--ss-ocean);">
+                                    <?php echo htmlspecialchars(date('d M Y', strtotime($finLastDate))); ?>
+                                </td>
+                            </tr>
+                        <?php endif; ?>
                         <tr>
                             <td style="font-size:12px;"><?php echo date('d/m/Y', strtotime($r['transaction_date'])); ?></td>
+                            <td style="font-size:12px;color:var(--ss-muted);"><?php echo $r['transaction_time'] ? date('H:i', strtotime($r['transaction_time'])) : '-'; ?></td>
                             <td>
                                 <?php if ($r['type'] === 'income'): ?>
                                     <span class="ss-status ss-status-approved" style="font-size:11px;">Masuk</span>
@@ -262,6 +275,7 @@ include 'layout-header.php';
                             <td style="font-size:12px;font-weight:600;color:<?php echo $r['type'] === 'income' ? 'var(--ss-success)' : 'var(--ss-danger)'; ?>;">
                                 <?php echo ($r['type'] === 'income' ? '+ ' : '- ') . sunseaRupiah((float)$r['amount']); ?>
                             </td>
+                            <td style="font-size:11.5px;color:var(--ss-muted);"><?php echo htmlspecialchars($r['created_by'] ?: '-'); ?></td>
                             <td>
                                 <?php if (!$r['invoice_id'] && !$r['booking_item_id']): ?>
                                     <div style="display:flex;gap:8px;align-items:center;">
@@ -269,12 +283,14 @@ include 'layout-header.php';
                                                                                                 "id" => (int)$r["id"],
                                                                                                 "type" => $r["type"],
                                                                                                 "date" => $r["transaction_date"],
+                                                                                                "time" => $r["transaction_time"] ? date("H:i", strtotime($r["transaction_time"])) : "",
                                                                                                 "category" => $r["category"],
                                                                                                 "description" => $r["description"],
                                                                                                 "amount" => (float)$r["amount"],
                                                                                                 "customer_id" => $r["customer_id"],
                                                                                                 "booking_id" => $r["booking_id"],
                                                                                                 "reference" => $r["reference"],
+                                                                                                "input_by" => $r["created_by"],
                                                                                             ], JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_HEX_TAG); ?>)' style="color:var(--ss-ocean);" title="Edit transaksi"><i data-feather="edit-3" style="width:14px;height:14px;"></i></a>
                                         <a href="finance.php?action=delete&id=<?php echo $r['id']; ?>"
                                             onclick="return confirm('Hapus transaksi ini?');"
@@ -351,6 +367,10 @@ include 'layout-header.php';
                         <input type="date" name="transaction_date" class="ss-input" style="font-size:12px;" value="<?php echo date('Y-m-d'); ?>" required>
                     </div>
                     <div class="ss-form-group" style="margin:0;">
+                        <label class="ss-label" style="font-size:11px;">Jam Transaksi</label>
+                        <input type="time" name="transaction_time" class="ss-input" style="font-size:12px;" value="<?php echo date('H:i'); ?>" required>
+                    </div>
+                    <div class="ss-form-group" style="margin:0;">
                         <label class="ss-label" style="font-size:11px;">Trip / Booking (opsional)</label>
                         <select name="booking_id" class="ss-select" id="bookingSelect" style="font-size:12px;" onchange="autoFillGuestFromBooking()">
                             <option value="">-- Tidak terkait trip tertentu --</option>
@@ -393,6 +413,10 @@ include 'layout-header.php';
                     <div class="ss-form-group" style="margin:0;grid-column:1 / -1;">
                         <label class="ss-label" style="font-size:11px;">Referensi (opsional)</label>
                         <input type="text" name="reference" class="ss-input" style="font-size:12px;" placeholder="No. nota / kwitansi">
+                    </div>
+                    <div class="ss-form-group" style="margin:0;grid-column:1 / -1;">
+                        <label class="ss-label" style="font-size:11px;">Diinput Oleh</label>
+                        <input type="text" name="input_by" class="ss-input" style="font-size:12px;" value="<?php echo htmlspecialchars($user); ?>" placeholder="Nama staff yang input" required>
                     </div>
                 </div>
                 <button type="submit" class="ss-btn ss-btn-primary" style="width:100%;font-size:12px;margin-top:14px;" id="txSubmitBtn">
@@ -443,6 +467,8 @@ include 'layout-header.php';
         document.getElementById('txModalTitle').textContent = 'Input Transaksi Kas';
         document.getElementById('txSubmitBtn').innerHTML = '<i data-feather="save"></i> Simpan Transaksi';
         document.getElementById('txForm').querySelector('[name="transaction_date"]').value = '<?php echo date('Y-m-d'); ?>';
+        document.getElementById('txForm').querySelector('[name="transaction_time"]').value = '<?php echo date('H:i'); ?>';
+        document.getElementById('txForm').querySelector('[name="input_by"]').value = '<?php echo htmlspecialchars($user, ENT_QUOTES); ?>';
         document.getElementById('txModalOverlay').style.display = 'flex';
         document.body.style.overflow = 'hidden';
         if (window.feather) feather.replace();
@@ -452,12 +478,14 @@ include 'layout-header.php';
         var form = document.getElementById('txForm');
         form.querySelector('[name="type"]').value = tx.type;
         form.querySelector('[name="transaction_date"]').value = tx.date;
+        form.querySelector('[name="transaction_time"]').value = tx.time || '00:00';
         form.querySelector('[name="booking_id"]').value = tx.booking_id || '';
         form.querySelector('[name="customer_id"]').value = tx.customer_id || '';
         form.querySelector('[name="category"]').value = tx.category || '';
         form.querySelector('[name="amount"]').value = tx.amount ? Math.round(tx.amount).toLocaleString('id-ID') : '';
         form.querySelector('[name="description"]').value = tx.description || '';
         form.querySelector('[name="reference"]').value = tx.reference || '';
+        form.querySelector('[name="input_by"]').value = tx.input_by || '<?php echo htmlspecialchars($user, ENT_QUOTES); ?>';
         document.getElementById('editIdInput').value = tx.id;
         document.getElementById('txModalTitle').textContent = 'Edit Transaksi Kas';
         document.getElementById('txSubmitBtn').innerHTML = '<i data-feather="save"></i> Simpan Perubahan';
