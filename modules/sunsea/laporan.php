@@ -267,10 +267,6 @@ if (($_GET['print'] ?? '') === '1') {
                     <div class="lbl">Total Pengeluaran</div>
                     <div class="val" style="color:#dc2626;"><?php echo sunseaRupiah($lapHarianExpense); ?></div>
                 </div>
-                <div class="lap-summary-box">
-                    <div class="lbl">Saldo Bersih</div>
-                    <div class="val" style="color:#0C4A6E;"><?php echo sunseaRupiah($lapHarianNet); ?></div>
-                </div>
             </div>
             <table>
                 <thead>
@@ -496,7 +492,7 @@ function lapPrintUrl(string $tab, array $extra = []): string
         </form>
     </div>
 
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:14px;">
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:14px;">
         <div class="ss-card">
             <div style="font-size:12px;color:var(--ss-muted);">Total Pemasukan</div>
             <div style="font-size:17px;font-weight:800;color:var(--ss-success);"><?php echo sunseaRupiah($lapHarianIncome); ?></div>
@@ -504,10 +500,6 @@ function lapPrintUrl(string $tab, array $extra = []): string
         <div class="ss-card">
             <div style="font-size:12px;color:var(--ss-muted);">Total Pengeluaran</div>
             <div style="font-size:17px;font-weight:800;color:var(--ss-danger);"><?php echo sunseaRupiah($lapHarianExpense); ?></div>
-        </div>
-        <div class="ss-card">
-            <div style="font-size:12px;color:var(--ss-muted);">Saldo Bersih</div>
-            <div style="font-size:17px;font-weight:800;color:var(--ss-ocean);"><?php echo sunseaRupiah($lapHarianNet); ?></div>
         </div>
     </div>
 
