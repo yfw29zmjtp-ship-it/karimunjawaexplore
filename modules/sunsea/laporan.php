@@ -47,36 +47,29 @@ foreach ($lapHarianRows as $r) {
 }
 $lapHarianNet = $lapHarianIncome - $lapHarianExpense;
 
-// ---- BULANAN: rekap per booking/trip dalam 1 bulan (nama tamu, paket, pemasukan, pengeluaran, margin) ----
+// ---- BULANAN: rekap uang riil (kas beneran masuk/keluar) per tamu dalam 1 bulan, berdasarkan tanggal transaksi kas ----
 $lapMonth = $_GET['month'] ?? date('Y-m');
 $lapMonthStart = date('Y-m-01', strtotime($lapMonth . '-01'));
 $lapMonthEnd = date('Y-m-t', strtotime($lapMonth . '-01'));
 $lapBulananRows = lapFetchAll($pdo, "
-    SELECT b.id, b.booking_no, b.start_date, b.end_date, c.name AS customer_name, p.name AS package_name,
-        COALESCE((SELECT SUM(i.total_sell) FROM booking_order_items i WHERE i.booking_id=b.id), 0) AS pemasukan,
-        COALESCE((SELECT SUM(cb.amount) FROM cash_book cb WHERE cb.type='expense' AND (cb.booking_id=b.id OR (cb.booking_id IS NULL AND cb.customer_id=b.customer_id AND NOT EXISTS (SELECT 1 FROM booking_orders b2 WHERE b2.customer_id=b.customer_id AND b2.id<>b.id)))), 0) AS pengeluaran,
-        COALESCE((SELECT SUM(inv.paid_amount) FROM invoices inv WHERE inv.status != 'cancelled' AND (inv.internal_notes = CONCAT('booking_id:', b.id) COLLATE utf8mb4_general_ci OR inv.internal_notes = CONCAT('Generated from Reservasi: ', b.booking_no) COLLATE utf8mb4_general_ci)), 0) AS terbayar
-    FROM booking_orders b
-    JOIN customers c ON c.id = b.customer_id
-    LEFT JOIN trip_packages p ON p.id = b.package_id
-    WHERE b.start_date BETWEEN ? AND ?
-    ORDER BY b.start_date, b.id
+    SELECT COALESCE(c.id, 0) AS customer_id, COALESCE(c.name, 'Operasional / Lainnya') AS customer_name,
+        SUM(CASE WHEN cb.type='income' THEN cb.amount ELSE 0 END) AS diterima,
+        SUM(CASE WHEN cb.type='expense' THEN cb.amount ELSE 0 END) AS pengeluaran
+    FROM cash_book cb
+    LEFT JOIN customers c ON c.id = cb.customer_id
+    WHERE cb.transaction_date BETWEEN ? AND ?
+    GROUP BY COALESCE(c.id, 0), COALESCE(c.name, 'Operasional / Lainnya')
+    ORDER BY customer_name
 ", [$lapMonthStart, $lapMonthEnd]);
 $lapBulananTotalIn = 0;
 $lapBulananTotalOut = 0;
-$lapBulananTotalTerbayar = 0;
 foreach ($lapBulananRows as &$row) {
-    $row['margin'] = (float)$row['pemasukan'] - (float)$row['pengeluaran'];
-    $row['status_bayar'] = (float)$row['terbayar'] <= 0
-        ? 'Belum Bayar'
-        : ((float)$row['terbayar'] >= (float)$row['pemasukan'] ? 'Lunas' : 'DP');
-    $lapBulananTotalIn += (float)$row['pemasukan'];
+    $row['saldo'] = (float)$row['diterima'] - (float)$row['pengeluaran'];
+    $lapBulananTotalIn += (float)$row['diterima'];
     $lapBulananTotalOut += (float)$row['pengeluaran'];
-    $lapBulananTotalTerbayar += (float)$row['terbayar'];
 }
 unset($row);
-$lapBulananTotalMargin = $lapBulananTotalIn - $lapBulananTotalOut;
-$lapBulananSaldoRiil = $lapBulananTotalTerbayar - $lapBulananTotalOut;
+$lapBulananSaldoRiil = $lapBulananTotalIn - $lapBulananTotalOut;
 
 // ---- PER CUSTOMER: rekap keuangan semua booking milik 1 tamu ----
 $lapCustomerId = (int)($_GET['customer_id'] ?? 0);
@@ -308,16 +301,10 @@ if (($_GET['print'] ?? '') === '1') {
             </table>
 
         <?php elseif ($tab === 'bulanan'): ?>
-            <p style="margin:-8px 0 12px;color:#64748b;font-size:12px;">*Estimasi Pendapatan Trip = nilai kontrak/harga jual trip yang dimulai bulan ini (belum tentu sudah dibayar penuh). Untuk kas riil yang sudah masuk, lihat halaman Finance.</p>
+            <p style="margin:-8px 0 12px;color:#64748b;font-size:12px;">*Berdasarkan uang yang benar-benar sudah diterima/keluar (tanggal transaksi kas) di bulan ini, bukan estimasi.</p>
             <div class="lap-summary">
                 <div class="lap-summary-box">
-                    <div class="lbl">Saldo Kas Riil (Diterima &minus; Pengeluaran)</div>
-                    <div class="val" style="color:<?php echo $lapBulananSaldoRiil < 0 ? '#dc2626' : '#16a34a'; ?>;"><?php echo sunseaRupiah($lapBulananSaldoRiil); ?></div>
-                </div>
-            </div>
-            <div class="lap-summary">
-                <div class="lap-summary-box">
-                    <div class="lbl">Total Estimasi Pendapatan Trip</div>
+                    <div class="lbl">Total Diterima</div>
                     <div class="val" style="color:#16a34a;"><?php echo sunseaRupiah($lapBulananTotalIn); ?></div>
                 </div>
                 <div class="lap-summary-box">
@@ -325,48 +312,40 @@ if (($_GET['print'] ?? '') === '1') {
                     <div class="val" style="color:#dc2626;"><?php echo sunseaRupiah($lapBulananTotalOut); ?></div>
                 </div>
                 <div class="lap-summary-box">
-                    <div class="lbl">Total Margin (Estimasi)</div>
-                    <div class="val" style="color:#0C4A6E;"><?php echo sunseaRupiah($lapBulananTotalMargin); ?></div>
+                    <div class="lbl">Saldo Kas Riil</div>
+                    <div class="val" style="color:<?php echo $lapBulananSaldoRiil < 0 ? '#dc2626' : '#0C4A6E'; ?>;"><?php echo sunseaRupiah($lapBulananSaldoRiil); ?></div>
                 </div>
             </div>
             <table>
                 <thead>
                     <tr>
                         <th>Nama Tamu</th>
-                        <th>Paket</th>
-                        <th>Estimasi Pendapatan</th>
-                        <th>Terbayar</th>
-                        <th>Status Bayar</th>
+                        <th>Diterima</th>
                         <th>Pengeluaran</th>
-                        <th>Margin</th>
+                        <th>Saldo</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($lapBulananRows)): ?>
                         <tr>
-                            <td colspan="7" style="text-align:center;color:#94a3b8;">Tidak ada trip pada bulan ini.</td>
+                            <td colspan="4" style="text-align:center;color:#94a3b8;">Tidak ada transaksi kas pada bulan ini.</td>
                         </tr>
                     <?php endif; ?>
                     <?php foreach ($lapBulananRows as $r): ?>
                         <tr>
                             <td><?php echo htmlspecialchars($r['customer_name']); ?></td>
-                            <td><?php echo htmlspecialchars($r['package_name'] ?: '-'); ?></td>
-                            <td><?php echo sunseaRupiah((float)$r['pemasukan']); ?></td>
-                            <td><?php echo sunseaRupiah((float)$r['terbayar']); ?></td>
-                            <td><?php echo htmlspecialchars($r['status_bayar']); ?></td>
+                            <td><?php echo sunseaRupiah((float)$r['diterima']); ?></td>
                             <td><?php echo sunseaRupiah((float)$r['pengeluaran']); ?></td>
-                            <td><?php echo sunseaRupiah((float)$r['margin']); ?></td>
+                            <td><?php echo sunseaRupiah((float)$r['saldo']); ?></td>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>
                 <tfoot>
                     <tr>
-                        <td colspan="2">Total Semua</td>
+                        <td>Total Semua</td>
                         <td><?php echo sunseaRupiah($lapBulananTotalIn); ?></td>
-                        <td><?php echo sunseaRupiah($lapBulananTotalTerbayar); ?></td>
-                        <td></td>
                         <td><?php echo sunseaRupiah($lapBulananTotalOut); ?></td>
-                        <td><?php echo sunseaRupiah($lapBulananTotalMargin); ?></td>
+                        <td><?php echo sunseaRupiah($lapBulananSaldoRiil); ?></td>
                     </tr>
                 </tfoot>
             </table>
@@ -589,17 +568,11 @@ function lapPrintUrl(string $tab, array $extra = []): string
         </form>
     </div>
 
-    <p style="margin:-6px 0 12px;color:var(--ss-muted);font-size:12px;">*Estimasi Pendapatan Trip = nilai kontrak/harga jual trip yang MULAI di bulan ini (belum tentu sudah dibayar penuh, lihat kolom "Terbayar"). Untuk kas riil yang sudah masuk/keluar, lihat halaman <strong>Finance</strong>.</p>
-
-    <div class="ss-card" style="margin-bottom:14px;">
-        <div style="font-size:12px;color:var(--ss-muted);">Saldo Kas Riil Bulan Ini (Uang Sudah Diterima &minus; Pengeluaran)</div>
-        <div style="font-size:20px;font-weight:800;color:<?php echo $lapBulananSaldoRiil < 0 ? 'var(--ss-danger)' : 'var(--ss-success)'; ?>;"><?php echo sunseaRupiah($lapBulananSaldoRiil); ?></div>
-        <div style="font-size:11px;color:var(--ss-muted);margin-top:4px;"><?php echo sunseaRupiah($lapBulananTotalTerbayar); ?> diterima &minus; <?php echo sunseaRupiah($lapBulananTotalOut); ?> pengeluaran</div>
-    </div>
+    <p style="margin:-6px 0 12px;color:var(--ss-muted);font-size:12px;">*Berdasarkan uang yang benar-benar sudah diterima/keluar (tanggal transaksi kas) di bulan ini, bukan estimasi.</p>
 
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:14px;">
         <div class="ss-card">
-            <div style="font-size:12px;color:var(--ss-muted);">Total Estimasi Pendapatan Trip</div>
+            <div style="font-size:12px;color:var(--ss-muted);">Total Diterima</div>
             <div style="font-size:17px;font-weight:800;color:var(--ss-success);"><?php echo sunseaRupiah($lapBulananTotalIn); ?></div>
         </div>
         <div class="ss-card">
@@ -607,53 +580,44 @@ function lapPrintUrl(string $tab, array $extra = []): string
             <div style="font-size:17px;font-weight:800;color:var(--ss-danger);"><?php echo sunseaRupiah($lapBulananTotalOut); ?></div>
         </div>
         <div class="ss-card">
-            <div style="font-size:12px;color:var(--ss-muted);">Total Margin (Estimasi)</div>
-            <div style="font-size:17px;font-weight:800;color:var(--ss-ocean);"><?php echo sunseaRupiah($lapBulananTotalMargin); ?></div>
+            <div style="font-size:12px;color:var(--ss-muted);">Saldo Kas Riil</div>
+            <div style="font-size:17px;font-weight:800;color:<?php echo $lapBulananSaldoRiil < 0 ? 'var(--ss-danger)' : 'var(--ss-ocean)'; ?>;"><?php echo sunseaRupiah($lapBulananSaldoRiil); ?></div>
         </div>
     </div>
 
     <div class="ss-card">
-        <div class="ss-card-title" style="margin-bottom:10px;">Rekap Trip Bulan <?php echo date('F Y', strtotime($lapMonthStart)); ?></div>
+        <div class="ss-card-title" style="margin-bottom:10px;">Rekap Kas Bulan <?php echo date('F Y', strtotime($lapMonthStart)); ?></div>
         <div class="ss-table-wrap">
             <table class="ss-table" style="font-size:12px;">
                 <thead>
                     <tr>
                         <th>Nama Tamu</th>
-                        <th>Paket</th>
-                        <th style="width:150px;">Estimasi Pendapatan</th>
-                        <th style="width:130px;">Terbayar</th>
-                        <th style="width:100px;">Status Bayar</th>
-                        <th style="width:130px;">Pengeluaran</th>
-                        <th style="width:130px;">Margin</th>
+                        <th style="width:150px;">Diterima</th>
+                        <th style="width:150px;">Pengeluaran</th>
+                        <th style="width:150px;">Saldo</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($lapBulananRows)): ?>
                         <tr>
-                            <td colspan="7" style="text-align:center;color:var(--ss-muted);padding:20px;">Tidak ada trip pada bulan ini.</td>
+                            <td colspan="4" style="text-align:center;color:var(--ss-muted);padding:20px;">Tidak ada transaksi kas pada bulan ini.</td>
                         </tr>
                     <?php endif; ?>
                     <?php foreach ($lapBulananRows as $r): ?>
-                        <?php $statusColorB = $r['status_bayar'] === 'Lunas' ? '#16a34a' : ($r['status_bayar'] === 'DP' ? '#d97706' : '#dc2626'); ?>
                         <tr>
-                            <td><?php echo htmlspecialchars($r['customer_name']); ?><br><small style="color:var(--ss-muted);"><?php echo htmlspecialchars($r['booking_no']); ?></small></td>
-                            <td><?php echo htmlspecialchars($r['package_name'] ?: '-'); ?></td>
-                            <td style="color:var(--ss-success);font-weight:600;"><?php echo sunseaRupiah((float)$r['pemasukan']); ?></td>
-                            <td style="font-weight:600;"><?php echo sunseaRupiah((float)$r['terbayar']); ?></td>
-                            <td><span style="font-weight:700;color:<?php echo $statusColorB; ?>;"><?php echo htmlspecialchars($r['status_bayar']); ?></span></td>
+                            <td><?php echo htmlspecialchars($r['customer_name']); ?></td>
+                            <td style="color:var(--ss-success);font-weight:600;"><?php echo sunseaRupiah((float)$r['diterima']); ?></td>
                             <td style="color:var(--ss-danger);font-weight:600;"><?php echo sunseaRupiah((float)$r['pengeluaran']); ?></td>
-                            <td style="font-weight:700;"><?php echo sunseaRupiah((float)$r['margin']); ?></td>
+                            <td style="font-weight:700;"><?php echo sunseaRupiah((float)$r['saldo']); ?></td>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>
                 <tfoot>
                     <tr style="border-top:2px solid var(--ss-gray-2);">
-                        <td colspan="2"><strong>Total Semua</strong></td>
+                        <td><strong>Total Semua</strong></td>
                         <td style="color:var(--ss-success);"><strong><?php echo sunseaRupiah($lapBulananTotalIn); ?></strong></td>
-                        <td><strong><?php echo sunseaRupiah($lapBulananTotalTerbayar); ?></strong></td>
-                        <td></td>
                         <td style="color:var(--ss-danger);"><strong><?php echo sunseaRupiah($lapBulananTotalOut); ?></strong></td>
-                        <td><strong><?php echo sunseaRupiah($lapBulananTotalMargin); ?></strong></td>
+                        <td><strong><?php echo sunseaRupiah($lapBulananSaldoRiil); ?></strong></td>
                     </tr>
                 </tfoot>
             </table>
