@@ -93,10 +93,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $invRow->execute([$iId]);
             $invNo = $invRow->fetchColumn();
             $pdo->prepare("
-                INSERT INTO cash_book (transaction_date, type, category, description, amount, reference, invoice_id, customer_id, booking_id, created_by)
-                VALUES (?,?,?,?,?,?,?,?,?,?)
+                INSERT INTO cash_book (transaction_date, transaction_time, type, category, description, amount, reference, invoice_id, customer_id, booking_id, created_by)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?)
             ")->execute([
                 $date,
+                date('H:i:s'),
                 'income',
                 'Penerimaan Trip',
                 "Pembayaran Invoice $invNo — $custName",

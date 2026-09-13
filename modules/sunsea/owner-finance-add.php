@@ -56,9 +56,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         try {
             $pdo->prepare("
-                INSERT INTO cash_book (transaction_date, type, category, description, amount, reference, customer_id, created_by)
-                VALUES (?,?,?,?,?,?,?,?)
-            ")->execute([$date, $type, $category, $description, $amount, $reference, $customerId, $username]);
+                INSERT INTO cash_book (transaction_date, transaction_time, type, category, description, amount, reference, customer_id, created_by)
+                VALUES (?,?,?,?,?,?,?,?,?)
+            ")->execute([$date, date('H:i:s'), $type, $category, $description, $amount, $reference, $customerId, $username]);
             header('Location: owner-finance.php');
             exit;
         } catch (Exception $e) {

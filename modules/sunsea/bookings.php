@@ -775,10 +775,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updat
                     $exists->execute([$itemId]);
                     if ((int)$exists->fetchColumn() === 0) {
                         $pdo->prepare("
-                            INSERT INTO cash_book (transaction_date, type, category, description, amount, reference, booking_id, booking_item_id, created_by)
-                            VALUES (?,?,?,?,?,?,?,?,?)
+                            INSERT INTO cash_book (transaction_date, transaction_time, type, category, description, amount, reference, booking_id, booking_item_id, created_by)
+                            VALUES (?,?,?,?,?,?,?,?,?,?)
                         ")->execute([
                             date('Y-m-d'),
+                            date('H:i:s'),
                             'expense',
                             'Pembayaran Mitra',
                             "Pembayaran Mitra: {$it['component_name']} — $bookingNo ($customerName)",
