@@ -509,6 +509,34 @@ function sunseaEnsureFinanceSchema(PDO $pdo): void
             SET cb.customer_id = i.customer_id
             WHERE cb.customer_id IS NULL AND cb.invoice_id IS NOT NULL
         ");
+
+        // Auto-sync: kalau ada invoice yang paid_amount-nya lebih besar dari total yang sudah
+        // tercatat di cash_book (mis. pembayaran diinput lewat cara lain di luar form "Tambah
+        // Pembayaran", atau data lama sebelum auto-insert cash_book ada), otomatis tambahkan
+        // selisihnya ke cash_book tiap kali halaman Finance/Laporan/Calendar dibuka - supaya
+        // uang yang sudah diterima selalu otomatis kelihatan di Buku Kas tanpa perlu tool manual.
+        $pdo->exec("
+            INSERT INTO cash_book (transaction_date, type, category, description, amount, reference, invoice_id, customer_id, created_by)
+            SELECT
+                COALESCE((SELECT MAX(p.payment_date) FROM payments p WHERE p.invoice_id = i.id), CURDATE()),
+                'income',
+                'Penerimaan Trip',
+                CONCAT('Pembayaran Invoice ', i.invoice_no, ' — ', c.name, ' (auto-sync selisih)'),
+                (i.paid_amount - COALESCE(cb.total_recorded, 0)),
+                i.invoice_no,
+                i.id,
+                i.customer_id,
+                'system-auto-sync'
+            FROM invoices i
+            JOIN customers c ON c.id = i.customer_id
+            LEFT JOIN (
+                SELECT invoice_id, SUM(amount) AS total_recorded
+                FROM cash_book
+                WHERE type = 'income' AND invoice_id IS NOT NULL
+                GROUP BY invoice_id
+            ) cb ON cb.invoice_id = i.id
+            WHERE i.paid_amount > COALESCE(cb.total_recorded, 0) + 0.01
+        ");
     } catch (Exception $e) {
         error_log('sunseaEnsureFinanceSchema error: ' . $e->getMessage());
     }

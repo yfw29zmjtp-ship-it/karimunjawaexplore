@@ -15,6 +15,7 @@ $auth = new Auth();
 $auth->requireLogin();
 
 $pdo    = getSunseaConnection();
+sunseaEnsureFinanceSchema($pdo);
 
 // Self-heal: status/remaining_amount kadang jadi stale (mis. invoice di-edit setelah dibayar,
 // atau proses lama yang belum sempat recalc) - selalu samakan dengan paid_amount vs total_amount
