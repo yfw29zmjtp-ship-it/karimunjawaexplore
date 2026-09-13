@@ -54,7 +54,7 @@ $lapMonthEnd = date('Y-m-t', strtotime($lapMonth . '-01'));
 $lapBulananRows = lapFetchAll($pdo, "
     SELECT b.id, b.booking_no, b.start_date, b.end_date, c.name AS customer_name, p.name AS package_name,
         COALESCE((SELECT SUM(i.total_sell) FROM booking_order_items i WHERE i.booking_id=b.id), 0) AS pemasukan,
-        COALESCE((SELECT SUM(cb.amount) FROM cash_book cb WHERE cb.booking_id=b.id AND cb.type='expense'), 0) AS pengeluaran
+        COALESCE((SELECT SUM(cb.amount) FROM cash_book cb WHERE cb.type='expense' AND (cb.booking_id=b.id OR (cb.booking_id IS NULL AND cb.customer_id=b.customer_id AND NOT EXISTS (SELECT 1 FROM booking_orders b2 WHERE b2.customer_id=b.customer_id AND b2.id<>b.id)))), 0) AS pengeluaran
     FROM booking_orders b
     JOIN customers c ON c.id = b.customer_id
     LEFT JOIN trip_packages p ON p.id = b.package_id
@@ -84,7 +84,7 @@ if ($lapCustomerId > 0) {
     $lapCustomerRows = lapFetchAll($pdo, "
         SELECT b.id, b.booking_no, b.start_date, b.end_date, p.name AS package_name,
             COALESCE((SELECT SUM(i.total_sell) FROM booking_order_items i WHERE i.booking_id=b.id), 0) AS pemasukan,
-            COALESCE((SELECT SUM(cb.amount) FROM cash_book cb WHERE cb.booking_id=b.id AND cb.type='expense'), 0) AS pengeluaran,
+            COALESCE((SELECT SUM(cb.amount) FROM cash_book cb WHERE cb.type='expense' AND (cb.booking_id=b.id OR (cb.booking_id IS NULL AND cb.customer_id=b.customer_id AND NOT EXISTS (SELECT 1 FROM booking_orders b2 WHERE b2.customer_id=b.customer_id AND b2.id<>b.id)))), 0) AS pengeluaran,
             COALESCE((SELECT SUM(inv.paid_amount) FROM invoices inv WHERE inv.internal_notes = CONCAT('booking_id:', b.id) OR inv.internal_notes = CONCAT('Generated from Reservasi: ', b.booking_no)), 0) AS terbayar
         FROM booking_orders b
         LEFT JOIN trip_packages p ON p.id = b.package_id
