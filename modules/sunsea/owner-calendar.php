@@ -861,7 +861,8 @@ include 'owner-mobile-header.php';
 
     // Timeline sudah menyambung 2 bulan (bulan ini + depan) dalam satu grid, jadi geser tanggal
     // cukup pakai scroll horizontal - di HP pakai swipe/touch bawaan browser (halus, tanpa reload),
-    // di desktop klik+geser mouse dikonversi jadi scrollLeft supaya tetap bisa di-drag pakai mouse.
+    // di desktop klik+geser mouse dikonversi jadi scrollLeft (pakai mouse event biasa, bukan Pointer
+    // Events, supaya konsisten di semua browser desktop) supaya tetap bisa di-drag pakai mouse.
     (function() {
         var scroller = document.getElementById('calTimelineScroll');
         if (!scroller) return;
@@ -870,16 +871,16 @@ include 'owner-mobile-header.php';
             startScroll = 0,
             dragged = false;
 
-        scroller.addEventListener('pointerdown', function(e) {
-            if (e.pointerType !== 'mouse') return;
-            e.preventDefault();
+        scroller.addEventListener('mousedown', function(e) {
+            if (e.button !== 0) return;
             isDown = true;
             dragged = false;
             startX = e.clientX;
             startScroll = scroller.scrollLeft;
             scroller.classList.add('is-dragging');
+            e.preventDefault();
         });
-        window.addEventListener('pointermove', function(e) {
+        document.addEventListener('mousemove', function(e) {
             if (!isDown) return;
             var dx = e.clientX - startX;
             if (Math.abs(dx) > 4) dragged = true;
@@ -890,8 +891,8 @@ include 'owner-mobile-header.php';
             isDown = false;
             scroller.classList.remove('is-dragging');
         }
-        window.addEventListener('pointerup', endDrag);
-        window.addEventListener('pointercancel', endDrag);
+        document.addEventListener('mouseup', endDrag);
+        document.addEventListener('mouseleave', endDrag);
         scroller.addEventListener('click', function(e) {
             if (dragged) {
                 e.stopPropagation();

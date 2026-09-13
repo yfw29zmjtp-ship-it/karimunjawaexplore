@@ -326,22 +326,22 @@ include 'layout-header.php';
     }
 
     .cal-guest-avatar {
-        width: 34px;
-        height: 34px;
+        width: 26px;
+        height: 26px;
         border-radius: 50%;
         background: linear-gradient(135deg, var(--ss-ocean), var(--ss-cyan));
         color: #fff;
-        font-size: 14px;
+        font-size: 11px;
         font-weight: 800;
         display: inline-flex;
         align-items: center;
         justify-content: center;
         flex-shrink: 0;
-        margin-right: 10px;
+        margin-right: 8px;
     }
 
     .cal-guest-name {
-        font-size: 15px;
+        font-size: 12.5px;
         font-weight: 700;
         color: var(--ss-text);
         white-space: nowrap;
@@ -350,7 +350,7 @@ include 'layout-header.php';
     }
 
     .cal-guest-meta {
-        font-size: 12px;
+        font-size: 10px;
         font-weight: 500;
         color: var(--ss-muted);
         white-space: nowrap;
@@ -1054,7 +1054,8 @@ include 'layout-header.php';
 
     // Timeline sudah menyambung 2 bulan (bulan ini + depan) dalam satu grid, jadi geser tanggal
     // cukup pakai scroll horizontal - di HP pakai swipe/touch bawaan browser (halus, tanpa reload),
-    // di desktop klik+geser mouse dikonversi jadi scrollLeft supaya tetap bisa di-drag pakai mouse.
+    // di desktop klik+geser mouse dikonversi jadi scrollLeft (pakai mouse event biasa, bukan Pointer
+    // Events, supaya konsisten di semua browser desktop) supaya tetap bisa di-drag pakai mouse.
     (function() {
         var scroller = document.getElementById('calTimelineScroll');
         if (!scroller) return;
@@ -1063,16 +1064,16 @@ include 'layout-header.php';
             startScroll = 0,
             dragged = false;
 
-        scroller.addEventListener('pointerdown', function(e) {
-            if (e.pointerType !== 'mouse') return;
-            e.preventDefault();
+        scroller.addEventListener('mousedown', function(e) {
+            if (e.button !== 0) return;
             isDown = true;
             dragged = false;
             startX = e.clientX;
             startScroll = scroller.scrollLeft;
             scroller.classList.add('is-dragging');
+            e.preventDefault();
         });
-        window.addEventListener('pointermove', function(e) {
+        document.addEventListener('mousemove', function(e) {
             if (!isDown) return;
             var dx = e.clientX - startX;
             if (Math.abs(dx) > 4) dragged = true;
@@ -1083,8 +1084,8 @@ include 'layout-header.php';
             isDown = false;
             scroller.classList.remove('is-dragging');
         }
-        window.addEventListener('pointerup', endDrag);
-        window.addEventListener('pointercancel', endDrag);
+        document.addEventListener('mouseup', endDrag);
+        document.addEventListener('mouseleave', endDrag);
         // Cegah klik baris terbuka modal detail kalau baru saja dipakai untuk drag mouse.
         scroller.addEventListener('click', function(e) {
             if (dragged) {
