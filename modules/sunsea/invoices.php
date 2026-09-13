@@ -499,6 +499,11 @@ if (in_array($action, ['view', 'print']) && $invId > 0) {
     $sp->execute([$invId]);
     $payments = $sp->fetchAll();
 
+    // Uang riil yang sudah masuk ke kas (cash_book), beda dari paid_amount yang estimasi/pencatatan invoice
+    $scb = $pdo->prepare("SELECT COALESCE(SUM(amount),0) FROM cash_book WHERE invoice_id=? AND type='income'");
+    $scb->execute([$invId]);
+    $invoiceRiilDiterima = (float)$scb->fetchColumn();
+
     // Hitung ulang sisa tagihan dari total-terbayar, jangan percaya kolom remaining_amount yang bisa basi.
     $invoice['remaining_amount'] = max(0, (float)$invoice['total_amount'] - (float)$invoice['paid_amount']);
 }
@@ -1270,6 +1275,24 @@ $prefillPaxCount = max(1, (int)($_GET['pax_count'] ?? 1));
                         <span><?php echo sunseaRupiah((float)$invoice['remaining_amount']); ?></span>
                     </div>
                 <?php endif; ?>
+            </div>
+        </div>
+    </div>
+
+    <div class="ss-card" style="max-width:900px;margin-bottom:16px;">
+        <div class="ss-card-title" style="margin-bottom:14px;">Ringkasan Uang Masuk</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
+            <div style="background:#EFF6FF;border-radius:10px;padding:14px;">
+                <div style="font-size:12px;color:var(--ss-muted);margin-bottom:4px;">Estimasi Diterima</div>
+                <div style="font-size:18px;font-weight:800;color:#1D4ED8;"><?php echo sunseaRupiah((float)$invoice['paid_amount']); ?></div>
+            </div>
+            <div style="background:#ECFDF5;border-radius:10px;padding:14px;">
+                <div style="font-size:12px;color:var(--ss-muted);margin-bottom:4px;">Riil Diterima (Kas)</div>
+                <div style="font-size:18px;font-weight:800;color:var(--ss-success);"><?php echo sunseaRupiah($invoiceRiilDiterima); ?></div>
+            </div>
+            <div style="background:<?php echo $invoice['remaining_amount'] > 0 ? '#FEF2F2' : '#F1F5F9'; ?>;border-radius:10px;padding:14px;">
+                <div style="font-size:12px;color:var(--ss-muted);margin-bottom:4px;">Piutang</div>
+                <div style="font-size:18px;font-weight:800;color:<?php echo $invoice['remaining_amount'] > 0 ? 'var(--ss-danger)' : 'var(--ss-success)'; ?>;"><?php echo sunseaRupiah((float)$invoice['remaining_amount']); ?></div>
             </div>
         </div>
     </div>
