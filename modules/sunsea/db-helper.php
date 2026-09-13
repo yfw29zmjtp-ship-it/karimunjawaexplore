@@ -493,6 +493,7 @@ function sunseaEnsureFinanceSchema(PDO $pdo): void
         $requiredColumns = [
             'booking_id' => "ALTER TABLE cash_book ADD COLUMN booking_id INT NULL AFTER customer_id",
             'booking_item_id' => "ALTER TABLE cash_book ADD COLUMN booking_item_id INT NULL AFTER booking_id",
+            'payment_id' => "ALTER TABLE cash_book ADD COLUMN payment_id INT NULL AFTER invoice_id",
         ];
         $check = $pdo->prepare("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cash_book' AND COLUMN_NAME = ?");
         foreach ($requiredColumns as $column => $alterSql) {
@@ -508,6 +509,21 @@ function sunseaEnsureFinanceSchema(PDO $pdo): void
             JOIN invoices i ON i.id = cb.invoice_id
             SET cb.customer_id = i.customer_id
             WHERE cb.customer_id IS NULL AND cb.invoice_id IS NOT NULL
+        ");
+
+        // Backfill: hubungkan cash_book lama ke baris payments-nya (payment_id) supaya kalau DP
+        // diedit tanggal/jumlahnya, cash_book ikut sinkron otomatis - hanya untuk kasus yang tidak
+        // ambigu (1 invoice cuma 1 pembayaran & 1 baris cash_book income yang jumlahnya sama).
+        $pdo->exec("
+            UPDATE cash_book cb
+            JOIN (
+                SELECT p.id AS payment_id, p.invoice_id, p.amount
+                FROM payments p
+                WHERE (SELECT COUNT(*) FROM payments p2 WHERE p2.invoice_id = p.invoice_id) = 1
+            ) p ON p.invoice_id = cb.invoice_id AND p.amount = cb.amount
+            SET cb.payment_id = p.payment_id
+            WHERE cb.payment_id IS NULL AND cb.type = 'income' AND cb.invoice_id IS NOT NULL
+                AND (SELECT COUNT(*) FROM cash_book cb2 WHERE cb2.invoice_id = cb.invoice_id AND cb2.type = 'income') = 1
         ");
 
         // Auto-sync: kalau ada invoice yang paid_amount-nya lebih besar dari total yang sudah

@@ -57,6 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 INSERT INTO payments (invoice_id, payment_date, amount, method, reference, notes, created_by)
                 VALUES (?,?,?,?,?,?,?)
             ")->execute([$iId, $date, $amount, $method, $ref, $notes, $user]);
+            $paymentId = (int)$pdo->lastInsertId();
 
             // Recalculate paid & remaining
             $totalPaid = $pdo->prepare("SELECT COALESCE(SUM(amount),0) FROM payments WHERE invoice_id=?");
@@ -94,8 +95,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $invRow->execute([$iId]);
             $invNo = $invRow->fetchColumn();
             $pdo->prepare("
-                INSERT INTO cash_book (transaction_date, transaction_time, type, category, description, amount, reference, invoice_id, customer_id, booking_id, created_by)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?)
+                INSERT INTO cash_book (transaction_date, transaction_time, type, category, description, amount, reference, invoice_id, payment_id, customer_id, booking_id, created_by)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
             ")->execute([
                 $date,
                 date('H:i:s'),
@@ -105,12 +106,56 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $amount,
                 $ref ?: $invNo,
                 $iId,
+                $paymentId,
                 $custId,
                 $linkedBookingId,
                 $user
             ]);
 
             $_SESSION['flash_message'] = 'Pembayaran berhasil dicatat.';
+            $_SESSION['flash_type']    = 'success';
+        }
+        header('Location: invoices.php?action=view&id=' . $iId);
+        exit;
+
+        // Edit an existing payment (DP) - keep the linked cash_book row in sync
+    } elseif ($postAction === 'edit_payment') {
+        $paymentId = (int)($_POST['payment_id'] ?? 0);
+        $iId       = (int)($_POST['invoice_id'] ?? 0);
+        $amount    = (float)str_replace(['.', ','], ['', '.'], $_POST['amount'] ?? '0');
+        $method    = $_POST['method'] ?? 'transfer';
+        $date      = $_POST['payment_date'] ?: date('Y-m-d');
+        $ref       = trim($_POST['reference'] ?? '');
+        $notes     = trim($_POST['notes'] ?? '');
+
+        if ($paymentId > 0 && $iId > 0 && $amount > 0) {
+            $pdo->prepare("
+                UPDATE payments SET payment_date=?, amount=?, method=?, reference=?, notes=?
+                WHERE id=? AND invoice_id=?
+            ")->execute([$date, $amount, $method, $ref, $notes, $paymentId, $iId]);
+
+            // Recalculate paid & remaining
+            $totalPaid = $pdo->prepare("SELECT COALESCE(SUM(amount),0) FROM payments WHERE invoice_id=?");
+            $totalPaid->execute([$iId]);
+            $paid = (float)$totalPaid->fetchColumn();
+
+            $inv = $pdo->prepare("SELECT total_amount FROM invoices WHERE id=?");
+            $inv->execute([$iId]);
+            $total = (float)$inv->fetchColumn();
+            $remaining = max(0, $total - $paid);
+
+            $newStatus = $remaining <= 0 ? 'paid' : ($paid > 0 ? 'partial' : 'issued');
+            $paidAt = $remaining <= 0 ? ', paid_at=NOW()' : '';
+            $pdo->prepare("UPDATE invoices SET paid_amount=?, remaining_amount=?, status=? $paidAt WHERE id=?")
+                ->execute([$paid, $remaining, $newStatus, $iId]);
+
+            // Sinkronkan cash_book yang terhubung ke pembayaran ini (biar Finance & Laporan ikut berubah)
+            $pdo->prepare("
+                UPDATE cash_book SET transaction_date=?, amount=?, reference=IF(? = '', reference, ?)
+                WHERE payment_id=? AND invoice_id=?
+            ")->execute([$date, $amount, $ref, $ref, $paymentId, $iId]);
+
+            $_SESSION['flash_message'] = 'Pembayaran berhasil diperbarui.';
             $_SESSION['flash_type']    = 'success';
         }
         header('Location: invoices.php?action=view&id=' . $iId);
@@ -1241,6 +1286,7 @@ $prefillPaxCount = max(1, (int)($_GET['pax_count'] ?? 1));
                             <th>Jumlah</th>
                             <th>Metode</th>
                             <th>Referensi</th>
+                            <th style="width:60px;">Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -1254,6 +1300,16 @@ $prefillPaxCount = max(1, (int)($_GET['pax_count'] ?? 1));
                                 <td style="font-weight:600;color:var(--ss-success);"><?php echo sunseaRupiah((float)$p['amount']); ?></td>
                                 <td><?php echo ucfirst($p['method']); ?></td>
                                 <td><?php echo htmlspecialchars($p['reference'] ?: '-'); ?></td>
+                                <td>
+                                    <button type="button" title="Edit pembayaran" onclick='openEditPayment(<?php echo json_encode([
+                                        "id" => (int)$p["id"],
+                                        "amount" => (float)$p["amount"],
+                                        "date" => $p["payment_date"],
+                                        "method" => $p["method"],
+                                        "reference" => $p["reference"],
+                                        "notes" => $p["notes"],
+                                    ]); ?>)' style="background:none;border:none;cursor:pointer;color:var(--ss-ocean);"><i data-feather="edit-2"></i></button>
+                                </td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
@@ -1316,6 +1372,61 @@ $prefillPaxCount = max(1, (int)($_GET['pax_count'] ?? 1));
             </form>
         </div>
     </div>
+
+    <!-- Edit Payment Modal -->
+    <div id="editPaymentModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:999;align-items:center;justify-content:center;">
+        <div class="ss-card" style="width:420px;max-width:96vw;">
+            <div class="ss-card-header">
+                <div class="ss-card-title">Edit Pembayaran</div>
+                <button type="button" onclick="document.getElementById('editPaymentModal').style.display='none'" style="background:none;border:none;cursor:pointer;"><i data-feather="x"></i></button>
+            </div>
+            <form method="POST">
+                <input type="hidden" name="action" value="edit_payment">
+                <input type="hidden" name="invoice_id" value="<?php echo $invoice['id']; ?>">
+                <input type="hidden" name="payment_id" id="editPaymentId">
+                <div class="ss-form-group">
+                    <label class="ss-label">Jumlah (Rp) *</label>
+                    <input type="text" name="amount" id="editPaymentAmount" class="ss-input" required>
+                </div>
+                <div class="ss-form-group">
+                    <label class="ss-label">Tanggal Bayar</label>
+                    <input type="date" name="payment_date" id="editPaymentDate" class="ss-input">
+                </div>
+                <div class="ss-form-group">
+                    <label class="ss-label">Metode</label>
+                    <select name="method" id="editPaymentMethod" class="ss-select">
+                        <option value="transfer">Transfer Bank</option>
+                        <option value="cash">Tunai</option>
+                        <option value="qris">QRIS</option>
+                        <option value="other">Lainnya</option>
+                    </select>
+                </div>
+                <div class="ss-form-group">
+                    <label class="ss-label">No. Referensi / Bukti</label>
+                    <input type="text" name="reference" id="editPaymentReference" class="ss-input" placeholder="Opsional">
+                </div>
+                <div class="ss-form-group">
+                    <label class="ss-label">Catatan</label>
+                    <textarea name="notes" id="editPaymentNotes" class="ss-textarea" rows="2"></textarea>
+                </div>
+                <div style="display:flex;gap:10px;justify-content:flex-end;">
+                    <button type="button" onclick="document.getElementById('editPaymentModal').style.display='none'" class="ss-btn ss-btn-outline">Batal</button>
+                    <button type="submit" class="ss-btn ss-btn-primary"><i data-feather="check"></i> Simpan Perubahan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <script>
+        function openEditPayment(p) {
+            document.getElementById('editPaymentId').value = p.id;
+            document.getElementById('editPaymentAmount').value = p.amount;
+            document.getElementById('editPaymentDate').value = p.date;
+            document.getElementById('editPaymentMethod').value = p.method || 'transfer';
+            document.getElementById('editPaymentReference').value = p.reference || '';
+            document.getElementById('editPaymentNotes').value = p.notes || '';
+            document.getElementById('editPaymentModal').style.display = 'flex';
+        }
+    </script>
 
     <?php if ($openPaymentModal): ?>
         <script>
