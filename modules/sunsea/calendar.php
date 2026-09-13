@@ -220,6 +220,12 @@ include 'layout-header.php';
         border: 1px solid var(--ss-gray-2);
         -webkit-overflow-scrolling: touch;
         scroll-behavior: smooth;
+        cursor: grab;
+    }
+
+    .cal-timeline-scroll.is-dragging {
+        cursor: grabbing;
+        scroll-behavior: auto;
     }
 
     .cal-timeline {
@@ -1046,8 +1052,45 @@ include 'layout-header.php';
     }
 
     // Timeline sudah menyambung 2 bulan (bulan ini + depan) dalam satu grid, jadi geser tanggal
-    // cukup pakai scroll horizontal bawaan browser (halus, tanpa reload) - tidak perlu drag-JS lagi.
-    // Panah bulan di atas timeline tetap dipakai kalau mau lompat lebih jauh dari 2 bulan yang tampil.
+    // cukup pakai scroll horizontal - di HP pakai swipe/touch bawaan browser (halus, tanpa reload),
+    // di desktop klik+geser mouse dikonversi jadi scrollLeft supaya tetap bisa di-drag pakai mouse.
+    (function() {
+        var scroller = document.getElementById('calTimelineScroll');
+        if (!scroller) return;
+        var isDown = false,
+            startX = 0,
+            startScroll = 0,
+            dragged = false;
+
+        scroller.addEventListener('pointerdown', function(e) {
+            if (e.pointerType !== 'mouse') return;
+            isDown = true;
+            dragged = false;
+            startX = e.clientX;
+            startScroll = scroller.scrollLeft;
+            scroller.classList.add('is-dragging');
+        });
+        window.addEventListener('pointermove', function(e) {
+            if (!isDown) return;
+            var dx = e.clientX - startX;
+            if (Math.abs(dx) > 4) dragged = true;
+            scroller.scrollLeft = startScroll - dx;
+        });
+        function endDrag() {
+            if (!isDown) return;
+            isDown = false;
+            scroller.classList.remove('is-dragging');
+        }
+        window.addEventListener('pointerup', endDrag);
+        window.addEventListener('pointercancel', endDrag);
+        // Cegah klik baris terbuka modal detail kalau baru saja dipakai untuk drag mouse.
+        scroller.addEventListener('click', function(e) {
+            if (dragged) {
+                e.stopPropagation();
+                e.preventDefault();
+            }
+        }, true);
+    })();
 
     function printBookingExpenses() {
         var ctx = window.__bookingDetailPrintCtx;
