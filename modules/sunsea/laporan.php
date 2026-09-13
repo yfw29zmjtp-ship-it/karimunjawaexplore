@@ -307,9 +307,10 @@ if (($_GET['print'] ?? '') === '1') {
             </table>
 
         <?php elseif ($tab === 'bulanan'): ?>
+            <p style="margin:-8px 0 12px;color:#64748b;font-size:12px;">*Estimasi Pendapatan Trip = nilai kontrak/harga jual trip yang dimulai bulan ini (belum tentu sudah dibayar penuh). Untuk kas riil yang sudah masuk, lihat halaman Finance.</p>
             <div class="lap-summary">
                 <div class="lap-summary-box">
-                    <div class="lbl">Total Pemasukan</div>
+                    <div class="lbl">Total Estimasi Pendapatan Trip</div>
                     <div class="val" style="color:#16a34a;"><?php echo sunseaRupiah($lapBulananTotalIn); ?></div>
                 </div>
                 <div class="lap-summary-box">
@@ -326,7 +327,7 @@ if (($_GET['print'] ?? '') === '1') {
                     <tr>
                         <th>Nama Tamu</th>
                         <th>Paket</th>
-                        <th>Pemasukan</th>
+                        <th>Estimasi Pendapatan</th>
                         <th>Terbayar</th>
                         <th>Status Bayar</th>
                         <th>Pengeluaran</th>
@@ -368,9 +369,10 @@ if (($_GET['print'] ?? '') === '1') {
                 <p style="color:#94a3b8;">Pilih tamu terlebih dahulu.</p>
             <?php else: ?>
                 <p style="margin:-8px 0 14px;color:#64748b;"><?php echo htmlspecialchars($lapCustomerInfo['phone'] ?: ''); ?><?php echo ($lapCustomerInfo['phone'] && $lapCustomerInfo['email']) ? ' &middot; ' : ''; ?><?php echo htmlspecialchars($lapCustomerInfo['email'] ?: ''); ?></p>
+                <p style="margin:-8px 0 12px;color:#64748b;font-size:12px;">*Estimasi Pendapatan Trip = nilai kontrak/harga jual trip, belum tentu sudah dibayar penuh. Untuk kas riil yang sudah masuk, lihat halaman Finance.</p>
                 <div class="lap-summary">
                     <div class="lap-summary-box">
-                        <div class="lbl">Total Pemasukan</div>
+                        <div class="lbl">Total Estimasi Pendapatan Trip</div>
                         <div class="val" style="color:#16a34a;"><?php echo sunseaRupiah($lapCustomerTotalIn); ?></div>
                     </div>
                     <div class="lap-summary-box">
@@ -388,7 +390,7 @@ if (($_GET['print'] ?? '') === '1') {
                             <th>No. Booking</th>
                             <th>Tanggal Trip</th>
                             <th>Paket</th>
-                            <th>Pemasukan</th>
+                            <th>Estimasi Pendapatan</th>
                             <th>Terbayar</th>
                             <th>Status Bayar</th>
                             <th>Pengeluaran</th>
@@ -580,9 +582,10 @@ function lapPrintUrl(string $tab, array $extra = []): string
         </form>
     </div>
 
+    <p style="margin:-6px 0 12px;color:var(--ss-muted);font-size:12px;">*Estimasi Pendapatan Trip = nilai kontrak/harga jual trip yang MULAI di bulan ini (belum tentu sudah dibayar penuh, lihat kolom "Terbayar"). Untuk kas riil yang sudah masuk/keluar, lihat halaman <strong>Finance</strong>.</p>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:14px;">
         <div class="ss-card">
-            <div style="font-size:12px;color:var(--ss-muted);">Total Pemasukan</div>
+            <div style="font-size:12px;color:var(--ss-muted);">Total Estimasi Pendapatan Trip</div>
             <div style="font-size:17px;font-weight:800;color:var(--ss-success);"><?php echo sunseaRupiah($lapBulananTotalIn); ?></div>
         </div>
         <div class="ss-card">
@@ -603,7 +606,7 @@ function lapPrintUrl(string $tab, array $extra = []): string
                     <tr>
                         <th>Nama Tamu</th>
                         <th>Paket</th>
-                        <th style="width:130px;">Pemasukan</th>
+                        <th style="width:150px;">Estimasi Pendapatan</th>
                         <th style="width:130px;">Terbayar</th>
                         <th style="width:100px;">Status Bayar</th>
                         <th style="width:130px;">Pengeluaran</th>
@@ -668,9 +671,10 @@ function lapPrintUrl(string $tab, array $extra = []): string
             <div style="text-align:center;color:var(--ss-muted);padding:20px;">Pilih tamu terlebih dahulu untuk melihat laporan finance-nya.</div>
         </div>
     <?php else: ?>
+        <p style="margin:-6px 0 12px;color:var(--ss-muted);font-size:12px;">*Estimasi Pendapatan Trip = nilai kontrak/harga jual trip, belum tentu sudah dibayar penuh (lihat kolom "Terbayar"). Untuk kas riil yang sudah masuk/keluar, lihat halaman <strong>Finance</strong>.</p>
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:14px;">
             <div class="ss-card">
-                <div style="font-size:12px;color:var(--ss-muted);">Total Pemasukan</div>
+                <div style="font-size:12px;color:var(--ss-muted);">Total Estimasi Pendapatan Trip</div>
                 <div style="font-size:17px;font-weight:800;color:var(--ss-success);"><?php echo sunseaRupiah($lapCustomerTotalIn); ?></div>
             </div>
             <div class="ss-card">
@@ -692,7 +696,7 @@ function lapPrintUrl(string $tab, array $extra = []): string
                             <th>No. Booking</th>
                             <th>Tanggal Trip</th>
                             <th>Paket</th>
-                            <th style="width:130px;">Pemasukan</th>
+                            <th style="width:150px;">Estimasi Pendapatan</th>
                             <th style="width:130px;">Terbayar</th>
                             <th style="width:100px;">Status Bayar</th>
                             <th style="width:130px;">Pengeluaran</th>
