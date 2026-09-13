@@ -652,6 +652,8 @@ if (empty($sunseaNavItemsVisible)) {
             border: none;
             text-decoration: none;
             transition: .2s;
+            white-space: nowrap;
+            flex-shrink: 0;
         }
 
         .ss-btn svg {

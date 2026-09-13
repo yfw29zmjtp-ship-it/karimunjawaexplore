@@ -410,7 +410,7 @@ include 'layout-header.php';
         <h3 style="margin:0;font-size:15px;">📅 Kalender Booking</h3>
         <div style="color:var(--ss-muted);font-size:11px;">Menampilkan reservasi tamu dengan status confirmed</div>
     </div>
-    <form method="GET" style="display:flex;gap:6px;align-items:center;">
+    <form method="GET" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
         <a href="?month=<?php echo $prevMonth; ?>" class="ss-btn ss-btn-outline ss-btn-sm" title="Bulan sebelumnya"><i data-feather="chevron-left" style="width:14px;height:14px;"></i></a>
         <a href="?month=<?php echo date('Y-m'); ?>" class="ss-btn <?php echo $isCurrentMonth ? 'ss-btn-primary' : 'ss-btn-outline'; ?> ss-btn-sm">Hari Ini</a>
         <a href="?month=<?php echo $nextMonth; ?>" class="ss-btn ss-btn-outline ss-btn-sm" title="Bulan berikutnya"><i data-feather="chevron-right" style="width:14px;height:14px;"></i></a>
@@ -519,10 +519,10 @@ include 'layout-header.php';
             <?php endforeach; ?>
 
             <?php
-            // Selalu tampilkan minimal 5 baris tamu supaya tinggi timeline stabil (tidak "lompat"/menciut)
-            // walau booking masih sedikit/kosong - baris kosong ini otomatis terisi begitu ada booking baru.
-            $calPlaceholderRows = max(0, 5 - count($bookings));
-            for ($pr = 0; $pr < $calPlaceholderRows; $pr++):
+            // Baris placeholder "Belum ada tamu" cuma tampil kalau memang belum ada booking sama sekali
+            // di bulan ini - tidak lagi dipaksa menambah baris kosong saat tamu sudah ada, supaya daftar
+            // tamu tidak tercampur dengan baris kosong yang membingungkan.
+            if (empty($bookings)):
             ?>
                 <div class="cal-row cal-row-placeholder">
                     <div class="cal-guest">
@@ -538,7 +538,7 @@ include 'layout-header.php';
                         <div class="cal-cell<?php echo $cd['dow'] >= 6 ? ' is-weekend' : ''; ?><?php echo $cd['date'] === date('Y-m-d') ? ' is-today' : ''; ?><?php echo $cd['isMonthStart'] ? ' cal-month-boundary' : ''; ?>"></div>
                     <?php endforeach; ?>
                 </div>
-            <?php endfor; ?>
+            <?php endif; ?>
 
             <?php if (empty($bookings)): ?>
                 <div style="padding:8px 14px;color:#64748b;font-size:12px;">
@@ -1053,16 +1053,18 @@ include 'layout-header.php';
     }
 
     // Timeline sudah menyambung 2 bulan (bulan ini + depan) dalam satu grid, jadi geser tanggal
-    // cukup pakai scroll horizontal - di HP pakai swipe/touch bawaan browser (halus, tanpa reload),
-    // di desktop klik+geser mouse dikonversi jadi scrollLeft (pakai mouse event biasa, bukan Pointer
-    // Events, supaya konsisten di semua browser desktop) supaya tetap bisa di-drag pakai mouse.
+    // cukup pakai scroll horizontal - di HP tetap swipe/touch bawaan browser (halus, tanpa reload).
+    // Drag mouse pakai Pointer Events + setPointerCapture supaya gerakan mouse tetap "ditangkap"
+    // oleh timeline walau kursor sempat keluar dari elemen/jendela saat digeser cepat (lebih stabil
+    // dibanding mouse event + listener di window yang gampang "lepas" duluan).
     (function() {
         var scroller = document.getElementById('calTimelineScroll');
-        if (!scroller) return;
+        if (!scroller || !window.PointerEvent) return;
         var isDown = false,
             startX = 0,
             startScroll = 0,
-            dragged = false;
+            dragged = false,
+            activePointerId = null;
 
         function beginDrag(pageX) {
             isDown = true;
@@ -1084,19 +1086,26 @@ include 'layout-header.php';
             if (!isDown) return;
             isDown = false;
             scroller.classList.remove('is-dragging');
+            if (activePointerId !== null && scroller.hasPointerCapture && scroller.hasPointerCapture(activePointerId)) {
+                scroller.releasePointerCapture(activePointerId);
+            }
+            activePointerId = null;
         }
 
-        scroller.addEventListener('mousedown', function(e) {
-            if (e.button !== 0) return;
+        scroller.addEventListener('pointerdown', function(e) {
+            if (e.pointerType !== 'mouse' || e.button !== 0) return;
+            activePointerId = e.pointerId;
+            scroller.setPointerCapture(e.pointerId);
             beginDrag(e.pageX);
         });
-        window.addEventListener('mousemove', function(e) {
-            if (!isDown) return;
+        scroller.addEventListener('pointermove', function(e) {
+            if (!isDown || e.pointerType !== 'mouse') return;
             e.preventDefault();
             moveDrag(e.pageX);
         });
-        window.addEventListener('mouseup', endDrag);
-        window.addEventListener('mouseleave', endDrag);
+        scroller.addEventListener('pointerup', endDrag);
+        scroller.addEventListener('pointercancel', endDrag);
+        scroller.addEventListener('lostpointercapture', endDrag);
 
         // Cegah klik baris terbuka modal detail kalau baru saja dipakai untuk drag mouse.
         // (Swipe di HP tetap pakai scroll native browser, tidak lewat JS ini.)
