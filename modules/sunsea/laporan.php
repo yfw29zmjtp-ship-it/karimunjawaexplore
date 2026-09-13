@@ -76,6 +76,7 @@ foreach ($lapBulananRows as &$row) {
 }
 unset($row);
 $lapBulananTotalMargin = $lapBulananTotalIn - $lapBulananTotalOut;
+$lapBulananSaldoRiil = $lapBulananTotalTerbayar - $lapBulananTotalOut;
 
 // ---- PER CUSTOMER: rekap keuangan semua booking milik 1 tamu ----
 $lapCustomerId = (int)($_GET['customer_id'] ?? 0);
@@ -310,6 +311,12 @@ if (($_GET['print'] ?? '') === '1') {
             <p style="margin:-8px 0 12px;color:#64748b;font-size:12px;">*Estimasi Pendapatan Trip = nilai kontrak/harga jual trip yang dimulai bulan ini (belum tentu sudah dibayar penuh). Untuk kas riil yang sudah masuk, lihat halaman Finance.</p>
             <div class="lap-summary">
                 <div class="lap-summary-box">
+                    <div class="lbl">Saldo Kas Riil (Diterima &minus; Pengeluaran)</div>
+                    <div class="val" style="color:<?php echo $lapBulananSaldoRiil < 0 ? '#dc2626' : '#16a34a'; ?>;"><?php echo sunseaRupiah($lapBulananSaldoRiil); ?></div>
+                </div>
+            </div>
+            <div class="lap-summary">
+                <div class="lap-summary-box">
                     <div class="lbl">Total Estimasi Pendapatan Trip</div>
                     <div class="val" style="color:#16a34a;"><?php echo sunseaRupiah($lapBulananTotalIn); ?></div>
                 </div>
@@ -318,7 +325,7 @@ if (($_GET['print'] ?? '') === '1') {
                     <div class="val" style="color:#dc2626;"><?php echo sunseaRupiah($lapBulananTotalOut); ?></div>
                 </div>
                 <div class="lap-summary-box">
-                    <div class="lbl">Total Margin</div>
+                    <div class="lbl">Total Margin (Estimasi)</div>
                     <div class="val" style="color:#0C4A6E;"><?php echo sunseaRupiah($lapBulananTotalMargin); ?></div>
                 </div>
             </div>
@@ -583,6 +590,13 @@ function lapPrintUrl(string $tab, array $extra = []): string
     </div>
 
     <p style="margin:-6px 0 12px;color:var(--ss-muted);font-size:12px;">*Estimasi Pendapatan Trip = nilai kontrak/harga jual trip yang MULAI di bulan ini (belum tentu sudah dibayar penuh, lihat kolom "Terbayar"). Untuk kas riil yang sudah masuk/keluar, lihat halaman <strong>Finance</strong>.</p>
+
+    <div class="ss-card" style="margin-bottom:14px;">
+        <div style="font-size:12px;color:var(--ss-muted);">Saldo Kas Riil Bulan Ini (Uang Sudah Diterima &minus; Pengeluaran)</div>
+        <div style="font-size:20px;font-weight:800;color:<?php echo $lapBulananSaldoRiil < 0 ? 'var(--ss-danger)' : 'var(--ss-success)'; ?>;"><?php echo sunseaRupiah($lapBulananSaldoRiil); ?></div>
+        <div style="font-size:11px;color:var(--ss-muted);margin-top:4px;"><?php echo sunseaRupiah($lapBulananTotalTerbayar); ?> diterima &minus; <?php echo sunseaRupiah($lapBulananTotalOut); ?> pengeluaran</div>
+    </div>
+
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:14px;">
         <div class="ss-card">
             <div style="font-size:12px;color:var(--ss-muted);">Total Estimasi Pendapatan Trip</div>
@@ -593,7 +607,7 @@ function lapPrintUrl(string $tab, array $extra = []): string
             <div style="font-size:17px;font-weight:800;color:var(--ss-danger);"><?php echo sunseaRupiah($lapBulananTotalOut); ?></div>
         </div>
         <div class="ss-card">
-            <div style="font-size:12px;color:var(--ss-muted);">Total Margin</div>
+            <div style="font-size:12px;color:var(--ss-muted);">Total Margin (Estimasi)</div>
             <div style="font-size:17px;font-weight:800;color:var(--ss-ocean);"><?php echo sunseaRupiah($lapBulananTotalMargin); ?></div>
         </div>
     </div>
