@@ -31,3 +31,22 @@ if (!empty($_GET['apply'])) {
 } else {
     echo "Dry run only. Add ?apply=1 to the URL to actually update.\n";
 }
+
+// Step 2: cancel duplicate invoice 015 (same trip/booking, wrongly paid a second time
+// with no transfer reference) — soft-cancel: remove its payment + cash_book entry, keep
+// the invoice row itself for audit trail with status='cancelled'.
+$dupInvId = 15;
+$dup = $pdo->prepare("SELECT id, invoice_no, paid_amount, status FROM invoices WHERE id=?");
+$dup->execute([$dupInvId]);
+$dupInv = $dup->fetch(PDO::FETCH_ASSOC);
+echo "\nDuplicate invoice before: " . print_r($dupInv, true) . "\n";
+
+if (!empty($_GET['apply_cancel_dup'])) {
+    $pdo->prepare("DELETE FROM cash_book WHERE invoice_id=?")->execute([$dupInvId]);
+    $pdo->prepare("DELETE FROM payments WHERE invoice_id=?")->execute([$dupInvId]);
+    $pdo->prepare("UPDATE invoices SET paid_amount=0, remaining_amount=total_amount, status='cancelled' WHERE id=?")->execute([$dupInvId]);
+    echo "Cancelled duplicate invoice $dupInvId (payment + cash_book entry removed).\n";
+} else {
+    echo "Dry run only. Add ?apply_cancel_dup=1 to the URL to actually cancel invoice $dupInvId.\n";
+}
+
