@@ -221,6 +221,7 @@ include 'layout-header.php';
         -webkit-overflow-scrolling: touch;
         scroll-behavior: smooth;
         cursor: grab;
+        user-select: none;
     }
 
     .cal-timeline-scroll.is-dragging {
@@ -235,7 +236,7 @@ include 'layout-header.php';
 
     .cal-day-row {
         display: grid;
-        grid-template-columns: 190px repeat(var(--cal-days), minmax(18px, 1fr));
+        grid-template-columns: 210px repeat(var(--cal-days), minmax(30px, 1fr));
     }
 
     .cal-name-col {
@@ -244,8 +245,8 @@ include 'layout-header.php';
         z-index: 2;
         background: var(--ss-sky);
         border-right: 1px solid var(--ss-gray-2);
-        padding: 10px 12px;
-        font-size: 12px;
+        padding: 12px 14px;
+        font-size: 13px;
         font-weight: 800;
         color: var(--ss-deep);
         text-transform: uppercase;
@@ -256,8 +257,8 @@ include 'layout-header.php';
 
     .cal-day-col {
         text-align: center;
-        padding: 8px 1px;
-        font-size: 11px;
+        padding: 10px 1px;
+        font-size: 12.5px;
         font-weight: 700;
         color: var(--ss-muted);
         background: var(--ss-sky);
@@ -300,7 +301,7 @@ include 'layout-header.php';
 
     .cal-row {
         display: grid;
-        grid-template-columns: 190px repeat(var(--cal-days), minmax(18px, 1fr));
+        grid-template-columns: 210px repeat(var(--cal-days), minmax(30px, 1fr));
         align-items: center;
         cursor: pointer;
         transition: background .15s ease;
@@ -320,27 +321,27 @@ include 'layout-header.php';
         z-index: 1;
         background: #fff;
         border-right: 1px solid var(--ss-gray-2);
-        padding: 10px 12px;
+        padding: 12px 14px;
         overflow: hidden;
     }
 
     .cal-guest-avatar {
-        width: 28px;
-        height: 28px;
+        width: 34px;
+        height: 34px;
         border-radius: 50%;
         background: linear-gradient(135deg, var(--ss-ocean), var(--ss-cyan));
         color: #fff;
-        font-size: 12px;
+        font-size: 14px;
         font-weight: 800;
         display: inline-flex;
         align-items: center;
         justify-content: center;
         flex-shrink: 0;
-        margin-right: 8px;
+        margin-right: 10px;
     }
 
     .cal-guest-name {
-        font-size: 14px;
+        font-size: 15px;
         font-weight: 700;
         color: var(--ss-text);
         white-space: nowrap;
@@ -349,14 +350,14 @@ include 'layout-header.php';
     }
 
     .cal-guest-meta {
-        font-size: 11px;
+        font-size: 12px;
         font-weight: 500;
         color: var(--ss-muted);
         white-space: nowrap;
     }
 
     .cal-cell {
-        height: 28px;
+        height: 36px;
         border-left: 1px solid rgba(15, 23, 42, .03);
         border-bottom: 1px solid rgba(15, 23, 42, .03);
     }
@@ -371,7 +372,7 @@ include 'layout-header.php';
     }
 
     .cal-bar {
-        height: 20px;
+        height: 26px;
         margin: 0 1px;
         border-radius: 999px;
         background: linear-gradient(90deg, var(--ss-ocean), #E85D2C);
@@ -387,7 +388,7 @@ include 'layout-header.php';
     }
 
     .cal-bar-label {
-        font-size: 11px;
+        font-size: 12.5px;
         font-weight: 700;
         color: #fff;
         white-space: nowrap;
@@ -1064,6 +1065,7 @@ include 'layout-header.php';
 
         scroller.addEventListener('pointerdown', function(e) {
             if (e.pointerType !== 'mouse') return;
+            e.preventDefault();
             isDown = true;
             dragged = false;
             startX = e.clientX;
