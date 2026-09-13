@@ -107,6 +107,25 @@ foreach ($lapCustomerRows as &$row) {
 unset($row);
 $lapCustomerTotalMargin = $lapCustomerTotalIn - $lapCustomerTotalOut;
 
+// Detail semua transaksi kas (masuk & keluar) milik tamu ini - baik yang ditandai langsung
+// lewat customer_id di cash_book, maupun yang tertaut lewat booking milik tamu tersebut.
+$lapCustomerTxRows = [];
+$lapCustomerTxIncome = 0;
+$lapCustomerTxExpense = 0;
+if ($lapCustomerId > 0) {
+    $lapCustomerTxRows = lapFetchAll($pdo, "
+        SELECT cb.*, bo.booking_no
+        FROM cash_book cb
+        LEFT JOIN booking_orders bo ON bo.id = cb.booking_id
+        WHERE cb.customer_id = ? OR cb.booking_id IN (SELECT id FROM booking_orders WHERE customer_id = ?)
+        ORDER BY cb.transaction_date, cb.id
+    ", [$lapCustomerId, $lapCustomerId]);
+    foreach ($lapCustomerTxRows as $tx) {
+        if ($tx['type'] === 'income') $lapCustomerTxIncome += (float)$tx['amount'];
+        else $lapCustomerTxExpense += (float)$tx['amount'];
+    }
+}
+
 // ---- PRINT MODE: halaman bersih tanpa sidebar, langsung window.print() ----
 if (($_GET['print'] ?? '') === '1') {
     $companyName = sunseaSetting($pdo, 'company_name', 'Karimunjawa Explore');
@@ -393,6 +412,43 @@ if (($_GET['print'] ?? '') === '1') {
                         </tr>
                     </tfoot>
                 </table>
+
+                <h3 style="margin:20px 0 8px;">Detail Transaksi Kas - <?php echo htmlspecialchars($lapCustomerInfo['name']); ?></h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Tanggal</th>
+                            <th>Tipe</th>
+                            <th>Kategori</th>
+                            <th>Deskripsi</th>
+                            <th>No. Booking</th>
+                            <th>Jumlah</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if (empty($lapCustomerTxRows)): ?>
+                            <tr>
+                                <td colspan="6" style="text-align:center;color:#94a3b8;">Belum ada transaksi kas untuk tamu ini.</td>
+                            </tr>
+                        <?php endif; ?>
+                        <?php foreach ($lapCustomerTxRows as $tx): ?>
+                            <tr>
+                                <td><?php echo date('d M Y', strtotime($tx['transaction_date'])); ?></td>
+                                <td><?php echo $tx['type'] === 'income' ? 'Masuk' : 'Keluar'; ?></td>
+                                <td><?php echo htmlspecialchars($tx['category'] ?: '-'); ?></td>
+                                <td><?php echo htmlspecialchars($tx['description']); ?></td>
+                                <td><?php echo htmlspecialchars($tx['booking_no'] ?: '-'); ?></td>
+                                <td><?php echo sunseaRupiah((float)$tx['amount']); ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="5">Total Kas Masuk / Keluar</td>
+                            <td><?php echo sunseaRupiah($lapCustomerTxIncome); ?> / <?php echo sunseaRupiah($lapCustomerTxExpense); ?></td>
+                        </tr>
+                    </tfoot>
+                </table>
             <?php endif; ?>
         <?php endif; ?>
     </body>
@@ -653,6 +709,49 @@ function lapPrintUrl(string $tab, array $extra = []): string
                             <td></td>
                             <td style="color:var(--ss-danger);"><strong><?php echo sunseaRupiah($lapCustomerTotalOut); ?></strong></td>
                             <td><strong><?php echo sunseaRupiah($lapCustomerTotalMargin); ?></strong></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <div class="ss-card" style="margin-top:14px;">
+            <div class="ss-card-title" style="margin-bottom:4px;">Detail Transaksi Kas - <?php echo htmlspecialchars($lapCustomerInfo['name']); ?></div>
+            <p style="margin:0 0 10px;color:var(--ss-muted);font-size:11.5px;">Semua uang masuk & keluar yang tercatat di Buku Kas untuk tamu ini (baik yang tertaut langsung maupun lewat booking-nya).</p>
+            <div class="ss-table-wrap">
+                <table class="ss-table" style="font-size:12px;">
+                    <thead>
+                        <tr>
+                            <th>Tanggal</th>
+                            <th style="width:80px;">Tipe</th>
+                            <th>Kategori</th>
+                            <th>Deskripsi</th>
+                            <th>No. Booking</th>
+                            <th style="width:130px;">Jumlah</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if (empty($lapCustomerTxRows)): ?>
+                            <tr>
+                                <td colspan="6" style="text-align:center;color:var(--ss-muted);padding:20px;">Belum ada transaksi kas untuk tamu ini.</td>
+                            </tr>
+                        <?php endif; ?>
+                        <?php foreach ($lapCustomerTxRows as $tx): ?>
+                            <tr>
+                                <td><?php echo date('d M Y', strtotime($tx['transaction_date'])); ?></td>
+                                <td><span style="font-weight:700;color:<?php echo $tx['type'] === 'income' ? 'var(--ss-success)' : 'var(--ss-danger)'; ?>;"><?php echo $tx['type'] === 'income' ? 'Masuk' : 'Keluar'; ?></span></td>
+                                <td><?php echo htmlspecialchars($tx['category'] ?: '-'); ?></td>
+                                <td><?php echo htmlspecialchars($tx['description']); ?></td>
+                                <td><?php echo htmlspecialchars($tx['booking_no'] ?: '-'); ?></td>
+                                <td style="font-weight:600;color:<?php echo $tx['type'] === 'income' ? 'var(--ss-success)' : 'var(--ss-danger)'; ?>;"><?php echo sunseaRupiah((float)$tx['amount']); ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                    <tfoot>
+                        <tr style="border-top:2px solid var(--ss-gray-2);">
+                            <td colspan="4"><strong>Total Kas</strong></td>
+                            <td></td>
+                            <td><strong style="color:var(--ss-success);"><?php echo sunseaRupiah($lapCustomerTxIncome); ?></strong> / <strong style="color:var(--ss-danger);"><?php echo sunseaRupiah($lapCustomerTxExpense); ?></strong></td>
                         </tr>
                     </tfoot>
                 </table>
