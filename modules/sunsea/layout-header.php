@@ -1248,12 +1248,27 @@ if (empty($sunseaNavItemsVisible)) {
                 <span class="ss-page-title"><?php echo htmlspecialchars($pageTitle ?? 'Karimunjawa Explore'); ?></span>
             </div>
             <div class="ss-topbar-actions">
+                <span class="ss-badge ss-badge-ocean" id="ssLiveClock">🕒 --:--:--</span>
                 <span class="ss-badge ss-badge-ocean">🌊 Karimunjawa Explore</span>
                 <a href="<?php echo BASE_URL; ?>/logout.php" style="color:var(--ss-muted);text-decoration:none;font-size:12px;">
                     <i data-feather="log-out" style="width:15px;height:15px;vertical-align:middle;"></i>
                 </a>
             </div>
         </header>
+
+        <script>
+        (function () {
+            var el = document.getElementById('ssLiveClock');
+            if (!el) return;
+            function tick() {
+                var d = new Date();
+                var pad = function (n) { return String(n).padStart(2, '0'); };
+                el.textContent = '🕒 ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+            }
+            tick();
+            setInterval(tick, 1000);
+        })();
+        </script>
 
         <div class="ss-content">
             <?php
