@@ -218,19 +218,13 @@ include 'layout-header.php';
         overflow-x: auto;
         border-radius: 10px;
         border: 1px solid var(--ss-gray-2);
-        cursor: grab;
-        user-select: none;
-    }
-
-    .cal-timeline-scroll.is-dragging {
-        cursor: grabbing;
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
     }
 
     .cal-timeline {
         width: 100%;
         background: #fff;
-        touch-action: pan-y;
-        will-change: transform;
     }
 
     .cal-day-row {
@@ -1051,76 +1045,9 @@ include 'layout-header.php';
         document.body.style.overflow = '';
     }
 
-    // Geser (swipe) timeline ke kiri/kanan untuk pindah ke bulan berikutnya/sebelumnya, dengan animasi slide yang halus.
-    (function() {
-        var scroller = document.getElementById('calTimelineScroll');
-        var timeline = document.getElementById('calTimeline');
-        if (!scroller || !timeline) return;
-
-        var prevMonthVal = scroller.dataset.prevMonth;
-        var nextMonthVal = scroller.dataset.nextMonth;
-        var isDown = false,
-            startX = 0,
-            dx = 0,
-            dragged = false,
-            width = 0;
-        var THRESHOLD = 90;
-
-        function setTransition(on) {
-            timeline.style.transition = on ? 'transform .28s cubic-bezier(.22,.9,.36,1), opacity .28s ease' : 'none';
-        }
-
-        scroller.addEventListener('pointerdown', function(e) {
-            if (e.pointerType === 'mouse' && e.button !== 0) return;
-            isDown = true;
-            dragged = false;
-            dx = 0;
-            startX = e.clientX;
-            width = scroller.clientWidth;
-            setTransition(false);
-            scroller.classList.add('is-dragging');
-        });
-        window.addEventListener('pointermove', function(e) {
-            if (!isDown) return;
-            e.preventDefault();
-            dx = e.clientX - startX;
-            if (Math.abs(dx) > 4) dragged = true;
-            // Beri efek "tertahan" (rubber-band) kalau ditarik ke arah tanpa bulan berikutnya/sebelumnya.
-            var limited = dx;
-            if (dx < 0 && !nextMonthVal) limited = dx * 0.25;
-            if (dx > 0 && !prevMonthVal) limited = dx * 0.25;
-            timeline.style.transform = 'translateX(' + limited + 'px)';
-        });
-
-        function endDrag() {
-            if (!isDown) return;
-            isDown = false;
-            scroller.classList.remove('is-dragging');
-            setTransition(true);
-
-            var goNext = dx <= -THRESHOLD && nextMonthVal;
-            var goPrev = dx >= THRESHOLD && prevMonthVal;
-
-            if (goNext || goPrev) {
-                timeline.style.transform = 'translateX(' + (goNext ? -width : width) + 'px)';
-                timeline.style.opacity = '0';
-                window.setTimeout(function() {
-                    window.location.href = '?month=' + (goNext ? nextMonthVal : prevMonthVal);
-                }, 240);
-            } else {
-                timeline.style.transform = 'translateX(0)';
-            }
-        }
-        window.addEventListener('pointerup', endDrag);
-        window.addEventListener('pointercancel', endDrag);
-        // Cegah klik baris terbuka modal detail kalau baru saja dipakai untuk swipe.
-        scroller.addEventListener('click', function(e) {
-            if (dragged) {
-                e.stopPropagation();
-                e.preventDefault();
-            }
-        }, true);
-    })();
+    // Timeline sudah menyambung 2 bulan (bulan ini + depan) dalam satu grid, jadi geser tanggal
+    // cukup pakai scroll horizontal bawaan browser (halus, tanpa reload) - tidak perlu drag-JS lagi.
+    // Panah bulan di atas timeline tetap dipakai kalau mau lompat lebih jauh dari 2 bulan yang tampil.
 
     function printBookingExpenses() {
         var ctx = window.__bookingDetailPrintCtx;
