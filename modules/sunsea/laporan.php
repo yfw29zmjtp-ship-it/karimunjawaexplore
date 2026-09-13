@@ -458,8 +458,8 @@ if (($_GET['print'] ?? '') === '1') {
                     </tbody>
                     <tfoot>
                         <tr>
-                            <td colspan="5">Total Kas Masuk / Keluar</td>
-                            <td><?php echo sunseaRupiah($lapCustomerTxIncome); ?> / <?php echo sunseaRupiah($lapCustomerTxExpense); ?></td>
+                            <td colspan="5">Saldo Kas (Uang Diterima <?php echo sunseaRupiah($lapCustomerTotalTerbayar); ?> &minus; Pengeluaran <?php echo sunseaRupiah($lapCustomerTxExpense); ?>)</td>
+                            <td><?php echo sunseaRupiah($lapCustomerTotalTerbayar - $lapCustomerTxExpense); ?></td>
                         </tr>
                     </tfoot>
                 </table>
@@ -740,7 +740,7 @@ function lapPrintUrl(string $tab, array $extra = []): string
 
         <div class="ss-card" style="margin-top:14px;">
             <div class="ss-card-title" style="margin-bottom:4px;">Detail Transaksi Kas - <?php echo htmlspecialchars($lapCustomerInfo['name']); ?></div>
-            <p style="margin:0 0 10px;color:var(--ss-muted);font-size:11.5px;">Semua uang masuk & keluar yang tercatat di Buku Kas untuk tamu ini (baik yang tertaut langsung maupun lewat booking-nya).</p>
+            <p style="margin:0 0 10px;color:var(--ss-muted);font-size:11.5px;">Semua uang masuk & keluar yang tercatat di Buku Kas untuk tamu ini (baik yang tertaut langsung maupun lewat booking-nya). Saldo Kas di bawah dihitung dari uang yang benar-benar sudah diterima (Terbayar), bukan cuma transaksi "Masuk" yang tercatat manual di kas — supaya tidak salah kelihatan minus.</p>
             <div class="ss-table-wrap">
                 <table class="ss-table" style="font-size:12px;">
                     <thead>
@@ -771,10 +771,10 @@ function lapPrintUrl(string $tab, array $extra = []): string
                         <?php endforeach; ?>
                     </tbody>
                     <tfoot>
+                        <?php $lapCustomerKasSaldo = $lapCustomerTotalTerbayar - $lapCustomerTxExpense; ?>
                         <tr style="border-top:2px solid var(--ss-gray-2);">
-                            <td colspan="4"><strong>Total Kas</strong></td>
-                            <td></td>
-                            <td><strong style="color:var(--ss-success);"><?php echo sunseaRupiah($lapCustomerTxIncome); ?></strong> / <strong style="color:var(--ss-danger);"><?php echo sunseaRupiah($lapCustomerTxExpense); ?></strong></td>
+                            <td colspan="5"><strong>Saldo Kas</strong> <span style="color:var(--ss-muted);font-weight:400;">(Uang Diterima <?php echo sunseaRupiah($lapCustomerTotalTerbayar); ?> &minus; Pengeluaran <?php echo sunseaRupiah($lapCustomerTxExpense); ?>)</span></td>
+                            <td><strong style="color:<?php echo $lapCustomerKasSaldo < 0 ? 'var(--ss-danger)' : 'var(--ss-success)'; ?>;"><?php echo sunseaRupiah($lapCustomerKasSaldo); ?></strong></td>
                         </tr>
                     </tfoot>
                 </table>
