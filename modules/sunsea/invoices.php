@@ -1084,7 +1084,7 @@ if ($action === 'print' && $invoice):
                     <tbody>
                         <?php foreach ($payments as $ppIdx => $pp):
                             $ppIsLast = $ppIdx === count($payments) - 1;
-                            $ppStage = $ppIdx === 0 ? 'DP 1' : ($ppIsLast && $computedRemaining <= 0 ? 'Pelunasan' : 'DP ' . ($ppIdx + 1));
+                            $ppStage = ($ppIsLast && $computedRemaining <= 0) ? 'Pelunasan' : ($ppIdx === 0 ? 'DP 1' : 'DP ' . ($ppIdx + 1));
                         ?>
                             <tr>
                                 <td><?php echo $ppStage; ?></td>
@@ -1245,7 +1245,7 @@ $prefillPaxCount = max(1, (int)($_GET['pax_count'] ?? 1));
                     <tbody>
                         <?php foreach ($payments as $pIdx => $p):
                             $isLastPayment = $pIdx === count($payments) - 1;
-                            $payStage = $pIdx === 0 ? 'DP 1' : ($isLastPayment && (float)$invoice['remaining_amount'] <= 0 ? 'Pelunasan' : 'DP ' . ($pIdx + 1));
+                            $payStage = ($isLastPayment && (float)$invoice['remaining_amount'] <= 0) ? 'Pelunasan' : ($pIdx === 0 ? 'DP 1' : 'DP ' . ($pIdx + 1));
                         ?>
                             <tr>
                                 <td><strong><?php echo $payStage; ?></strong></td>

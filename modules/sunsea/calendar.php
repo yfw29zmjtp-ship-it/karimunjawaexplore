@@ -971,7 +971,7 @@ include 'layout-header.php';
                 } else {
                     html += '<table class="ss-table"><thead><tr><th style="white-space:nowrap;">Tanggal</th><th>Metode</th><th style="width:115px;white-space:nowrap;">Jumlah</th></tr></thead><tbody>';
                     data.payments.forEach(function(py, idx) {
-                        var payLabel = (idx === 0 ? 'DP 1' : (idx === data.payments.length - 1 && data.remainingPayment <= 0 ? 'Pelunasan' : 'DP ' + (idx + 1)));
+                        var payLabel = (idx === data.payments.length - 1 && data.remainingPayment <= 0) ? 'Pelunasan' : (idx === 0 ? 'DP 1' : 'DP ' + (idx + 1));
                         html += '<tr><td style="white-space:nowrap;">' + py.payment_date + '</td>' +
                             '<td>' + payLabel + (py.method ? ' <small style="color:var(--ss-muted);">(' + py.method + ')</small>' : '') + '</td>' +
                             '<td style="font-weight:600;color:var(--ss-success);white-space:nowrap;">' + fmt(py.amount) + '</td></tr>';

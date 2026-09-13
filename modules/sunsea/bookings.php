@@ -1064,7 +1064,7 @@ include 'layout-header.php';
                     <tbody>
                         <?php foreach ($detailPayments as $dpIdx => $dp):
                             $dpIsLast = $dpIdx === count($detailPayments) - 1;
-                            $dpStage = $dpIdx === 0 ? 'DP 1' : ($dpIsLast && $remainingPaymentActual <= 0 ? 'Pelunasan' : 'DP ' . ($dpIdx + 1));
+                            $dpStage = ($dpIsLast && $remainingPaymentActual <= 0) ? 'Pelunasan' : ($dpIdx === 0 ? 'DP 1' : 'DP ' . ($dpIdx + 1));
                         ?>
                             <tr>
                                 <td><strong><?php echo $dpStage; ?></strong></td>
