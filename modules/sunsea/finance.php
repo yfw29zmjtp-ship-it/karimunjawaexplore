@@ -301,6 +301,23 @@ include 'layout-header.php';
                         </tr>
                     <?php endforeach; ?>
                 </tbody>
+                <?php if (!empty($rows)): ?>
+                    <tfoot>
+                        <tr style="border-top:2px solid var(--ss-gray-2);">
+                            <td colspan="6" style="font-size:12px;text-align:right;"><strong>Total <?php echo count($rows); ?> transaksi (sesuai filter di atas):</strong></td>
+                            <td style="font-size:12px;font-weight:800;">
+                                <?php if ($filterType === 'income'): ?>
+                                    <span style="color:var(--ss-success);">+ <?php echo sunseaRupiah($totalIncome); ?></span>
+                                <?php elseif ($filterType === 'expense'): ?>
+                                    <span style="color:var(--ss-danger);">- <?php echo sunseaRupiah($totalExpense); ?></span>
+                                <?php else: ?>
+                                    <span style="color:<?php echo $balance < 0 ? 'var(--ss-danger)' : 'var(--ss-ocean)'; ?>;"><?php echo sunseaRupiah($balance); ?></span>
+                                <?php endif; ?>
+                            </td>
+                            <td colspan="2"></td>
+                        </tr>
+                    </tfoot>
+                <?php endif; ?>
             </table>
         </div>
     </div>
