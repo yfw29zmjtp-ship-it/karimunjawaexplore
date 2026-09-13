@@ -72,8 +72,9 @@ $lapBulananRows = lapFetchAll($pdo, "
 $lapBulananTotalIn = 0;
 $lapBulananTotalOut = 0;
 foreach ($lapBulananRows as &$row) {
-    $row['saldo'] = (float)$row['diterima'] - (float)$row['pengeluaran'];
-    $lapBulananTotalIn += (float)$row['diterima'];
+    $row['diterima_total'] = (float)$row['diterima'] + (float)$row['diterima_bulan_lain'];
+    $row['saldo'] = $row['diterima_total'] - (float)$row['pengeluaran'];
+    $lapBulananTotalIn += $row['diterima_total'];
     $lapBulananTotalOut += (float)$row['pengeluaran'];
 }
 unset($row);
@@ -327,24 +328,22 @@ if (($_GET['print'] ?? '') === '1') {
                         <th>Diterima</th>
                         <th>Pengeluaran</th>
                         <th>Saldo</th>
+                        <th>Keterangan</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($lapBulananRows)): ?>
                         <tr>
-                            <td colspan="4" style="text-align:center;color:#94a3b8;">Tidak ada transaksi kas pada bulan ini.</td>
+                            <td colspan="5" style="text-align:center;color:#94a3b8;">Tidak ada transaksi kas pada bulan ini.</td>
                         </tr>
                     <?php endif; ?>
                     <?php foreach ($lapBulananRows as $r): ?>
                         <tr>
                             <td><?php echo htmlspecialchars($r['customer_name']); ?></td>
-                            <td><?php echo sunseaRupiah((float)$r['diterima']); ?>
-                                <?php if ((float)$r['diterima_bulan_lain'] > 0): ?>
-                                    <br><small style="color:#64748b;">*sudah DP <?php echo sunseaRupiah((float)$r['diterima_bulan_lain']); ?> pada <?php echo date('d M Y', strtotime($r['diterima_bulan_lain_tanggal'])); ?> (bulan lain)</small>
-                                <?php endif; ?>
-                            </td>
+                            <td><?php echo sunseaRupiah((float)$r['diterima_total']); ?></td>
                             <td><?php echo sunseaRupiah((float)$r['pengeluaran']); ?></td>
                             <td><?php echo sunseaRupiah((float)$r['saldo']); ?></td>
+                            <td><?php echo (float)$r['diterima_bulan_lain'] > 0 ? ('DP ' . sunseaRupiah((float)$r['diterima_bulan_lain']) . ' pada ' . date('d M Y', strtotime($r['diterima_bulan_lain_tanggal'])) . ' (bulan lain)') : '-'; ?></td>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>
@@ -354,6 +353,7 @@ if (($_GET['print'] ?? '') === '1') {
                         <td><?php echo sunseaRupiah($lapBulananTotalIn); ?></td>
                         <td><?php echo sunseaRupiah($lapBulananTotalOut); ?></td>
                         <td><?php echo sunseaRupiah($lapBulananSaldoRiil); ?></td>
+                        <td></td>
                     </tr>
                 </tfoot>
             </table>
@@ -599,24 +599,22 @@ function lapPrintUrl(string $tab, array $extra = []): string
                         <th style="width:150px;">Diterima</th>
                         <th style="width:150px;">Pengeluaran</th>
                         <th style="width:150px;">Saldo</th>
+                        <th>Keterangan</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($lapBulananRows)): ?>
                         <tr>
-                            <td colspan="4" style="text-align:center;color:var(--ss-muted);padding:20px;">Tidak ada transaksi kas pada bulan ini.</td>
+                            <td colspan="5" style="text-align:center;color:var(--ss-muted);padding:20px;">Tidak ada transaksi kas pada bulan ini.</td>
                         </tr>
                     <?php endif; ?>
                     <?php foreach ($lapBulananRows as $r): ?>
                         <tr>
                             <td><?php echo htmlspecialchars($r['customer_name']); ?></td>
-                            <td style="color:var(--ss-success);font-weight:600;"><?php echo sunseaRupiah((float)$r['diterima']); ?>
-                                <?php if ((float)$r['diterima_bulan_lain'] > 0): ?>
-                                    <br><small style="color:var(--ss-muted);font-weight:400;">*sudah DP <?php echo sunseaRupiah((float)$r['diterima_bulan_lain']); ?> pada <?php echo date('d M Y', strtotime($r['diterima_bulan_lain_tanggal'])); ?> (bulan lain)</small>
-                                <?php endif; ?>
-                            </td>
+                            <td style="color:var(--ss-success);font-weight:600;"><?php echo sunseaRupiah((float)$r['diterima_total']); ?></td>
                             <td style="color:var(--ss-danger);font-weight:600;"><?php echo sunseaRupiah((float)$r['pengeluaran']); ?></td>
                             <td style="font-weight:700;"><?php echo sunseaRupiah((float)$r['saldo']); ?></td>
+                            <td style="color:var(--ss-muted);font-size:11px;"><?php echo (float)$r['diterima_bulan_lain'] > 0 ? ('DP ' . sunseaRupiah((float)$r['diterima_bulan_lain']) . ' pada ' . date('d M Y', strtotime($r['diterima_bulan_lain_tanggal'])) . ' (bulan lain)') : '-'; ?></td>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>
@@ -626,6 +624,7 @@ function lapPrintUrl(string $tab, array $extra = []): string
                         <td style="color:var(--ss-success);"><strong><?php echo sunseaRupiah($lapBulananTotalIn); ?></strong></td>
                         <td style="color:var(--ss-danger);"><strong><?php echo sunseaRupiah($lapBulananTotalOut); ?></strong></td>
                         <td><strong><?php echo sunseaRupiah($lapBulananSaldoRiil); ?></strong></td>
+                        <td></td>
                     </tr>
                 </tfoot>
             </table>
