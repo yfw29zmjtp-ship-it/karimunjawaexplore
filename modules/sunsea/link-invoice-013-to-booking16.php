@@ -3,9 +3,10 @@
 // so ensureInvoiceFromBooking() recognizes it and won't auto-generate another duplicate invoice.
 // Delete this file after running once.
 define('APP_ACCESS', true);
-require_once __DIR__ . '/config/config.php';
-require_once __DIR__ . '/config/database.php';
-require_once __DIR__ . '/includes/auth.php';
+require_once '../../config/config.php';
+require_once '../../config/database.php';
+require_once '../../includes/auth.php';
+require_once 'db-helper.php';
 
 $auth = new Auth();
 $auth->requireLogin();
