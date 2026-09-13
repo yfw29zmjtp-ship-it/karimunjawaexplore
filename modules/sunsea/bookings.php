@@ -862,7 +862,7 @@ $facilities = [];
 $list = safeFetchAll(
     $pdo,
     "SELECT b.*, c.name as customer_name, c.phone as customer_phone, p.name as package_name,
-        COALESCE((SELECT SUM(i.paid_amount) FROM invoices i WHERE i.status != 'cancelled' AND (i.internal_notes = CONCAT('booking_id:', b.id) OR i.internal_notes = CONCAT('Generated from Reservasi: ', b.booking_no))), 0) AS paid_amount_total,
+        COALESCE((SELECT SUM(i.paid_amount) FROM invoices i WHERE i.status != 'cancelled' AND (i.internal_notes = CONCAT('booking_id:', b.id) COLLATE utf8mb4_general_ci OR i.internal_notes = CONCAT('Generated from Reservasi: ', b.booking_no) COLLATE utf8mb4_general_ci)), 0) AS paid_amount_total,
         (SELECT component_name FROM booking_order_items WHERE booking_id=b.id AND component_code IN ('penginapan','accommodation') ORDER BY sort_order LIMIT 1) AS accommodation_item
     FROM booking_orders b
     JOIN customers c ON c.id=b.customer_id
