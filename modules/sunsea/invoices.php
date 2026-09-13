@@ -265,7 +265,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$inv) {
             $_SESSION['flash_message'] = 'Invoice tidak ditemukan.';
             $_SESSION['flash_type']    = 'error';
-        } elseif (preg_match('/Generated from Reservasi:/', (string)($inv['internal_notes'] ?? ''))) {
+        } elseif (
+            preg_match('/Generated from Reservasi:/', (string)($inv['internal_notes'] ?? ''))
+            || preg_match('/^booking_id:\d+$/', (string)($inv['internal_notes'] ?? ''))
+        ) {
+            // Invoice ini sudah otomatis dibuat DARI booking yang ada (lihat ensureInvoiceFromBooking
+            // di bookings.php) atau sebelumnya sudah dikonfirmasi jadi booking — jangan buat duplikat.
             $_SESSION['flash_message'] = 'Invoice ini sudah terhubung ke booking.';
             $_SESSION['flash_type']    = 'error';
         } elseif (empty($inv['trip_date']) || empty($inv['trip_end_date'])) {
@@ -419,13 +424,27 @@ if (in_array($action, ['view', 'print']) && $invId > 0) {
         $bo = $boStmt->fetch(PDO::FETCH_ASSOC);
         if ($bo) {
             $linkedBooking = ['id' => (int)$bo['id'], 'booking_no' => $m[1]];
-            if ($bo['booking_mode'] === 'paket') {
-                $invItems = array_values(array_filter($invItems, function ($it) {
-                    $isZero = (float)$it['unit_price'] === 0.0 && (float)$it['subtotal'] === 0.0;
-                    $isPaketLine = stripos((string)$it['description'], 'Paket:') === 0;
-                    return !$isZero || $isPaketLine;
-                }));
-            }
+        }
+    } elseif (preg_match('/^booking_id:(\d+)$/', (string)($invoice['internal_notes'] ?? ''), $m)) {
+        // Invoice ini dibuat OTOMATIS dari booking yang sudah ada (lihat ensureInvoiceFromBooking
+        // di bookings.php) — bukan invoice manual yang belum terhubung booking mana pun.
+        $boStmt = $pdo->prepare("SELECT id, booking_no, booking_mode FROM booking_orders WHERE id=?");
+        $boStmt->execute([(int)$m[1]]);
+        $bo = $boStmt->fetch(PDO::FETCH_ASSOC);
+        if ($bo) {
+            $linkedBooking = ['id' => (int)$bo['id'], 'booking_no' => $bo['booking_no']];
+        }
+    }
+    if ($linkedBooking) {
+        $boModeStmt = $pdo->prepare("SELECT booking_mode FROM booking_orders WHERE id=?");
+        $boModeStmt->execute([$linkedBooking['id']]);
+        $linkedBookingMode = $boModeStmt->fetchColumn();
+        if ($linkedBookingMode === 'paket') {
+            $invItems = array_values(array_filter($invItems, function ($it) {
+                $isZero = (float)$it['unit_price'] === 0.0 && (float)$it['subtotal'] === 0.0;
+                $isPaketLine = stripos((string)$it['description'], 'Paket:') === 0;
+                return !$isZero || $isPaketLine;
+            }));
         }
     }
 
