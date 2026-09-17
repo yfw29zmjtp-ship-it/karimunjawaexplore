@@ -13,6 +13,17 @@ $auth->requireLogin();
 $pdo = getSunseaConnection();
 sunseaEnsureMasterDataSchema($pdo);
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete') {
+    $id = (int)($_POST['id'] ?? 0);
+    if ($id > 0) {
+        $pdo->prepare("DELETE FROM coordinators WHERE id=?")->execute([$id]);
+        $_SESSION['flash_message'] = 'Koordinator dihapus.';
+        $_SESSION['flash_type'] = 'success';
+    }
+    header('Location: coordinators.php');
+    exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save') {
     $id = (int)($_POST['id'] ?? 0);
     $d = [
@@ -96,6 +107,7 @@ include 'layout-header.php';
                         <th>Kontak</th>
                         <th>Area</th>
                         <th>Status</th>
+                        <th>Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -106,6 +118,13 @@ include 'layout-header.php';
                             <td><?php echo htmlspecialchars($r['phone'] ?: '-'); ?><br><small style="color:var(--ss-muted)"><?php echo htmlspecialchars($r['email'] ?: '-'); ?></small></td>
                             <td><?php echo htmlspecialchars($r['area'] ?: '-'); ?></td>
                             <td><?php echo $r['is_active'] ? '<span class="ss-status ss-status-approved">Aktif</span>' : '<span class="ss-status ss-status-draft">Nonaktif</span>'; ?></td>
+                            <td>
+                                <form method="POST" style="display:inline;" onsubmit="return confirm('Hapus koordinator <?php echo htmlspecialchars(addslashes($r['name'])); ?>?');">
+                                    <input type="hidden" name="action" value="delete">
+                                    <input type="hidden" name="id" value="<?php echo $r['id']; ?>">
+                                    <button type="submit" class="ss-btn ss-btn-outline ss-btn-sm" style="color:#dc2626;border-color:#dc2626;" title="Hapus"><i data-feather="trash-2"></i></button>
+                                </form>
+                            </td>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>
