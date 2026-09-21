@@ -257,6 +257,22 @@ class EmailHelper
         imap_expunge($this->conn);
     }
 
+    /**
+     * Mark a single message as read/unread without opening it (used by bulk "Tandai Dibaca").
+     */
+    public function markSeen(int $uid, bool $seen = true): void
+    {
+        $msgno = imap_msgno($this->conn, $uid);
+        if (!$msgno) {
+            return;
+        }
+        if ($seen) {
+            @imap_setflag_full($this->conn, (string)$msgno, '\\Seen');
+        } else {
+            @imap_clearflag_full($this->conn, (string)$msgno, '\\Seen');
+        }
+    }
+
     private function getBody($msgno, $structure): array
     {
         $html = '';

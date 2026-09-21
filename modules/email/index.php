@@ -45,6 +45,32 @@ if ($emailConfig === null) {
         }
     }
 
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'bulk_mark_read') {
+        $uids = array_map('intval', $_POST['uids'] ?? []);
+        try {
+            $emailHelper = new EmailHelper($emailConfig, $folder);
+            foreach ($uids as $uid) {
+                $emailHelper->markSeen($uid, true);
+            }
+            $deleteMsg = count($uids) . ' email ditandai sudah dibaca.';
+        } catch (Throwable $e) {
+            $errorMsg = 'Gagal menandai email: ' . $e->getMessage();
+        }
+    }
+
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'bulk_delete') {
+        $uids = array_map('intval', $_POST['uids'] ?? []);
+        try {
+            $emailHelper = new EmailHelper($emailConfig, $folder);
+            foreach ($uids as $uid) {
+                $emailHelper->deleteMessage($uid);
+            }
+            $deleteMsg = count($uids) . ' email ' . ($folder === 'INBOX.Trash' ? 'dihapus permanen.' : 'dipindahkan ke Sampah.');
+        } catch (Throwable $e) {
+            $errorMsg = 'Gagal menghapus email: ' . $e->getMessage();
+        }
+    }
+
     try {
         $emailHelper = new EmailHelper($emailConfig, $folder);
         $result = $emailHelper->listMessages($perPage, $offset);
@@ -211,13 +237,38 @@ include '../sunsea/layout-header.php';
         padding: 14px;
     }
 
-    .em-pager a {
-        padding: 6px 12px;
-        border: 1px solid var(--ss-gray-2);
-        border-radius: 6px;
-        text-decoration: none;
-        color: var(--ss-text);
+    .em-bulkbar {
+        display: none;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 16px;
+        background: #f8fafc;
+        border-bottom: 1px solid var(--ss-gray-2);
         font-size: 0.85rem;
+    }
+
+    .em-bulkbar.show {
+        display: flex;
+    }
+
+    .em-bulkbar button {
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        cursor: pointer;
+        border: 1px solid var(--ss-gray-2);
+        background: #fff;
+        color: var(--ss-text);
+    }
+
+    .em-bulkbar button.em-danger {
+        border-color: #fecaca;
+        color: #b91c1c;
+    }
+
+    .em-row-check {
+        flex-shrink: 0;
     }
 </style>
 
@@ -250,26 +301,43 @@ include '../sunsea/layout-header.php';
         </div>
 
         <div class="em-main">
-            <div class="em-card">
-                <?php if (!$errorMsg && empty($messages)): ?>
-                    <div style="padding:24px;text-align:center;color:var(--ss-muted);">Tidak ada email.</div>
-                <?php endif; ?>
-
-                <?php foreach ($messages as $m): ?>
-                    <div class="em-row <?php echo $m['seen'] ? '' : 'unread'; ?>">
-                        <a href="view.php?uid=<?php echo (int)$m['uid']; ?>&folder=<?php echo urlencode($folder); ?>" style="display:flex;flex:1;gap:12px;align-items:center;text-decoration:none;color:inherit;min-width:0;">
-                            <div class="em-from"><?php echo htmlspecialchars($m['from']); ?></div>
-                            <div class="em-subject"><?php echo htmlspecialchars($m['subject']); ?></div>
-                            <div class="em-date"><?php echo htmlspecialchars($m['date'] !== '' ? date('d M Y H:i', strtotime($m['date'])) : ''); ?></div>
-                        </a>
-                        <form method="post" onsubmit="return confirm('<?php echo $folder === 'INBOX.Trash' ? 'Hapus permanen email ini?' : 'Pindahkan email ini ke Sampah?'; ?>');" style="flex-shrink:0;margin:0;">
-                            <input type="hidden" name="action" value="delete">
-                            <input type="hidden" name="uid" value="<?php echo (int)$m['uid']; ?>">
-                            <button type="submit" title="Hapus" style="background:none;border:none;color:#b91c1c;cursor:pointer;font-size:0.9rem;padding:6px 8px;">&#128465;</button>
-                        </form>
+            <form method="post" id="emBulkForm">
+                <input type="hidden" name="action" id="emBulkAction" value="">
+                <input type="hidden" name="folder" value="<?php echo htmlspecialchars($folder); ?>">
+                <div class="em-card">
+                    <div class="em-bulkbar" id="emBulkbar">
+                        <span id="emBulkCount">0 dipilih</span>
+                        <button type="button" onclick="emSubmitBulk('bulk_mark_read')">&#128065; Tandai Dibaca</button>
+                        <button type="button" class="em-danger" onclick="emSubmitBulk('bulk_delete')"><?php echo $folder === 'INBOX.Trash' ? '&#128465; Hapus Permanen' : '&#128465; Hapus'; ?></button>
                     </div>
-                <?php endforeach; ?>
-            </div>
+
+                    <?php if (!$errorMsg && !empty($messages)): ?>
+                        <div class="em-row" style="background:#f8fafc;">
+                            <label class="em-row-check" style="display:flex;align-items:center;gap:8px;font-size:0.8rem;color:var(--ss-muted);cursor:pointer;">
+                                <input type="checkbox" id="emSelectAll" onchange="emToggleAll(this)"> Pilih Semua di Halaman Ini
+                            </label>
+                        </div>
+                    <?php endif; ?>
+
+                    <?php if (!$errorMsg && empty($messages)): ?>
+                        <div style="padding:24px;text-align:center;color:var(--ss-muted);">Tidak ada email.</div>
+                    <?php endif; ?>
+
+                    <?php foreach ($messages as $m): ?>
+                        <div class="em-row <?php echo $m['seen'] ? '' : 'unread'; ?>">
+                            <label class="em-row-check">
+                                <input type="checkbox" name="uids[]" value="<?php echo (int)$m['uid']; ?>" class="em-row-checkbox" onchange="emUpdateBulkbar()">
+                            </label>
+                            <a href="view.php?uid=<?php echo (int)$m['uid']; ?>&folder=<?php echo urlencode($folder); ?>" style="display:flex;flex:1;gap:12px;align-items:center;text-decoration:none;color:inherit;min-width:0;">
+                                <div class="em-from"><?php echo htmlspecialchars($m['from']); ?></div>
+                                <div class="em-subject"><?php echo htmlspecialchars($m['subject']); ?></div>
+                                <div class="em-date"><?php echo htmlspecialchars($m['date'] !== '' ? date('d M Y H:i', strtotime($m['date'])) : ''); ?></div>
+                            </a>
+                            <button type="button" title="Hapus" onclick="emSubmitSingleDelete(<?php echo (int)$m['uid']; ?>)" style="background:none;border:none;color:#b91c1c;cursor:pointer;font-size:0.9rem;padding:6px 8px;flex-shrink:0;">&#128465;</button>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            </form>
 
             <?php if ($totalPages > 1): ?>
                 <div class="em-pager">
@@ -281,6 +349,42 @@ include '../sunsea/layout-header.php';
         </div>
     </div>
 </div>
+
+<script>
+    function emUpdateBulkbar() {
+        var checked = document.querySelectorAll('.em-row-checkbox:checked').length;
+        var bar = document.getElementById('emBulkbar');
+        document.getElementById('emBulkCount').textContent = checked + ' dipilih';
+        bar.classList.toggle('show', checked > 0);
+    }
+
+    function emToggleAll(source) {
+        document.querySelectorAll('.em-row-checkbox').forEach(function(cb) {
+            cb.checked = source.checked;
+        });
+        emUpdateBulkbar();
+    }
+
+    function emSubmitBulk(action) {
+        var checked = document.querySelectorAll('.em-row-checkbox:checked').length;
+        if (checked === 0) return;
+        if (action === 'bulk_delete' && !confirm('Yakin hapus ' + checked + ' email terpilih?')) return;
+        document.getElementById('emBulkAction').value = action;
+        document.getElementById('emBulkForm').submit();
+    }
+
+    function emSubmitSingleDelete(uid) {
+        if (!confirm('<?php echo $folder === 'INBOX.Trash' ? 'Hapus permanen email ini?' : 'Pindahkan email ini ke Sampah?'; ?>')) return;
+        var form = document.getElementById('emBulkForm');
+        document.getElementById('emBulkAction').value = 'delete';
+        var hidden = document.createElement('input');
+        hidden.type = 'hidden';
+        hidden.name = 'uid';
+        hidden.value = uid;
+        form.appendChild(hidden);
+        form.submit();
+    }
+</script>
 
 <?php include 'compose-widget.php'; ?>
 <?php include '../sunsea/layout-footer.php'; ?>
