@@ -83,6 +83,81 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save'
     exit;
 }
 
+// ---- PAY / PELUNASAN INVOICE (dari popup Buku Kas yang sama) ----
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'pay_invoice') {
+    $iId       = (int)($_POST['invoice_id'] ?? 0);
+    $payAmount = (float)str_replace(['.', ','], ['', '.'], $_POST['pay_amount'] ?? '0');
+    $payMethod = $_POST['pay_method'] ?? 'transfer';
+    $payDate   = $_POST['pay_date'] ?: date('Y-m-d');
+    $payRef    = trim($_POST['pay_reference'] ?? '');
+    $payNotes  = trim($_POST['pay_notes'] ?? '');
+    $payBy     = trim($_POST['pay_input_by'] ?? '') ?: $user;
+
+    if ($iId <= 0 || $payAmount <= 0) {
+        $_SESSION['flash_message'] = 'Pilih invoice dan isi jumlah pembayaran yang valid.';
+        $_SESSION['flash_type']    = 'error';
+    } else {
+        $invStmt = $pdo->prepare("SELECT i.*, c.name AS customer_name FROM invoices i JOIN customers c ON c.id=i.customer_id WHERE i.id=?");
+        $invStmt->execute([$iId]);
+        $payInv = $invStmt->fetch();
+        if (!$payInv) {
+            $_SESSION['flash_message'] = 'Invoice tidak ditemukan.';
+            $_SESSION['flash_type']    = 'error';
+        } else {
+            $pdo->prepare("
+                INSERT INTO payments (invoice_id, payment_date, amount, method, reference, notes, created_by)
+                VALUES (?,?,?,?,?,?,?)
+            ")->execute([$iId, $payDate, $payAmount, $payMethod, $payRef, $payNotes, $payBy]);
+            $paymentId = (int)$pdo->lastInsertId();
+
+            $totalPaidStmt = $pdo->prepare("SELECT COALESCE(SUM(amount),0) FROM payments WHERE invoice_id=?");
+            $totalPaidStmt->execute([$iId]);
+            $paid      = (float)$totalPaidStmt->fetchColumn();
+            $total     = (float)$payInv['total_amount'];
+            $remaining = max(0, $total - $paid);
+            $newStatus = $remaining <= 0 ? 'paid' : ($paid > 0 ? 'partial' : 'issued');
+            $paidAt    = $remaining <= 0 ? ', paid_at=NOW()' : '';
+            $pdo->prepare("UPDATE invoices SET paid_amount=?, remaining_amount=?, status=? $paidAt WHERE id=?")
+                ->execute([$paid, $remaining, $newStatus, $iId]);
+
+            // Cari booking terkait (kalau invoice ini berasal dari booking) - pola sama seperti invoices.php.
+            $payLinkedBookingId = null;
+            if (preg_match('/Generated from Reservasi:\s*(\S+)/', (string)($payInv['internal_notes'] ?? ''), $mBk)) {
+                $bkStmt = $pdo->prepare("SELECT id FROM booking_orders WHERE booking_no=?");
+                $bkStmt->execute([$mBk[1]]);
+                $payLinkedBookingId = $bkStmt->fetchColumn() ?: null;
+            } elseif (preg_match('/^booking_id:(\d+)$/', (string)($payInv['internal_notes'] ?? ''), $mBk)) {
+                $payLinkedBookingId = (int)$mBk[1];
+            }
+
+            $pdo->prepare("
+                INSERT INTO cash_book (transaction_date, transaction_time, type, category, description, amount, reference, invoice_id, payment_id, customer_id, booking_id, created_by)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+            ")->execute([
+                $payDate,
+                date('H:i:s'),
+                'income',
+                'Penerimaan Trip',
+                "Pembayaran Invoice {$payInv['invoice_no']} — {$payInv['customer_name']}",
+                $payAmount,
+                $payRef ?: $payInv['invoice_no'],
+                $iId,
+                $paymentId,
+                (int)$payInv['customer_id'],
+                $payLinkedBookingId,
+                $payBy
+            ]);
+
+            $_SESSION['flash_message'] = $remaining <= 0
+                ? "Invoice {$payInv['invoice_no']} berhasil dilunasi."
+                : "Pembayaran invoice {$payInv['invoice_no']} berhasil dicatat.";
+            $_SESSION['flash_type'] = 'success';
+        }
+    }
+    header('Location: finance.php' . (!empty($_POST['redirect_qs']) ? '?' . $_POST['redirect_qs'] : ''));
+    exit;
+}
+
 // ---- DELETE ----
 if (($_GET['action'] ?? '') === 'delete' && (int)($_GET['id'] ?? 0) > 0) {
     $delId = (int)$_GET['id'];
@@ -174,6 +249,19 @@ $bookings  = $pdo->query("
     ORDER BY bo.id DESC
     LIMIT 300
 ")->fetchAll();
+
+// Invoice yang masih ada sisa tagihan - dipakai di tab "Pelunasan Invoice" pada popup Buku Kas.
+$outstandingInvoices = $pdo->query("
+    SELECT i.id, i.invoice_no, i.total_amount, i.paid_amount, c.name AS customer_name
+    FROM invoices i JOIN customers c ON c.id = i.customer_id
+    WHERE i.status IN ('issued','partial')
+    ORDER BY i.created_at DESC
+")->fetchAll();
+foreach ($outstandingInvoices as &$_oi) {
+    $_oi['remaining_amount'] = max(0, (float)$_oi['total_amount'] - (float)$_oi['paid_amount']);
+}
+unset($_oi);
+$outstandingInvoices = array_values(array_filter($outstandingInvoices, fn($oi) => $oi['remaining_amount'] > 0));
 
 $pageTitle  = 'Finance - Buku Kas Operasional';
 $activePage = 'finance';
@@ -374,87 +462,188 @@ include 'layout-header.php';
 
 <!-- Modal: Tambah Transaksi Kas -->
 <div id="txModalOverlay" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,0.55);z-index:1000;align-items:center;justify-content:center;padding:20px;">
-    <div style="width:100%;max-width:680px;max-height:88vh;display:flex;flex-direction:column;background:#fff;border-radius:10px;overflow:hidden;">
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 20px;border-bottom:1px solid var(--ss-gray-1);flex-shrink:0;">
-            <div style="font-size:13px;font-weight:700;" id="txModalTitle">Input Transaksi Kas</div>
-            <button type="button" onclick="closeTxModal()" style="background:none;border:none;cursor:pointer;color:var(--ss-muted);padding:4px;">
+    <div style="width:100%;max-width:720px;max-height:90vh;display:flex;flex-direction:column;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 20px 50px rgba(15,23,42,.3);">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 22px;border-bottom:1px solid var(--ss-gray-1);flex-shrink:0;background:linear-gradient(135deg,#FFF7ED,#fff);">
+            <div>
+                <div style="font-size:15px;font-weight:800;color:var(--ss-ocean);" id="txModalTitle">Input Transaksi Kas</div>
+                <div style="font-size:11px;color:var(--ss-muted);margin-top:2px;">Catat pemasukan/pengeluaran, atau lunasi invoice tamu.</div>
+            </div>
+            <button type="button" onclick="closeTxModal()" style="background:#fff;border:1px solid var(--ss-gray-1);border-radius:8px;cursor:pointer;color:var(--ss-muted);padding:6px;">
                 <i data-feather="x" style="width:16px;height:16px;"></i>
             </button>
         </div>
-        <div style="flex:1;overflow:auto;padding:16px 20px;">
-            <form method="POST" id="txForm">
-                <input type="hidden" name="action" value="save">
-                <input type="hidden" name="edit_id" id="editIdInput" value="">
-                <input type="hidden" name="redirect_qs" value="<?php echo htmlspecialchars(http_build_query($_GET)); ?>">
-                <div class="fin-modal-grid">
-                    <div class="ss-form-group" style="margin:0;">
-                        <label class="ss-label" style="font-size:11px;">Jenis</label>
-                        <select name="type" class="ss-select" id="typeSelect" style="font-size:12px;">
-                            <option value="expense">Pengeluaran</option>
-                            <option value="income">Pemasukan</option>
-                        </select>
+
+        <div class="fin-tab-bar">
+            <button type="button" class="fin-tab-btn active" id="finTabBtnManual" onclick="switchTxTab('manual')">
+                <i data-feather="edit-3" style="width:13px;height:13px;"></i> Transaksi Manual
+            </button>
+            <button type="button" class="fin-tab-btn" id="finTabBtnInvoice" onclick="switchTxTab('invoice')">
+                <i data-feather="check-circle" style="width:13px;height:13px;"></i> Pelunasan Invoice
+            </button>
+        </div>
+
+        <div style="flex:1;overflow:auto;padding:18px 22px;">
+            <!-- TAB 1: Transaksi manual (pemasukan/pengeluaran biasa) -->
+            <div id="finTabManual">
+                <form method="POST" id="txForm">
+                    <input type="hidden" name="action" value="save">
+                    <input type="hidden" name="edit_id" id="editIdInput" value="">
+                    <input type="hidden" name="redirect_qs" value="<?php echo htmlspecialchars(http_build_query($_GET)); ?>">
+                    <select name="type" id="typeSelect" style="display:none;">
+                        <option value="expense">Pengeluaran</option>
+                        <option value="income">Pemasukan</option>
+                    </select>
+
+                    <div class="fin-type-toggle">
+                        <button type="button" class="fin-type-btn fin-type-expense active" data-type="expense" onclick="setTxType('expense')">
+                            <i data-feather="arrow-down-circle"></i> Pengeluaran
+                        </button>
+                        <button type="button" class="fin-type-btn fin-type-income" data-type="income" onclick="setTxType('income')">
+                            <i data-feather="arrow-up-circle"></i> Pemasukan
+                        </button>
                     </div>
-                    <div class="ss-form-group" style="margin:0;">
-                        <label class="ss-label" style="font-size:11px;">Tanggal</label>
-                        <input type="date" name="transaction_date" class="ss-input" style="font-size:12px;" value="<?php echo date('Y-m-d'); ?>" required>
+
+                    <div class="fin-section-title">Detail Transaksi</div>
+                    <div class="fin-modal-grid">
+                        <div class="ss-form-group" style="margin:0;">
+                            <label class="ss-label" style="font-size:11px;">Tanggal</label>
+                            <input type="date" name="transaction_date" class="ss-input" style="font-size:12px;" value="<?php echo date('Y-m-d'); ?>" required>
+                        </div>
+                        <div class="ss-form-group" style="margin:0;">
+                            <label class="ss-label" style="font-size:11px;">Jam Transaksi</label>
+                            <input type="time" name="transaction_time" class="ss-input" style="font-size:12px;" value="<?php echo date('H:i'); ?>" required>
+                        </div>
+                        <div class="ss-form-group" style="margin:0;">
+                            <label class="ss-label" style="font-size:11px;">Kategori</label>
+                            <select name="category" class="ss-select" style="font-size:12px;">
+                                <option value="">-- Pilih kategori --</option>
+                                <?php foreach ($categoryOptions as $cat): ?>
+                                    <option value="<?php echo htmlspecialchars($cat); ?>"><?php echo htmlspecialchars($cat); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="ss-form-group" style="margin:0;">
+                            <label class="ss-label" style="font-size:11px;">Jumlah (Rp)</label>
+                            <input type="text" name="amount" class="ss-input" style="font-size:12px;font-weight:700;" placeholder="0" required>
+                        </div>
+                        <div class="ss-form-group" style="margin:0;grid-column:1 / -1;">
+                            <label class="ss-label" style="font-size:11px;">Keterangan</label>
+                            <input type="text" name="description" class="ss-input" style="font-size:12px;" placeholder="Contoh: Bensin speedboat trip snorkeling" required>
+                        </div>
                     </div>
-                    <div class="ss-form-group" style="margin:0;">
-                        <label class="ss-label" style="font-size:11px;">Jam Transaksi</label>
-                        <input type="time" name="transaction_time" class="ss-input" style="font-size:12px;" value="<?php echo date('H:i'); ?>" required>
+
+                    <div class="fin-section-title">Kaitkan ke Tamu / Trip <span style="font-weight:400;color:var(--ss-muted);">(opsional)</span></div>
+                    <div class="fin-modal-grid">
+                        <div class="ss-form-group" style="margin:0;">
+                            <label class="ss-label" style="font-size:11px;">Trip / Booking</label>
+                            <select name="booking_id" class="ss-select" id="bookingSelect" style="font-size:12px;" onchange="autoFillGuestFromBooking()">
+                                <option value="">-- Tidak terkait trip tertentu --</option>
+                                <?php foreach ($bookings as $b): ?>
+                                    <option value="<?php echo $b['id']; ?>" data-customer-id="<?php echo $b['customer_id']; ?>">
+                                        <?php echo htmlspecialchars($b['booking_no']); ?> — <?php echo htmlspecialchars($b['customer_name']); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="ss-form-group" style="margin:0;">
+                            <label class="ss-label" style="font-size:11px;">Tamu / Customer</label>
+                            <select name="customer_id" class="ss-select" id="customerSelect" style="font-size:12px;">
+                                <option value="">-- Operasional Perusahaan (bukan tamu tertentu) --</option>
+                                <?php foreach ($customers as $c): ?>
+                                    <option value="<?php echo $c['id']; ?>"><?php echo htmlspecialchars($c['name']); ?><?php echo $c['phone'] ? ' - ' . htmlspecialchars($c['phone']) : ''; ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div style="grid-column:1 / -1;font-size:10.5px;color:var(--ss-muted);margin-top:-4px;">* Tamu otomatis terisi saat memilih Trip/Booking, tapi bisa diganti manual.</div>
                     </div>
+
+                    <div class="fin-section-title">Lainnya</div>
+                    <div class="fin-modal-grid">
+                        <div class="ss-form-group" style="margin:0;">
+                            <label class="ss-label" style="font-size:11px;">Referensi (opsional)</label>
+                            <input type="text" name="reference" class="ss-input" style="font-size:12px;" placeholder="No. nota / kwitansi">
+                        </div>
+                        <div class="ss-form-group" style="margin:0;">
+                            <label class="ss-label" style="font-size:11px;">Diinput Oleh</label>
+                            <input type="text" name="input_by" class="ss-input" style="font-size:12px;" value="<?php echo htmlspecialchars($user); ?>" placeholder="Nama staff yang input" required>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="ss-btn ss-btn-primary" style="width:100%;font-size:12px;margin-top:16px;" id="txSubmitBtn">
+                        <i data-feather="save"></i> Simpan Transaksi
+                    </button>
+                </form>
+            </div>
+
+            <!-- TAB 2: Pelunasan / pembayaran invoice tamu yang masih ada tagihan -->
+            <div id="finTabInvoice" style="display:none;">
+                <form method="POST" id="payInvoiceForm">
+                    <input type="hidden" name="action" value="pay_invoice">
+                    <input type="hidden" name="redirect_qs" value="<?php echo htmlspecialchars(http_build_query($_GET)); ?>">
+
+                    <div class="fin-section-title" style="margin-top:0;">Pilih Invoice yang Belum Lunas</div>
                     <div class="ss-form-group" style="margin:0;">
-                        <label class="ss-label" style="font-size:11px;">Trip / Booking (opsional)</label>
-                        <select name="booking_id" class="ss-select" id="bookingSelect" style="font-size:12px;" onchange="autoFillGuestFromBooking()">
-                            <option value="">-- Tidak terkait trip tertentu --</option>
-                            <?php foreach ($bookings as $b): ?>
-                                <option value="<?php echo $b['id']; ?>" data-customer-id="<?php echo $b['customer_id']; ?>">
-                                    <?php echo htmlspecialchars($b['booking_no']); ?> — <?php echo htmlspecialchars($b['customer_name']); ?>
+                        <select name="invoice_id" id="payInvoiceSelect" class="ss-select" style="font-size:12px;" onchange="onPayInvoiceChange()" required>
+                            <option value="">-- Pilih invoice --</option>
+                            <?php foreach ($outstandingInvoices as $oi): ?>
+                                <option value="<?php echo $oi['id']; ?>"
+                                    data-total="<?php echo (float)$oi['total_amount']; ?>"
+                                    data-paid="<?php echo (float)$oi['paid_amount']; ?>"
+                                    data-remaining="<?php echo (float)$oi['remaining_amount']; ?>">
+                                    <?php echo htmlspecialchars($oi['invoice_no']); ?> — <?php echo htmlspecialchars($oi['customer_name']); ?> (Sisa <?php echo sunseaRupiah($oi['remaining_amount']); ?>)
                                 </option>
                             <?php endforeach; ?>
                         </select>
+                        <?php if (empty($outstandingInvoices)): ?>
+                            <div style="font-size:11.5px;color:var(--ss-success);margin-top:6px;">🎉 Semua invoice sudah lunas, tidak ada tagihan tersisa.</div>
+                        <?php endif; ?>
                     </div>
-                    <div class="ss-form-group" style="margin:0;">
-                        <label class="ss-label" style="font-size:11px;">Tamu / Customer</label>
-                        <select name="customer_id" class="ss-select" id="customerSelect" style="font-size:12px;">
-                            <option value="">-- Operasional Perusahaan (bukan tamu tertentu) --</option>
-                            <?php foreach ($customers as $c): ?>
-                                <option value="<?php echo $c['id']; ?>"><?php echo htmlspecialchars($c['name']); ?><?php echo $c['phone'] ? ' - ' . htmlspecialchars($c['phone']) : ''; ?></option>
-                            <?php endforeach; ?>
-                        </select>
+
+                    <div id="payInvoiceSummary" class="fin-pis-card" style="display:none;">
+                        <div><span>Total Tagihan</span><strong id="pisTotal">Rp 0</strong></div>
+                        <div><span>Sudah Dibayar</span><strong id="pisPaid" style="color:var(--ss-success);">Rp 0</strong></div>
+                        <div><span>Sisa Tagihan</span><strong id="pisRemaining" style="color:var(--ss-danger);">Rp 0</strong></div>
                     </div>
-                    <div class="ss-form-group" style="margin:0;grid-column:1 / -1;margin-top:-6px;">
-                        <div style="font-size:10.5px;color:var(--ss-muted);">* Tamu otomatis terisi saat memilih Trip/Booking, tapi bisa diganti manual.</div>
+
+                    <div class="fin-section-title">Detail Pembayaran</div>
+                    <div class="fin-modal-grid">
+                        <div class="ss-form-group" style="margin:0;">
+                            <label class="ss-label" style="font-size:11px;">Jumlah Dibayar (Rp)</label>
+                            <input type="text" name="pay_amount" id="payAmountInput" class="ss-input" style="font-size:12px;font-weight:700;" placeholder="0" required>
+                            <div style="font-size:10.5px;color:var(--ss-muted);margin-top:4px;">Otomatis terisi sisa tagihan (pelunasan penuh) - bisa diubah untuk DP bertahap.</div>
+                        </div>
+                        <div class="ss-form-group" style="margin:0;">
+                            <label class="ss-label" style="font-size:11px;">Tanggal Bayar</label>
+                            <input type="date" name="pay_date" class="ss-input" style="font-size:12px;" value="<?php echo date('Y-m-d'); ?>" required>
+                        </div>
+                        <div class="ss-form-group" style="margin:0;">
+                            <label class="ss-label" style="font-size:11px;">Metode</label>
+                            <select name="pay_method" class="ss-select" style="font-size:12px;">
+                                <option value="transfer">Transfer Bank</option>
+                                <option value="cash">Tunai</option>
+                                <option value="qris">QRIS</option>
+                                <option value="other">Lainnya</option>
+                            </select>
+                        </div>
+                        <div class="ss-form-group" style="margin:0;">
+                            <label class="ss-label" style="font-size:11px;">No. Referensi (opsional)</label>
+                            <input type="text" name="pay_reference" class="ss-input" style="font-size:12px;" placeholder="No. bukti transfer">
+                        </div>
+                        <div class="ss-form-group" style="margin:0;grid-column:1 / -1;">
+                            <label class="ss-label" style="font-size:11px;">Catatan (opsional)</label>
+                            <textarea name="pay_notes" class="ss-textarea" style="font-size:12px;" rows="2"></textarea>
+                        </div>
+                        <div class="ss-form-group" style="margin:0;grid-column:1 / -1;">
+                            <label class="ss-label" style="font-size:11px;">Diinput Oleh</label>
+                            <input type="text" name="pay_input_by" class="ss-input" style="font-size:12px;" value="<?php echo htmlspecialchars($user); ?>" required>
+                        </div>
                     </div>
-                    <div class="ss-form-group" style="margin:0;">
-                        <label class="ss-label" style="font-size:11px;">Kategori</label>
-                        <select name="category" class="ss-select" style="font-size:12px;">
-                            <option value="">-- Pilih kategori --</option>
-                            <?php foreach ($categoryOptions as $cat): ?>
-                                <option value="<?php echo htmlspecialchars($cat); ?>"><?php echo htmlspecialchars($cat); ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="ss-form-group" style="margin:0;">
-                        <label class="ss-label" style="font-size:11px;">Jumlah (Rp)</label>
-                        <input type="text" name="amount" class="ss-input" style="font-size:12px;" placeholder="0" required>
-                    </div>
-                    <div class="ss-form-group" style="margin:0;grid-column:1 / -1;">
-                        <label class="ss-label" style="font-size:11px;">Keterangan</label>
-                        <input type="text" name="description" class="ss-input" style="font-size:12px;" placeholder="Contoh: Bensin speedboat trip snorkeling" required>
-                    </div>
-                    <div class="ss-form-group" style="margin:0;grid-column:1 / -1;">
-                        <label class="ss-label" style="font-size:11px;">Referensi (opsional)</label>
-                        <input type="text" name="reference" class="ss-input" style="font-size:12px;" placeholder="No. nota / kwitansi">
-                    </div>
-                    <div class="ss-form-group" style="margin:0;grid-column:1 / -1;">
-                        <label class="ss-label" style="font-size:11px;">Diinput Oleh</label>
-                        <input type="text" name="input_by" class="ss-input" style="font-size:12px;" value="<?php echo htmlspecialchars($user); ?>" placeholder="Nama staff yang input" required>
-                    </div>
-                </div>
-                <button type="submit" class="ss-btn ss-btn-primary" style="width:100%;font-size:12px;margin-top:14px;" id="txSubmitBtn">
-                    <i data-feather="save"></i> Simpan Transaksi
-                </button>
-            </form>
+
+                    <button type="submit" class="ss-btn" style="width:100%;font-size:12px;margin-top:16px;background:var(--ss-success);border-color:var(--ss-success);color:#fff;">
+                        <i data-feather="check-circle"></i> Catat Pembayaran / Pelunasan
+                    </button>
+                </form>
+            </div>
         </div>
     </div>
 </div>
@@ -490,17 +679,158 @@ include 'layout-header.php';
     .fin-add-btn:hover {
         opacity: .9;
     }
+
+    .fin-tab-bar {
+        display: flex;
+        gap: 6px;
+        padding: 10px 22px 0;
+        border-bottom: 1px solid var(--ss-gray-1);
+        flex-shrink: 0;
+    }
+
+    .fin-tab-btn {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 9px 16px;
+        background: none;
+        border: none;
+        border-bottom: 2px solid transparent;
+        font-size: 12.5px;
+        font-weight: 600;
+        color: var(--ss-muted);
+        cursor: pointer;
+    }
+
+    .fin-tab-btn.active {
+        color: var(--ss-ocean);
+        border-bottom-color: var(--ss-ocean);
+    }
+
+    .fin-type-toggle {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-bottom: 16px;
+    }
+
+    .fin-type-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 10px;
+        border-radius: 8px;
+        border: 1.5px solid var(--ss-gray-1);
+        background: #fff;
+        color: var(--ss-muted);
+        font-size: 12.5px;
+        font-weight: 700;
+        cursor: pointer;
+    }
+
+    .fin-type-btn.active.fin-type-expense {
+        background: #FEF2F2;
+        border-color: var(--ss-danger);
+        color: var(--ss-danger);
+    }
+
+    .fin-type-btn.active.fin-type-income {
+        background: #ECFDF5;
+        border-color: var(--ss-success);
+        color: var(--ss-success);
+    }
+
+    .fin-section-title {
+        font-size: 11.5px;
+        font-weight: 700;
+        color: var(--ss-ocean);
+        text-transform: uppercase;
+        letter-spacing: .03em;
+        margin: 16px 0 8px;
+        padding-bottom: 6px;
+        border-bottom: 1px dashed var(--ss-gray-1);
+    }
+
+    .fin-pis-card {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        background: #FFF7ED;
+        border: 1px solid #FED7AA;
+        border-radius: 10px;
+        padding: 12px 14px;
+        margin: 12px 0 4px;
+    }
+
+    .fin-pis-card>div {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .fin-pis-card span {
+        font-size: 10.5px;
+        color: var(--ss-muted);
+    }
+
+    .fin-pis-card strong {
+        font-size: 13px;
+    }
+
+    @media (max-width: 560px) {
+        .fin-pis-card {
+            grid-template-columns: 1fr;
+        }
+    }
 </style>
 
 <script>
+    function switchTxTab(tab) {
+        var isManual = tab === 'manual';
+        document.getElementById('finTabManual').style.display = isManual ? '' : 'none';
+        document.getElementById('finTabInvoice').style.display = isManual ? 'none' : '';
+        document.getElementById('finTabBtnManual').classList.toggle('active', isManual);
+        document.getElementById('finTabBtnInvoice').classList.toggle('active', !isManual);
+    }
+
+    function setTxType(type) {
+        document.getElementById('typeSelect').value = type;
+        document.querySelectorAll('.fin-type-btn').forEach(function(btn) {
+            btn.classList.toggle('active', btn.getAttribute('data-type') === type);
+        });
+    }
+
+    function onPayInvoiceChange() {
+        var sel = document.getElementById('payInvoiceSelect');
+        var opt = sel.options[sel.selectedIndex];
+        var summary = document.getElementById('payInvoiceSummary');
+        if (!opt || !opt.value) {
+            summary.style.display = 'none';
+            return;
+        }
+        var total = parseFloat(opt.getAttribute('data-total')) || 0;
+        var paid = parseFloat(opt.getAttribute('data-paid')) || 0;
+        var remaining = parseFloat(opt.getAttribute('data-remaining')) || 0;
+        document.getElementById('pisTotal').textContent = 'Rp ' + Math.round(total).toLocaleString('id-ID');
+        document.getElementById('pisPaid').textContent = 'Rp ' + Math.round(paid).toLocaleString('id-ID');
+        document.getElementById('pisRemaining').textContent = 'Rp ' + Math.round(remaining).toLocaleString('id-ID');
+        summary.style.display = 'grid';
+        document.getElementById('payAmountInput').value = Math.round(remaining).toLocaleString('id-ID');
+    }
+
     function openTxModal() {
         document.getElementById('txForm').reset();
+        document.getElementById('payInvoiceForm').reset();
+        document.getElementById('payInvoiceSummary').style.display = 'none';
         document.getElementById('editIdInput').value = '';
         document.getElementById('txModalTitle').textContent = 'Input Transaksi Kas';
         document.getElementById('txSubmitBtn').innerHTML = '<i data-feather="save"></i> Simpan Transaksi';
         document.getElementById('txForm').querySelector('[name="transaction_date"]').value = '<?php echo date('Y-m-d'); ?>';
         document.getElementById('txForm').querySelector('[name="transaction_time"]').value = '<?php echo date('H:i'); ?>';
         document.getElementById('txForm').querySelector('[name="input_by"]').value = '<?php echo htmlspecialchars($user, ENT_QUOTES); ?>';
+        setTxType('expense');
+        switchTxTab('manual');
         document.getElementById('txModalOverlay').style.display = 'flex';
         document.body.style.overflow = 'hidden';
         if (window.feather) feather.replace();
@@ -521,6 +851,8 @@ include 'layout-header.php';
         document.getElementById('editIdInput').value = tx.id;
         document.getElementById('txModalTitle').textContent = 'Edit Transaksi Kas';
         document.getElementById('txSubmitBtn').innerHTML = '<i data-feather="save"></i> Simpan Perubahan';
+        setTxType(tx.type === 'income' ? 'income' : 'expense');
+        switchTxTab('manual');
         document.getElementById('txModalOverlay').style.display = 'flex';
         document.body.style.overflow = 'hidden';
         if (window.feather) feather.replace();
