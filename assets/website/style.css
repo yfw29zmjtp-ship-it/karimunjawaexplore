@@ -724,9 +724,81 @@ a {
   }
   .we-pkg-grid {
     grid-template-columns: 1fr;
+    gap: 20px;
   }
   .we-pkg-sidebar {
     position: static;
+  }
+  /* Detail paket di HP: rapikan & kecilkan teks, harga tetap elegan tapi ringkas */
+  .we-pkg-hero-img {
+    height: 190px;
+    border-radius: 12px;
+    margin-bottom: 16px;
+  }
+  .we-pkg-header {
+    margin-bottom: 16px;
+    gap: 8px;
+  }
+  .we-pkg-title {
+    font-size: 19px;
+    margin: 0 0 8px;
+  }
+  .we-pkg-badges {
+    gap: 6px;
+  }
+  .we-pkg-badge {
+    font-size: 10.5px;
+    padding: 4px 9px;
+  }
+  .we-pkg-section {
+    margin-bottom: 20px;
+  }
+  .we-pkg-section-title {
+    font-size: 13.5px;
+    gap: 6px;
+    margin: 0 0 8px;
+    padding-bottom: 8px;
+  }
+  .we-pkg-desc {
+    font-size: 13px;
+    line-height: 1.75;
+  }
+  .we-pkg-list {
+    gap: 8px;
+  }
+  .we-pkg-list li {
+    font-size: 12.5px;
+    line-height: 1.5;
+  }
+  .we-pkg-itinerary li {
+    font-size: 12.5px;
+    line-height: 1.6;
+    padding-left: 22px;
+  }
+  .we-pkg-sidebar {
+    padding: 16px;
+    border-radius: 12px;
+  }
+  .we-pkg-price-label {
+    font-size: 11px;
+  }
+  .we-pkg-price {
+    font-size: 20px;
+  }
+  .we-pkg-price span {
+    font-size: 11px;
+  }
+  .we-pkg-sidebar-meta {
+    margin: 12px 0;
+    padding: 12px 0;
+    gap: 7px;
+  }
+  .we-pkg-sidebar-meta-row {
+    font-size: 12px;
+  }
+  .we-pkg-sidebar .we-btn {
+    padding: 11px 16px;
+    font-size: 13.5px;
   }
 }
 
