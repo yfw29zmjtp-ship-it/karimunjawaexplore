@@ -1741,6 +1741,9 @@ $prefillPaxCount = max(1, (int)($_GET['pax_count'] ?? 1));
                                     <td><?php echo $inv['due_date'] ? date('d M Y', strtotime($inv['due_date'])) : '-'; ?></td>
                                     <td>
                                         <div style="display:flex;gap:6px;align-items:center;">
+                                            <?php if (in_array($inv['status'], ['issued', 'partial'], true)): ?>
+                                                <a href="invoices.php?action=view&id=<?php echo $inv['id']; ?>&open_payment=1&pay_mode=full" class="ss-btn ss-btn-primary ss-btn-sm" style="background:var(--ss-success);border-color:var(--ss-success);" title="Catat pembayaran / pelunasan"><i data-feather="dollar-sign"></i> Bayar</a>
+                                            <?php endif; ?>
                                             <a href="invoices.php?action=view&id=<?php echo $inv['id']; ?>" class="ss-btn ss-btn-outline ss-btn-sm" title="Lihat invoice"><i data-feather="eye"></i></a>
                                             <a href="invoices.php?action=edit&id=<?php echo $inv['id']; ?>" class="ss-btn ss-btn-primary ss-btn-sm" title="Edit invoice"><i data-feather="edit-3"></i></a>
                                             <a href="invoices.php?action=print&id=<?php echo $inv['id']; ?>" target="_blank" class="ss-btn ss-btn-outline ss-btn-sm"><i data-feather="printer"></i></a>
