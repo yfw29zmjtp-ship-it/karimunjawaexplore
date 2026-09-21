@@ -543,6 +543,35 @@ if ($outstandingFilter) {
     $invoiceList = array_values(array_filter($invoiceList, fn($r) => $r['remaining_amount'] > 0 && $r['status'] !== 'cancelled'));
 }
 
+// Ambil rincian tiap pembayaran (DP 1/DP 2/Pelunasan) sekaligus untuk semua invoice di daftar,
+// supaya kolom Terbayar tidak cuma total tapi juga breakdown per tahap seperti di halaman detail.
+$paymentsByInvoice = [];
+if (!empty($invoiceList)) {
+    $listIds = array_column($invoiceList, 'id');
+    $inPh = implode(',', array_fill(0, count($listIds), '?'));
+    $pStmt = $pdo->prepare("SELECT invoice_id, payment_date, amount FROM payments WHERE invoice_id IN ($inPh) ORDER BY invoice_id, payment_date, id");
+    $pStmt->execute($listIds);
+    foreach ($pStmt->fetchAll() as $pRow) {
+        $paymentsByInvoice[$pRow['invoice_id']][] = $pRow;
+    }
+    foreach ($paymentsByInvoice as &$_pList) {
+        foreach ($_pList as $_pIdx => &$_pRow) {
+            $_pIsLast = $_pIdx === count($_pList) - 1;
+            $_pRow['stage'] = ($_pIsLast) ? null : 'DP ' . ($_pIdx + 1); // stage final ditentukan per-invoice di bawah
+        }
+        unset($_pRow);
+    }
+    unset($_pList);
+    foreach ($invoiceList as $_invRow2) {
+        if (!empty($paymentsByInvoice[$_invRow2['id']])) {
+            $lastIdx = count($paymentsByInvoice[$_invRow2['id']]) - 1;
+            $paymentsByInvoice[$_invRow2['id']][$lastIdx]['stage'] = ($_invRow2['remaining_amount'] <= 0)
+                ? 'Pelunasan'
+                : 'DP ' . ($lastIdx + 1);
+        }
+    }
+}
+
 $invoiceLogoPath = sunseaSetting($pdo, 'invoice_logo', '') ?: sunseaSetting($pdo, 'company_logo', '');
 $invoiceLogoSrc = sunseaAssetUrl($invoiceLogoPath);
 
@@ -1325,13 +1354,13 @@ $prefillPaxCount = max(1, (int)($_GET['pax_count'] ?? 1));
                                 <td><?php echo htmlspecialchars($p['reference'] ?: '-'); ?></td>
                                 <td>
                                     <button type="button" title="Edit pembayaran" onclick='openEditPayment(<?php echo json_encode([
-                                        "id" => (int)$p["id"],
-                                        "amount" => (float)$p["amount"],
-                                        "date" => $p["payment_date"],
-                                        "method" => $p["method"],
-                                        "reference" => $p["reference"],
-                                        "notes" => $p["notes"],
-                                    ]); ?>)' style="background:none;border:none;cursor:pointer;color:var(--ss-ocean);"><i data-feather="edit-2"></i></button>
+                                                                                                                "id" => (int)$p["id"],
+                                                                                                                "amount" => (float)$p["amount"],
+                                                                                                                "date" => $p["payment_date"],
+                                                                                                                "method" => $p["method"],
+                                                                                                                "reference" => $p["reference"],
+                                                                                                                "notes" => $p["notes"],
+                                                                                                            ]); ?>)' style="background:none;border:none;cursor:pointer;color:var(--ss-ocean);"><i data-feather="edit-2"></i></button>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -1697,7 +1726,16 @@ $prefillPaxCount = max(1, (int)($_GET['pax_count'] ?? 1));
                                     <td><a href="invoices.php?action=view&id=<?php echo $inv['id']; ?>" style="color:var(--ss-ocean);font-weight:600;text-decoration:none;"><?php echo htmlspecialchars($inv['invoice_no']); ?></a></td>
                                     <td><?php echo htmlspecialchars($inv['customer_name']); ?></td>
                                     <td style="font-weight:600;"><?php echo sunseaRupiah((float)$inv['total_amount']); ?></td>
-                                    <td style="color:var(--ss-success);font-weight:600;"><?php echo sunseaRupiah((float)$inv['paid_amount']); ?></td>
+                                    <td style="color:var(--ss-success);font-weight:600;">
+                                        <?php echo sunseaRupiah((float)$inv['paid_amount']); ?>
+                                        <?php if (!empty($paymentsByInvoice[$inv['id']])): ?>
+                                            <div style="font-weight:400;font-size:11px;color:var(--ss-muted);margin-top:2px;line-height:1.5;">
+                                                <?php foreach ($paymentsByInvoice[$inv['id']] as $pp): ?>
+                                                    <div><?php echo htmlspecialchars($pp['stage']); ?>: <?php echo sunseaRupiah((float)$pp['amount']); ?> <span style="color:#94a3b8;">(<?php echo date('d/m/y', strtotime($pp['payment_date'])); ?>)</span></div>
+                                                <?php endforeach; ?>
+                                            </div>
+                                        <?php endif; ?>
+                                    </td>
                                     <td style="color:<?php echo $inv['remaining_amount'] > 0 ? 'var(--ss-danger)' : 'var(--ss-success)'; ?>;font-weight:700;"><?php echo sunseaRupiah((float)$inv['remaining_amount']); ?></td>
                                     <td><span class="ss-status ss-status-<?php echo $inv['status']; ?>"><?php echo ucfirst($inv['status']); ?></span></td>
                                     <td><?php echo $inv['due_date'] ? date('d M Y', strtotime($inv['due_date'])) : '-'; ?></td>
