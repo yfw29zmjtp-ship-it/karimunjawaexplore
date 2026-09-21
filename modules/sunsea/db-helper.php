@@ -830,3 +830,101 @@ function sunseaCompanyPhones(PDO $pdo): array
 
     return $phones;
 }
+
+/**
+ * List of admin notification emails from the "notif_admin_emails" setting (one address per line).
+ */
+function sunseaNotifAdminEmails(PDO $pdo): array
+{
+    $raw = sunseaSetting($pdo, 'notif_admin_emails', '');
+    $emails = [];
+    foreach (preg_split('/\r\n|\r|\n/', trim($raw)) as $line) {
+        $line = trim($line);
+        if ($line !== '' && filter_var($line, FILTER_VALIDATE_EMAIL) && !in_array($line, $emails, true)) {
+            $emails[] = $line;
+        }
+    }
+    return $emails;
+}
+
+/**
+ * Email semua admin (setting "notif_admin_emails") saat ada penawaran baru masuk dari website
+ * (form quick-quote di beranda / form kontak), lengkap dengan tombol "Follow Up" yang langsung
+ * membuka detail penawarannya. Dipanggil setelah INSERT ke tabel quotations selesai. Best-effort:
+ * kalau email gagal terkirim (SMTP belum disetel, dsb), gagal senyap - tidak boleh menggagalkan
+ * proses booking tamu di website.
+ */
+function sunseaNotifyAdminNewQuotation(PDO $pdo, int $quotationId): void
+{
+    try {
+        $emails = sunseaNotifAdminEmails($pdo);
+        if (!$emails) {
+            return;
+        }
+
+        require_once __DIR__ . '/../../includes/EmailHelper.php';
+        require_once __DIR__ . '/../../includes/SmtpMailer.php';
+
+        $db = Database::getInstance();
+        $emailConfig = EmailHelper::resolveConfig($db);
+        if ($emailConfig === null) {
+            return;
+        }
+
+        $stmt = $pdo->prepare(
+            "SELECT q.quotation_no, q.trip_date, q.trip_end_date, q.pax_count, q.total_amount, q.notes,
+                    c.name AS customer_name, c.phone AS customer_phone,
+                    p.name AS package_name
+             FROM quotations q
+             LEFT JOIN customers c ON c.id = q.customer_id
+             LEFT JOIN trip_packages p ON p.id = q.package_id
+             WHERE q.id = ?
+             LIMIT 1"
+        );
+        $stmt->execute([$quotationId]);
+        $q = $stmt->fetch();
+        if (!$q) {
+            return;
+        }
+
+        $companyName = sunseaSetting($pdo, 'company_name', 'Karimunjawa Explore');
+        $followUpUrl = BASE_URL . '/modules/sunsea/quotations.php?action=view&id=' . $quotationId;
+        $tripDate = $q['trip_date'] ? date('d M Y', strtotime($q['trip_date'])) : '-';
+        $tripEndDate = $q['trip_end_date'] ? date('d M Y', strtotime($q['trip_end_date'])) : '';
+
+        $subject = 'Booking Baru Masuk - ' . $q['quotation_no'] . ' (Perlu Follow Up)';
+        $bodyHtml = '<div style="font-family:Arial,sans-serif;max-width:520px;">'
+            . '<h2 style="color:#0f766e;margin-bottom:4px;">Ada Booking Baru dari Website</h2>'
+            . '<p style="color:#334155;">Permintaan penawaran baru masuk dan perlu segera ditindaklanjuti.</p>'
+            . '<table style="width:100%;border-collapse:collapse;margin:14px 0;font-size:14px;color:#334155;">'
+            . '<tr><td style="padding:4px 0;color:#64748b;">No. Penawaran</td><td style="padding:4px 0;font-weight:600;">' . htmlspecialchars($q['quotation_no']) . '</td></tr>'
+            . '<tr><td style="padding:4px 0;color:#64748b;">Nama Tamu</td><td style="padding:4px 0;font-weight:600;">' . htmlspecialchars($q['customer_name'] ?: '-') . '</td></tr>'
+            . '<tr><td style="padding:4px 0;color:#64748b;">No. WhatsApp</td><td style="padding:4px 0;font-weight:600;">' . htmlspecialchars($q['customer_phone'] ?: '-') . '</td></tr>'
+            . '<tr><td style="padding:4px 0;color:#64748b;">Paket</td><td style="padding:4px 0;font-weight:600;">' . htmlspecialchars($q['package_name'] ?: '-') . '</td></tr>'
+            . '<tr><td style="padding:4px 0;color:#64748b;">Tanggal Trip</td><td style="padding:4px 0;font-weight:600;">' . htmlspecialchars($tripDate . ($tripEndDate ? ' - ' . $tripEndDate : '')) . '</td></tr>'
+            . '<tr><td style="padding:4px 0;color:#64748b;">Jumlah Pax</td><td style="padding:4px 0;font-weight:600;">' . (int)$q['pax_count'] . '</td></tr>'
+            . '<tr><td style="padding:4px 0;color:#64748b;">Estimasi Nominal</td><td style="padding:4px 0;font-weight:600;">' . sunseaRupiah((float)$q['total_amount']) . '</td></tr>'
+            . '</table>'
+            . '<a href="' . htmlspecialchars($followUpUrl) . '" style="display:inline-block;padding:12px 24px;background:#0f766e;color:#ffffff;text-decoration:none;border-radius:6px;font-weight:700;">Follow Up Sekarang</a>'
+            . '<p style="color:#94a3b8;font-size:12px;margin-top:18px;">Email otomatis dari sistem ' . htmlspecialchars($companyName) . '.</p>'
+            . '</div>';
+
+        $mailer = new SmtpMailer(
+            $emailConfig['host'],
+            (int)($emailConfig['smtp_port'] ?? 465),
+            $emailConfig['smtp_encryption'] ?? 'ssl',
+            $emailConfig['user'],
+            $emailConfig['pass']
+        );
+
+        foreach ($emails as $to) {
+            try {
+                $mailer->send($to, $subject, $bodyHtml, $companyName);
+            } catch (Throwable $e) {
+                error_log('sunseaNotifyAdminNewQuotation send to ' . $to . ' failed: ' . $e->getMessage());
+            }
+        }
+    } catch (Throwable $e) {
+        error_log('sunseaNotifyAdminNewQuotation error: ' . $e->getMessage());
+    }
+}

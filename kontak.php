@@ -92,6 +92,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             $pdo->commit();
+
+            sunseaNotifyAdminNewQuotation($pdo, $quotationId);
+
             $successMsg = "Terima kasih! Permintaan booking Anda telah kami terima dengan No. Penawaran {$quotationNo}. Tim kami akan segera menghubungi Anda.";
         } catch (Exception $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();

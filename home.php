@@ -95,6 +95,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['we_action'] ?? '') === 'qu
             $pdo->prepare("INSERT INTO quotation_items (quotation_id, item_type, description, qty, unit, unit_price, subtotal, sort_order) VALUES (?,?,?,?,?,?,?,0)")
                 ->execute([$qId, 'other', $qPackageName, $qPax, 'org', $qPackageRow['base_price'] ?? 0, $qSubtotal]);
 
+            sunseaNotifyAdminNewQuotation($pdo, $qId);
+
             $weQuoteSuccessMsg = "Terima kasih, {$qName}! Permintaan penawaran Anda (No. {$qNo}) sudah kami terima. Tim kami akan segera menghubungi Anda via WhatsApp.";
             $weQuoteOld = ['name' => '', 'phone' => '', 'trip_date' => '', 'pax' => 2, 'package_id' => ''];
         } catch (Throwable $e) {

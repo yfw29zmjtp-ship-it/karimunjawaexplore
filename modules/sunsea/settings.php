@@ -206,6 +206,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $tab = 'invoice';
     }
 
+    if ($postTab === 'notifikasi') {
+        $notifLines = preg_split('/\r\n|\r|\n/', trim($_POST['notif_admin_emails'] ?? ''));
+        $notifLines = array_values(array_filter(array_map('trim', $notifLines), fn($l) => $l !== ''));
+        $invalidEmails = array_filter($notifLines, fn($l) => !filter_var($l, FILTER_VALIDATE_EMAIL));
+        if ($invalidEmails) {
+            $flashMsg = 'Email tidak valid: ' . implode(', ', $invalidEmails);
+            $flashType = 'error';
+        } else {
+            setSetting($pdo, 'notif_admin_emails', implode("\n", $notifLines));
+            $flashMsg = 'Pengaturan notifikasi email berhasil disimpan.';
+            $flashType = 'success';
+        }
+        $tab = 'notifikasi';
+    }
+
     if ($postTab === 'sidebar') {
         $selected = $_POST['sidebar_menu'] ?? [];
         if (!is_array($selected)) {
@@ -448,6 +463,7 @@ $keys = [
     'invoice_show_tax',
     'sidebar_visible_menu_keys',
     'login_background',
+    'notif_admin_emails',
 ];
 foreach ($keys as $k) {
     $cfg[$k] = getSetting($pdo, $k);
@@ -520,6 +536,10 @@ $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : '
     <a href="?tab=login_page" style="padding:10px 24px;font-weight:600;text-decoration:none;border-bottom:2px solid transparent;margin-bottom:-2px;
         <?php echo $tab === 'login_page' ? 'border-bottom-color:#C2410C;color:#C2410C;' : 'color:#666;'; ?>">
         🖼️ Background Login
+    </a>
+    <a href="?tab=notifikasi" style="padding:10px 24px;font-weight:600;text-decoration:none;border-bottom:2px solid transparent;margin-bottom:-2px;
+        <?php echo $tab === 'notifikasi' ? 'border-bottom-color:#C2410C;color:#C2410C;' : 'color:#666;'; ?>">
+        📧 Notifikasi Email
     </a>
     <a href="?tab=reset" style="padding:10px 24px;font-weight:600;text-decoration:none;border-bottom:2px solid transparent;margin-bottom:-2px;
         <?php echo $tab === 'reset' ? 'border-bottom-color:#b91c1c;color:#b91c1c;' : 'color:#666;'; ?>">
@@ -1038,6 +1058,34 @@ $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : '
             <?php endif; ?>
         </div>
     </div>
+
+    <!-- TAB: NOTIFIKASI EMAIL -->
+<?php elseif ($tab === 'notifikasi'): ?>
+    <form method="POST" style="max-width:640px;">
+        <input type="hidden" name="tab" value="notifikasi">
+        <div style="background:#fff;border:1px solid #dde5ef;border-radius:8px;padding:20px;">
+            <div style="font-size:16px;font-weight:700;color:#7C2D12;margin-bottom:6px;">📧 Notifikasi Email Booking Baru</div>
+            <div style="font-size:13px;color:#666;margin-bottom:16px;">
+                Setiap ada permintaan penawaran/booking baru dari website (form "Minta Penawaran" di beranda atau form Kontak),
+                sistem otomatis mengirim email ke daftar admin di bawah ini, lengkap dengan tombol "Follow Up" yang langsung
+                membuka detail penawarannya. Bisa diisi lebih dari 1 email — gunakan alamat email di HP admin agar muncul notifikasi.
+                Pengiriman menggunakan pengaturan SMTP di menu <strong>Email Kantor &rarr; Pengaturan Email</strong>.
+            </div>
+
+            <div>
+                <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;">Email Admin (bisa lebih dari 1)</label>
+                <textarea name="notif_admin_emails" rows="5" placeholder="admin1@gmail.com&#10;admin2@gmail.com"
+                    style="width:100%;padding:9px 12px;border:1px solid #ccc;border-radius:5px;font-family:inherit;font-size:14px;box-sizing:border-box;resize:vertical;"><?php echo htmlspecialchars($cfg['notif_admin_emails']); ?></textarea>
+                <small style="color:#888;">1 baris = 1 alamat email.</small>
+            </div>
+
+            <div style="padding-top:14px;">
+                <button type="submit" style="padding:10px 24px;background:#C2410C;color:white;border:none;border-radius:5px;font-weight:700;cursor:pointer;font-size:14px;">
+                    💾 Simpan Pengaturan Notifikasi
+                </button>
+            </div>
+        </div>
+    </form>
 
     <!-- TAB: RESET DATA -->
 <?php elseif ($tab === 'reset'): ?>
