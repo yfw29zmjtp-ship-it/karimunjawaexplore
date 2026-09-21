@@ -832,6 +832,28 @@ function sunseaCompanyPhones(PDO $pdo): array
 }
 
 /**
+ * Some packages are priced as a fixed-size group (e.g. "Family Trip untuk 4 Orang",
+ * "Honeymoon untuk 2 Orang") - base_price already covers the whole group, so pax MUST
+ * NOT be freely multiplied or the quote/invoice becomes wildly overpriced (e.g. 4x).
+ * Detects this from either `min_pax === max_pax` (explicit, from Paket Wisata admin form)
+ * or a "Pax untuk N Orang" pattern in the package name (fallback for packages where the
+ * admin only labelled the name but didn't set min/max_pax). Returns 0 if the package is
+ * NOT a fixed-group package (regular per-pax pricing).
+ */
+function sunseaPackageFixedPax(array $package): int
+{
+    $minPax = (int)($package['min_pax'] ?? 0);
+    $maxPax = (int)($package['max_pax'] ?? 0);
+    if ($minPax > 0 && $minPax === $maxPax) {
+        return $minPax;
+    }
+    if (preg_match('/Pax\s+untuk\s+(\d+)\s+Orang/i', (string)($package['name'] ?? ''), $m)) {
+        return (int)$m[1];
+    }
+    return 0;
+}
+
+/**
  * List of admin notification emails from the "notif_admin_emails" setting (one address per line).
  */
 function sunseaNotifAdminEmails(PDO $pdo): array

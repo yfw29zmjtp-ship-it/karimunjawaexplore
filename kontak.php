@@ -5,7 +5,7 @@ sunseaEnsureBookingSchema($pdo);
 sunseaEnsurePackageItemsSchema($pdo);
 
 $packages = $pdo->query(
-    "SELECT id, name, duration_days, duration_nights, base_price FROM trip_packages WHERE is_active = 1 ORDER BY name"
+    "SELECT id, name, duration_days, duration_nights, base_price, min_pax, max_pax FROM trip_packages WHERE is_active = 1 ORDER BY name"
 )->fetchAll();
 
 $selectedPackageId = (int)($_GET['package_id'] ?? 0);
@@ -30,6 +30,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $pkgStmt = $pdo->prepare("SELECT * FROM trip_packages WHERE id = ? AND is_active = 1");
                 $pkgStmt->execute([$packageId]);
                 $pkg = $pkgStmt->fetch();
+            }
+
+            // Paket grup tetap (mis. "Pax untuk 4 Orang") sudah dihargai untuk seluruh grup -
+            // paksa pax ke jumlah tetap itu di server, jangan percaya input tamu (bisa dimanipulasi
+            // walau di form sudah dikunci via JS), supaya nominal tidak dikali salah (mis. 4x).
+            $fixedPax = $pkg ? sunseaPackageFixedPax($pkg) : 0;
+            if ($fixedPax > 0) {
+                $pax = $fixedPax;
             }
 
             $durationDays = $pkg ? max(1, (int)$pkg['duration_days']) : 3;
@@ -161,10 +169,10 @@ require __DIR__ . '/includes/website-header.php';
                 </div>
                 <div class="we-form-row">
                     <label>Pilih Paket (opsional)</label>
-                    <select name="package_id">
+                    <select name="package_id" id="weKontakPackage">
                         <option value="0">-- Custom Trip / Belum Menentukan --</option>
                         <?php foreach ($packages as $pkg): ?>
-                            <option value="<?php echo (int)$pkg['id']; ?>" <?php echo ($selectedPackageId === (int)$pkg['id'] || (int)($_POST['package_id'] ?? 0) === (int)$pkg['id']) ? 'selected' : ''; ?>>
+                            <option value="<?php echo (int)$pkg['id']; ?>" data-min-pax="<?php echo (int)$pkg['min_pax']; ?>" data-max-pax="<?php echo (int)$pkg['max_pax']; ?>" <?php echo ($selectedPackageId === (int)$pkg['id'] || (int)($_POST['package_id'] ?? 0) === (int)$pkg['id']) ? 'selected' : ''; ?>>
                                 <?php echo htmlspecialchars($pkg['name']); ?> (<?php echo (int)$pkg['duration_days']; ?>H<?php echo (int)$pkg['duration_nights']; ?>M)
                             </option>
                         <?php endforeach; ?>
@@ -177,7 +185,8 @@ require __DIR__ . '/includes/website-header.php';
                     </div>
                     <div class="we-form-row">
                         <label>Jumlah Peserta *</label>
-                        <input type="number" name="pax" min="1" required value="<?php echo htmlspecialchars($_POST['pax'] ?? '1'); ?>">
+                        <input type="number" name="pax" id="weKontakPax" min="1" required value="<?php echo htmlspecialchars($_POST['pax'] ?? '1'); ?>">
+                        <small id="weKontakPaxHint" style="display:none;color:#c2410c;font-weight:600;"></small>
                     </div>
                 </div>
                 <div class="we-form-row">
@@ -189,5 +198,37 @@ require __DIR__ . '/includes/website-header.php';
         </div>
     </div>
 </section>
+
+<script>
+    // Sama seperti form quick-quote di beranda: paket dengan grup tetap (mis. "Pax untuk 4 Orang")
+    // sudah dihargai per-paket, bukan per-orang - kunci Jumlah Peserta agar tidak salah dikali.
+    function weKontakApplyFixedPax() {
+        var select = document.getElementById('weKontakPackage');
+        var paxInput = document.getElementById('weKontakPax');
+        var hint = document.getElementById('weKontakPaxHint');
+        var opt = select.options[select.selectedIndex];
+        if (!opt || !opt.value || opt.value === '0') {
+            paxInput.readOnly = false;
+            hint.style.display = 'none';
+            return;
+        }
+        var minPax = parseInt(opt.getAttribute('data-min-pax') || '0', 10);
+        var maxPax = parseInt(opt.getAttribute('data-max-pax') || '0', 10);
+        var fixedMatch = opt.textContent.match(/Pax\s+untuk\s+(\d+)\s+Orang/i);
+        var fixedPax = fixedMatch ? parseInt(fixedMatch[1], 10) : (minPax > 0 && minPax === maxPax ? minPax : 0);
+
+        if (fixedPax > 0) {
+            paxInput.value = fixedPax;
+            paxInput.readOnly = true;
+            hint.textContent = 'Paket ini untuk grup tetap ' + fixedPax + ' orang, jumlah peserta otomatis mengikuti paket.';
+            hint.style.display = 'block';
+        } else {
+            paxInput.readOnly = false;
+            hint.style.display = 'none';
+        }
+    }
+    document.getElementById('weKontakPackage').addEventListener('change', weKontakApplyFixedPax);
+    document.addEventListener('DOMContentLoaded', weKontakApplyFixedPax);
+</script>
 
 <?php require __DIR__ . '/includes/website-footer.php'; ?>

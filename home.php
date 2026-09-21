@@ -8,7 +8,7 @@ $featuredPackages = $pdo->query(
      FROM trip_packages WHERE is_active = 1 ORDER BY display_order, id DESC"
 )->fetchAll();
 $weAllPackages = $pdo->query(
-    "SELECT id, name, duration_days, duration_nights
+    "SELECT id, name, duration_days, duration_nights, min_pax, max_pax
      FROM trip_packages WHERE is_active = 1 ORDER BY name ASC"
 )->fetchAll();
 $weHomeGallery = $pdo->query(
@@ -67,10 +67,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['we_action'] ?? '') === 'qu
                 $qCustomerId = (int)$pdo->lastInsertId();
             }
 
-            $qPackageStmt = $pdo->prepare("SELECT name, duration_days, base_price FROM trip_packages WHERE id = ?");
+            $qPackageStmt = $pdo->prepare("SELECT name, duration_days, base_price, min_pax, max_pax FROM trip_packages WHERE id = ?");
             $qPackageStmt->execute([$qPackageId]);
             $qPackageRow = $qPackageStmt->fetch();
             $qPackageName = $qPackageRow['name'] ?? '-';
+
+            // Paket grup tetap (mis. "Pax untuk 4 Orang") sudah dihargai untuk seluruh grup -
+            // paksa pax ke jumlah tetap itu di server, jangan percaya input tamu (bisa dimanipulasi
+            // walau di form sudah dikunci via JS), supaya nominal tidak dikali salah (mis. 4x).
+            $qFixedPax = $qPackageRow ? sunseaPackageFixedPax($qPackageRow) : 0;
+            if ($qFixedPax > 0) {
+                $qPax = $qFixedPax;
+                $weQuoteOld['pax'] = $qPax;
+            }
 
             // Tanggal selesai dihitung otomatis dari durasi paket (mis. 3H2M -> +2 hari) agar
             // admin tidak perlu isi manual di menu Penawaran dan nominal langsung terhitung.
@@ -132,15 +141,16 @@ require __DIR__ . '/includes/website-header.php';
             </div>
             <div class="we-quotebar-field">
                 <label>Total Pax</label>
-                <input type="number" name="q_pax" min="1" required value="<?php echo (int)$weQuoteOld['pax']; ?>">
+                <input type="number" name="q_pax" id="weQuotePax" min="1" required value="<?php echo (int)$weQuoteOld['pax']; ?>">
+                <small id="weQuotePaxHint" style="display:none;color:#c2410c;font-weight:600;"></small>
             </div>
             <div class="we-quotebar-field">
                 <label>Pilih Paket</label>
-                <select name="q_package_id" required>
+                <select name="q_package_id" id="weQuotePackage" required>
                     <option value="">Pilih Paket</option>
                     <?php foreach ($weAllPackages as $pkg): ?>
                         <?php $pkgLabel = $pkg['duration_days'] . 'H' . $pkg['duration_nights'] . 'M - ' . $pkg['name']; ?>
-                        <option value="<?php echo (int)$pkg['id']; ?>" <?php echo (string)$weQuoteOld['package_id'] === (string)$pkg['id'] ? 'selected' : ''; ?>><?php echo htmlspecialchars($pkgLabel); ?></option>
+                        <option value="<?php echo (int)$pkg['id']; ?>" data-min-pax="<?php echo (int)$pkg['min_pax']; ?>" data-max-pax="<?php echo (int)$pkg['max_pax']; ?>" <?php echo (string)$weQuoteOld['package_id'] === (string)$pkg['id'] ? 'selected' : ''; ?>><?php echo htmlspecialchars($pkgLabel); ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
@@ -179,6 +189,38 @@ require __DIR__ . '/includes/website-header.php';
 <?php endif; ?>
 
 <script>
+    // Sejumlah paket (mis. "Family Trip untuk 4 Orang", "Honeymoon untuk 2 Orang") sudah
+    // dihargai per-paket untuk jumlah orang TETAP, bukan per-orang. Kalau tamu bebas mengisi
+    // Total Pax sendiri, sistem akan mengalikan harga paket x pax dan tagihan jadi salah
+    // (mis. 4x lipat). Kuncikan Total Pax ke min_pax/max_pax paket saat keduanya sama.
+    function weApplyFixedPax() {
+        var select = document.getElementById('weQuotePackage');
+        var paxInput = document.getElementById('weQuotePax');
+        var hint = document.getElementById('weQuotePaxHint');
+        var opt = select.options[select.selectedIndex];
+        if (!opt || !opt.value) {
+            paxInput.readOnly = false;
+            hint.style.display = 'none';
+            return;
+        }
+        var minPax = parseInt(opt.getAttribute('data-min-pax') || '0', 10);
+        var maxPax = parseInt(opt.getAttribute('data-max-pax') || '0', 10);
+        var fixedMatch = opt.textContent.match(/Pax\s+untuk\s+(\d+)\s+Orang/i);
+        var fixedPax = fixedMatch ? parseInt(fixedMatch[1], 10) : (minPax > 0 && minPax === maxPax ? minPax : 0);
+
+        if (fixedPax > 0) {
+            paxInput.value = fixedPax;
+            paxInput.readOnly = true;
+            hint.textContent = 'Paket ini untuk grup tetap ' + fixedPax + ' orang, jumlah pax otomatis mengikuti paket.';
+            hint.style.display = 'block';
+        } else {
+            paxInput.readOnly = false;
+            hint.style.display = 'none';
+        }
+    }
+    document.getElementById('weQuotePackage').addEventListener('change', weApplyFixedPax);
+    document.addEventListener('DOMContentLoaded', weApplyFixedPax);
+
     function weOpenQuoteModal() {
         // Only validate the fields visible in the bar itself — q_name/q_phone live
         // inside the (still-hidden) modal, and browsers silently fail reportValidity()
