@@ -89,9 +89,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['we_action'] ?? '') === 'qu
                 $qEndDate = date('Y-m-d', strtotime($qDate . ' + ' . ($qDurationDays - 1) . ' days'));
             }
 
-            // Nominal dihitung otomatis dari harga paket x pax, sama seperti form kontak.php,
-            // supaya total sudah langsung muncul tanpa admin perlu buka & simpan ulang.
-            $qSubtotal = (float)($qPackageRow['base_price'] ?? 0) * $qPax;
+            // Nominal dihitung otomatis dari harga paket x pax. Untuk paket grup tetap,
+            // base_price SUDAH mewakili harga seluruh grup - jangan dikali pax lagi (dobel harga).
+            $qBasePrice = (float)($qPackageRow['base_price'] ?? 0);
+            $qSubtotal = $qFixedPax > 0 ? $qBasePrice : $qBasePrice * $qPax;
+            $qItemQty = $qFixedPax > 0 ? 1 : $qPax;
+            $qItemUnit = $qFixedPax > 0 ? 'paket' : 'org';
 
             $qNo = sunseaNextNumber($pdo, 'quotation');
             $qNotes = "[Website] Permintaan penawaran cepat.\nPaket: " . $qPackageName;
@@ -102,7 +105,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['we_action'] ?? '') === 'qu
             // Simpan baris item paketnya juga, supaya detail penawaran langsung tampil
             // di menu admin tanpa perlu buka & simpan ulang form edit dulu.
             $pdo->prepare("INSERT INTO quotation_items (quotation_id, item_type, description, qty, unit, unit_price, subtotal, sort_order) VALUES (?,?,?,?,?,?,?,0)")
-                ->execute([$qId, 'other', $qPackageName, $qPax, 'org', $qPackageRow['base_price'] ?? 0, $qSubtotal]);
+                ->execute([$qId, 'other', $qPackageName, $qItemQty, $qItemUnit, $qBasePrice, $qSubtotal]);
 
             sunseaNotifyAdminNewQuotation($pdo, $qId);
 
@@ -220,6 +223,14 @@ require __DIR__ . '/includes/website-header.php';
     }
     document.getElementById('weQuotePackage').addEventListener('change', weApplyFixedPax);
     document.addEventListener('DOMContentLoaded', weApplyFixedPax);
+
+    document.getElementById('weQuoteForm').addEventListener('submit', function() {
+        var btn = this.querySelector('button[type="submit"]');
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = 'Mengirim...';
+        }
+    });
 
     function weOpenQuoteModal() {
         // Only validate the fields visible in the bar itself — q_name/q_phone live

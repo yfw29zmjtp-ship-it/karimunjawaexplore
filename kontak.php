@@ -64,7 +64,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $quotationNo = sunseaNextNumber($pdo, 'quotation');
             $quoteNotes = "[Website] Permintaan booking dari form kontak.\n" . ($message !== '' ? "Pesan: {$message}" : '');
-            $subtotal = $pkg ? (float)$pkg['base_price'] * $pax : 0;
+            // Paket grup tetap: base_price sudah mewakili harga seluruh grup, jangan dikali pax lagi.
+            $subtotal = $pkg ? ($fixedPax > 0 ? (float)$pkg['base_price'] : (float)$pkg['base_price'] * $pax) : 0;
 
             $pdo->prepare("INSERT INTO quotations
                 (quotation_no, customer_id, package_id, trip_date, trip_end_date, pax_count, status, subtotal, total_amount, notes, created_by)
@@ -92,8 +93,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $quotationId,
                         'other',
                         $pkg['name'],
-                        $pax,
-                        'pax',
+                        $fixedPax > 0 ? 1 : $pax,
+                        $fixedPax > 0 ? 'paket' : 'pax',
                         (float)$pkg['base_price'],
                         $subtotal,
                     ]);
@@ -152,7 +153,7 @@ require __DIR__ . '/includes/website-header.php';
             <?php if ($successMsg): ?><div class="we-alert we-alert-success"><?php echo htmlspecialchars($successMsg); ?></div><?php endif; ?>
             <?php if ($errorMsg): ?><div class="we-alert we-alert-error"><?php echo htmlspecialchars($errorMsg); ?></div><?php endif; ?>
 
-            <form method="POST">
+            <form method="POST" id="weKontakForm">
                 <div class="we-form-row">
                     <label>Nama Lengkap *</label>
                     <input type="text" name="name" required value="<?php echo htmlspecialchars($_POST['name'] ?? ''); ?>">
@@ -229,6 +230,14 @@ require __DIR__ . '/includes/website-header.php';
     }
     document.getElementById('weKontakPackage').addEventListener('change', weKontakApplyFixedPax);
     document.addEventListener('DOMContentLoaded', weKontakApplyFixedPax);
+
+    document.querySelector('#weKontakForm').addEventListener('submit', function() {
+        var btn = this.querySelector('button[type="submit"]');
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = 'Mengirim...';
+        }
+    });
 </script>
 
 <?php require __DIR__ . '/includes/website-footer.php'; ?>
