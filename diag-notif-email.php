@@ -110,3 +110,10 @@ if (!$foundLog) {
     echo "Tidak ditemukan file error_log yang bisa dibaca dari lokasi umum. Cek manual lewat\n";
     echo "cPanel -> Metrics -> Errors, filter kata 'sunseaNotifyAdminNewQuotation'.\n";
 }
+
+echo "\n=== 6. Cek apakah file home.php & kontak.php DI SERVER sudah versi terbaru ===\n";
+foreach (['home.php', 'kontak.php'] as $f) {
+    $path = __DIR__ . '/' . $f;
+    $hasCall = is_readable($path) && strpos(file_get_contents($path), 'sunseaNotifyAdminNewQuotation') !== false;
+    echo "{$f}: " . ($hasCall ? "SUDAH ada panggilan notifikasi (versi terbaru)" : "TIDAK ADA panggilan notifikasi! File ini di server masih versi LAMA, belum di-upload ulang.") . "\n";
+}
