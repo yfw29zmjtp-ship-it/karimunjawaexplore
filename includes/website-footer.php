@@ -307,6 +307,23 @@
         })();
     </script>
 
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script>
+        // Ganti date picker bawaan browser (tampilan beda-beda per OS/browser, sulit dirapikan)
+        // dengan flatpickr agar tampilannya konsisten, elegan, dan selalu muncul di bawah field.
+        document.querySelectorAll('input[type="date"]').forEach(function(el) {
+            flatpickr(el, {
+                dateFormat: 'Y-m-d',
+                altInput: true,
+                altFormat: 'd F Y',
+                minDate: el.getAttribute('min') || null,
+                position: 'below',
+                disableMobile: true,
+                monthSelectorType: 'static'
+            });
+        });
+    </script>
+
     </body>
 
     </html>

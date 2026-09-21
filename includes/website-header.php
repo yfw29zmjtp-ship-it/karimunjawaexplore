@@ -19,6 +19,7 @@ $weFaviconPath = sunseaSetting($pdo, 'website_favicon', '');
         <link rel="icon" href="<?php echo htmlspecialchars(sunseaAssetUrl($weFaviconPath)); ?>">
     <?php endif; ?>
     <link rel="stylesheet" href="<?php echo sunseaAssetUrl('assets/website/style.css'); ?>">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 </head>
 
 <body class="we-body">
