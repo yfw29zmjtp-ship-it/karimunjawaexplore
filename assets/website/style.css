@@ -776,29 +776,38 @@ a {
     padding-left: 22px;
   }
   .we-pkg-sidebar {
-    padding: 16px;
+    padding: 14px 16px;
     border-radius: 12px;
   }
   .we-pkg-price-label {
     font-size: 11px;
+    margin-bottom: 2px;
   }
   .we-pkg-price {
-    font-size: 20px;
+    display: flex;
+    align-items: baseline;
+    flex-wrap: nowrap;
+    gap: 5px;
+    font-size: 17px;
+    line-height: 1.2;
+    margin-bottom: 0;
+    white-space: nowrap;
   }
   .we-pkg-price span {
-    font-size: 11px;
+    font-size: 10.5px;
+    white-space: nowrap;
   }
   .we-pkg-sidebar-meta {
-    margin: 12px 0;
-    padding: 12px 0;
-    gap: 7px;
+    margin: 10px 0;
+    padding: 10px 0;
+    gap: 6px;
   }
   .we-pkg-sidebar-meta-row {
     font-size: 12px;
   }
   .we-pkg-sidebar .we-btn {
-    padding: 11px 16px;
-    font-size: 13.5px;
+    padding: 10px 16px;
+    font-size: 13px;
   }
 }
 
