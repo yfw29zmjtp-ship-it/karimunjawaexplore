@@ -892,6 +892,9 @@ function sunseaNotifyAdminNewQuotation(PDO $pdo, int $quotationId): void
         $tripDate = $q['trip_date'] ? date('d M Y', strtotime($q['trip_date'])) : '-';
         $tripEndDate = $q['trip_end_date'] ? date('d M Y', strtotime($q['trip_end_date'])) : '';
 
+        $waMessage = "Halo {$q['customer_name']}, terima kasih sudah menghubungi {$companyName} untuk penawaran No. {$q['quotation_no']}. Kami bantu follow up ya kak.";
+        $waUrl = $q['customer_phone'] ? sunseaWaLink($q['customer_phone'], $waMessage) : '';
+
         $subject = 'Booking Baru Masuk - ' . $q['quotation_no'] . ' (Perlu Follow Up)';
         $bodyHtml = '<div style="font-family:Arial,sans-serif;max-width:520px;">'
             . '<h2 style="color:#0f766e;margin-bottom:4px;">Ada Booking Baru dari Website</h2>'
@@ -905,7 +908,8 @@ function sunseaNotifyAdminNewQuotation(PDO $pdo, int $quotationId): void
             . '<tr><td style="padding:4px 0;color:#64748b;">Jumlah Pax</td><td style="padding:4px 0;font-weight:600;">' . (int)$q['pax_count'] . '</td></tr>'
             . '<tr><td style="padding:4px 0;color:#64748b;">Estimasi Nominal</td><td style="padding:4px 0;font-weight:600;">' . sunseaRupiah((float)$q['total_amount']) . '</td></tr>'
             . '</table>'
-            . '<a href="' . htmlspecialchars($followUpUrl) . '" style="display:inline-block;padding:12px 24px;background:#0f766e;color:#ffffff;text-decoration:none;border-radius:6px;font-weight:700;">Follow Up Sekarang</a>'
+            . '<a href="' . htmlspecialchars($followUpUrl) . '" style="display:inline-block;padding:12px 24px;background:#0f766e;color:#ffffff;text-decoration:none;border-radius:6px;font-weight:700;margin-right:10px;">Follow Up Sekarang</a>'
+            . ($waUrl !== '' ? '<a href="' . htmlspecialchars($waUrl) . '" style="display:inline-block;padding:12px 24px;background:#25D366;color:#ffffff;text-decoration:none;border-radius:6px;font-weight:700;">Follow Up via WhatsApp</a>' : '')
             . '<p style="color:#94a3b8;font-size:12px;margin-top:18px;">Email otomatis dari sistem ' . htmlspecialchars($companyName) . '.</p>'
             . '</div>';
 
