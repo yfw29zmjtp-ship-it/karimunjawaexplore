@@ -206,14 +206,17 @@ a {
   transform: translateX(-50%) translateY(4px);
   min-width: 190px;
   max-width: 230px;
-  background: linear-gradient(135deg, #c2410c, #ea580c);
+  background: rgba(15, 23, 42, 0.82);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   color: #fff;
   font-size: 11.5px;
   font-weight: 600;
   line-height: 1.4;
   padding: 9px 12px;
   border-radius: 10px;
-  box-shadow: 0 8px 20px rgba(194, 65, 12, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.28);
   text-align: center;
   z-index: 20;
   opacity: 0;
@@ -227,7 +230,7 @@ a {
   left: 50%;
   transform: translateX(-50%);
   border: 6px solid transparent;
-  border-top-color: #ea580c;
+  border-top-color: rgba(15, 23, 42, 0.82);
 }
 .we-pax-bubble.show {
   opacity: 1;
