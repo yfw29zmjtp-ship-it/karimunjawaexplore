@@ -722,93 +722,6 @@ a {
   .we-hero h1 {
     font-size: 27px;
   }
-  .we-pkg-grid {
-    grid-template-columns: 1fr;
-    gap: 20px;
-  }
-  .we-pkg-sidebar {
-    position: static;
-  }
-  /* Detail paket di HP: rapikan & kecilkan teks, harga tetap elegan tapi ringkas */
-  .we-pkg-hero-img {
-    height: 190px;
-    border-radius: 12px;
-    margin-bottom: 16px;
-  }
-  .we-pkg-header {
-    margin-bottom: 16px;
-    gap: 8px;
-  }
-  .we-pkg-title {
-    font-size: 19px;
-    margin: 0 0 8px;
-  }
-  .we-pkg-badges {
-    gap: 6px;
-  }
-  .we-pkg-badge {
-    font-size: 10.5px;
-    padding: 4px 9px;
-  }
-  .we-pkg-section {
-    margin-bottom: 20px;
-  }
-  .we-pkg-section-title {
-    font-size: 13.5px;
-    gap: 6px;
-    margin: 0 0 8px;
-    padding-bottom: 8px;
-  }
-  .we-pkg-desc {
-    font-size: 13px;
-    line-height: 1.75;
-  }
-  .we-pkg-list {
-    gap: 8px;
-  }
-  .we-pkg-list li {
-    font-size: 12.5px;
-    line-height: 1.5;
-  }
-  .we-pkg-itinerary li {
-    font-size: 12.5px;
-    line-height: 1.6;
-    padding-left: 22px;
-  }
-  .we-pkg-sidebar {
-    padding: 14px 16px;
-    border-radius: 12px;
-  }
-  .we-pkg-price-label {
-    font-size: 11px;
-    margin-bottom: 2px;
-  }
-  .we-pkg-price {
-    display: flex;
-    align-items: baseline;
-    flex-wrap: nowrap;
-    gap: 5px;
-    font-size: 17px;
-    line-height: 1.2;
-    margin-bottom: 0;
-    white-space: nowrap;
-  }
-  .we-pkg-price span {
-    font-size: 10.5px;
-    white-space: nowrap;
-  }
-  .we-pkg-sidebar-meta {
-    margin: 10px 0;
-    padding: 10px 0;
-    gap: 6px;
-  }
-  .we-pkg-sidebar-meta-row {
-    font-size: 12px;
-  }
-  .we-pkg-sidebar .we-btn {
-    padding: 10px 16px;
-    font-size: 13px;
-  }
 }
 
 /* Package detail page */
@@ -1050,6 +963,96 @@ a {
   display: block;
   text-align: center;
   width: 100%;
+}
+
+/* Mobile: harus ditulis SETELAH rule dasar .we-pkg-* di atas, kalau tidak akan
+   ketiban/dibatalkan oleh rule dasar tanpa media query (spesifisitas sama, urutan
+   sumber menang) - ini yang bikin layout dulu tetap 2 kolom & kepotong di HP. */
+@media (max-width: 620px) {
+  .we-pkg-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  .we-pkg-sidebar {
+    position: static;
+    padding: 14px 16px;
+    border-radius: 12px;
+  }
+  .we-pkg-hero-img {
+    height: 190px;
+    border-radius: 12px;
+    margin-bottom: 16px;
+  }
+  .we-pkg-header {
+    margin-bottom: 16px;
+    gap: 8px;
+  }
+  .we-pkg-title {
+    font-size: 19px;
+    margin: 0 0 8px;
+  }
+  .we-pkg-badges {
+    gap: 6px;
+  }
+  .we-pkg-badge {
+    font-size: 10.5px;
+    padding: 4px 9px;
+  }
+  .we-pkg-section {
+    margin-bottom: 20px;
+  }
+  .we-pkg-section-title {
+    font-size: 13.5px;
+    gap: 6px;
+    margin: 0 0 8px;
+    padding-bottom: 8px;
+  }
+  .we-pkg-desc {
+    font-size: 13px;
+    line-height: 1.75;
+  }
+  .we-pkg-list {
+    gap: 8px;
+  }
+  .we-pkg-list li {
+    font-size: 12.5px;
+    line-height: 1.5;
+  }
+  .we-pkg-itinerary li {
+    font-size: 12.5px;
+    line-height: 1.6;
+    padding-left: 22px;
+  }
+  .we-pkg-price-label {
+    font-size: 11px;
+    margin-bottom: 2px;
+  }
+  .we-pkg-price {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: nowrap;
+    gap: 5px;
+    font-size: 17px;
+    line-height: 1.2;
+    margin-bottom: 0;
+    white-space: nowrap;
+  }
+  .we-pkg-price span {
+    font-size: 10.5px;
+    white-space: nowrap;
+  }
+  .we-pkg-sidebar-meta {
+    margin: 10px 0;
+    padding: 10px 0;
+    gap: 6px;
+  }
+  .we-pkg-sidebar-meta-row {
+    font-size: 12px;
+  }
+  .we-pkg-sidebar .we-btn {
+    padding: 10px 16px;
+    font-size: 13px;
+  }
 }
 
 /* Section "Tentang" ringkas di beranda, sebelum daftar paket wisata */
