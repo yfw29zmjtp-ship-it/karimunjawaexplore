@@ -12,7 +12,15 @@ require_once '../../includes/functions.php';
 require_once 'db-helper.php';
 
 $auth = new Auth();
-$auth->requireLogin();
+
+// Link "Cetak/PDF" dikirim ke customer via WhatsApp harus bisa dibuka TANPA login -
+// kalau token share valid, lewati requireLogin() khusus untuk action=print ini saja.
+$action = $_GET['action'] ?? 'list';
+$qId    = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+$isPublicShare = $action === 'print' && $qId > 0 && ($_GET['share'] ?? '') !== '' && hash_equals(sunseaShareToken('quotation', $qId), (string)$_GET['share']);
+if (!$isPublicShare) {
+    $auth->requireLogin();
+}
 
 $pdo    = getSunseaConnection();
 sunseaEnsureMasterDataSchema($pdo);
@@ -20,8 +28,6 @@ sunseaEnsureAccommodationSchema($pdo);
 sunseaEnsureQuotationItinerarySchema($pdo);
 sunseaEnsurePackageItemsSchema($pdo);
 sunseaEnsureBookingSchema($pdo);
-$action = $_GET['action'] ?? 'list';
-$qId    = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
 // ---- HANDLE POST ----
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -963,7 +969,8 @@ include 'layout-header.php';
     <!-- ============ VIEW DETAIL ============ -->
     <?php
     $waPhone = $quotation['customer_whatsapp'] ?: $quotation['customer_phone'];
-    $waMessage = "Halo {$quotation['customer_name']}, berikut penawaran perjalanan dari " . sunseaSetting($pdo, 'company_name', 'Explore Karimunjawa') . " nomor {$quotation['quotation_no']} sebesar " . sunseaRupiah((float)$quotation['total_amount']) . ". Berlaku sampai " . ($quotation['valid_until'] ? date('d M Y', strtotime($quotation['valid_until'])) : '-') . ". Terima kasih.";
+    $waShareUrl = rtrim(BASE_URL, '/') . '/modules/sunsea/quotations.php?action=print&id=' . $quotation['id'] . '&share=' . sunseaShareToken('quotation', (int)$quotation['id']);
+    $waMessage = "Halo {$quotation['customer_name']}, berikut penawaran perjalanan dari " . sunseaSetting($pdo, 'company_name', 'Explore Karimunjawa') . " nomor {$quotation['quotation_no']} sebesar " . sunseaRupiah((float)$quotation['total_amount']) . ". Berlaku sampai " . ($quotation['valid_until'] ? date('d M Y', strtotime($quotation['valid_until'])) : '-') . ". Lihat/download PDF penawaran di sini: {$waShareUrl}\nTerima kasih.";
     $waLink = $waPhone ? sunseaWaLink($waPhone, $waMessage) : '';
     ?>
     <div style="margin-bottom:18px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">

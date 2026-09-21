@@ -832,6 +832,16 @@ function sunseaCompanyPhones(PDO $pdo): array
 }
 
 /**
+ * Token untuk share link publik (tanpa login) - dipakai supaya customer bisa buka
+ * "Cetak / PDF" penawaran langsung dari link yang dikirim via WhatsApp, tanpa harus login.
+ * Tidak bisa ditebak tanpa tahu DB_PASS server (dipakai sebagai kunci HMAC).
+ */
+function sunseaShareToken(string $type, int $id): string
+{
+    return substr(hash_hmac('sha256', $type . ':' . $id, DB_PASS . '|sunsea-share-salt'), 0, 24);
+}
+
+/**
  * Some packages are priced as a fixed-size group (e.g. "Family Trip untuk 4 Orang",
  * "Honeymoon untuk 2 Orang") - base_price already covers the whole group, so pax MUST
  * NOT be freely multiplied or the quote/invoice becomes wildly overpriced (e.g. 4x).
