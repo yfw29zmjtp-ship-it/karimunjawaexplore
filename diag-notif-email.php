@@ -75,3 +75,38 @@ if ($emailConfig === null) {
 }
 
 echo "\nSelesai. Hapus file ini (diag-notif-email.php) setelah selesai dicek.\n";
+
+echo "\n=== 4. Panggil FUNGSI ASLI sunseaNotifyAdminNewQuotation() pada penawaran website terbaru ===\n";
+$latestId = (int)($pdo->query("SELECT id FROM quotations WHERE created_by = 'website' ORDER BY id DESC LIMIT 1")->fetchColumn() ?: 0);
+if ($latestId <= 0) {
+    echo "Tidak ada penawaran created_by='website' ditemukan.\n";
+} else {
+    echo "Memanggil sunseaNotifyAdminNewQuotation() untuk quotation id={$latestId} ...\n";
+    try {
+        sunseaNotifyAdminNewQuotation($pdo, $latestId);
+        echo "Selesai dipanggil tanpa exception yang lolos ke sini (cek Inbox/Spam sekarang,";
+        echo " dan cek juga poin 5 di bawah untuk error internal yang mungkin di-log).\n";
+    } catch (Throwable $e) {
+        echo "EXCEPTION LOLOS: " . $e->getMessage() . "\n";
+    }
+}
+
+echo "\n=== 5. Isi error_log terbaru (kalau file ditemukan & bisa dibaca) ===\n";
+$logCandidates = [
+    __DIR__ . '/error_log',
+    dirname(__DIR__) . '/error_log',
+    dirname(__DIR__, 2) . '/logs/' . ($_SERVER['HTTP_HOST'] ?? '') . '.error.log',
+];
+$foundLog = false;
+foreach ($logCandidates as $logPath) {
+    if (is_readable($logPath)) {
+        $foundLog = true;
+        echo "-- {$logPath} (50 baris terakhir) --\n";
+        $lines = file($logPath);
+        echo implode('', array_slice($lines, -50));
+    }
+}
+if (!$foundLog) {
+    echo "Tidak ditemukan file error_log yang bisa dibaca dari lokasi umum. Cek manual lewat\n";
+    echo "cPanel -> Metrics -> Errors, filter kata 'sunseaNotifyAdminNewQuotation'.\n";
+}
