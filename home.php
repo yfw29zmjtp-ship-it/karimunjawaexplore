@@ -142,7 +142,7 @@ require __DIR__ . '/includes/website-header.php';
             <div class="we-quotebar-field">
                 <label>Total Pax</label>
                 <input type="number" name="q_pax" id="weQuotePax" min="1" required value="<?php echo (int)$weQuoteOld['pax']; ?>">
-                <small id="weQuotePaxHint" style="display:none;color:#c2410c;font-weight:600;"></small>
+                <div class="we-pax-bubble" id="weQuotePaxHint"></div>
             </div>
             <div class="we-quotebar-field">
                 <label>Pilih Paket</label>
@@ -200,7 +200,7 @@ require __DIR__ . '/includes/website-header.php';
         var opt = select.options[select.selectedIndex];
         if (!opt || !opt.value) {
             paxInput.readOnly = false;
-            hint.style.display = 'none';
+            hint.classList.remove('show');
             return;
         }
         var minPax = parseInt(opt.getAttribute('data-min-pax') || '0', 10);
@@ -212,10 +212,10 @@ require __DIR__ . '/includes/website-header.php';
             paxInput.value = fixedPax;
             paxInput.readOnly = true;
             hint.textContent = 'Paket ini untuk grup tetap ' + fixedPax + ' orang, jumlah pax otomatis mengikuti paket.';
-            hint.style.display = 'block';
+            hint.classList.add('show');
         } else {
             paxInput.readOnly = false;
-            hint.style.display = 'none';
+            hint.classList.remove('show');
         }
     }
     document.getElementById('weQuotePackage').addEventListener('change', weApplyFixedPax);
