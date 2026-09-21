@@ -67,7 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['we_action'] ?? '') === 'qu
                 $qCustomerId = (int)$pdo->lastInsertId();
             }
 
-            $qPackageStmt = $pdo->prepare("SELECT name, duration_days, base_price, min_pax, max_pax FROM trip_packages WHERE id = ?");
+            $qPackageStmt = $pdo->prepare("SELECT name, duration_days, base_price, min_pax, max_pax, itinerary FROM trip_packages WHERE id = ?");
             $qPackageStmt->execute([$qPackageId]);
             $qPackageRow = $qPackageStmt->fetch();
             $qPackageName = $qPackageRow['name'] ?? '-';
@@ -98,8 +98,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['we_action'] ?? '') === 'qu
 
             $qNo = sunseaNextNumber($pdo, 'quotation');
             $qNotes = "[Website] Permintaan penawaran cepat.\nPaket: " . $qPackageName;
-            $pdo->prepare("INSERT INTO quotations (quotation_no, customer_id, package_id, trip_date, trip_end_date, pax_count, subtotal, total_amount, notes, valid_until, created_by) VALUES (?,?,?,?,?,?,?,?,?,?,?)")
-                ->execute([$qNo, $qCustomerId, $qPackageId, $qDate, $qEndDate, $qPax, $qSubtotal, $qSubtotal, $qNotes, date('Y-m-d', strtotime('+7 days')), 'website']);
+            $qItinerary = $qPackageRow['itinerary'] ?? '';
+            $pdo->prepare("INSERT INTO quotations (quotation_no, customer_id, package_id, trip_date, trip_end_date, itinerary, pax_count, subtotal, total_amount, notes, valid_until, created_by) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)")
+                ->execute([$qNo, $qCustomerId, $qPackageId, $qDate, $qEndDate, $qItinerary, $qPax, $qSubtotal, $qSubtotal, $qNotes, date('Y-m-d', strtotime('+7 days')), 'website']);
             $qId = (int)$pdo->lastInsertId();
 
             // Simpan baris item paketnya juga, supaya detail penawaran langsung tampil

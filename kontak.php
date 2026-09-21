@@ -68,14 +68,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $subtotal = $pkg ? ($fixedPax > 0 ? (float)$pkg['base_price'] : (float)$pkg['base_price'] * $pax) : 0;
 
             $pdo->prepare("INSERT INTO quotations
-                (quotation_no, customer_id, package_id, trip_date, trip_end_date, pax_count, status, subtotal, total_amount, notes, created_by)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?)")
+                (quotation_no, customer_id, package_id, trip_date, trip_end_date, itinerary, pax_count, status, subtotal, total_amount, notes, created_by)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?)")
                 ->execute([
                     $quotationNo,
                     $customerId,
                     $pkg ? $packageId : null,
                     $startDate,
                     $endDate,
+                    $pkg['itinerary'] ?? '',
                     $pax,
                     'draft',
                     $subtotal,
