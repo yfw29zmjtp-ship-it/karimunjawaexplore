@@ -6,7 +6,8 @@ $activeNav = 'galeri';
 require __DIR__ . '/includes/website-header.php';
 
 $weGalleryIcons = ['🏝️', '🌅', '🛥️', '🐠', '⛺', '🏖️', '🌊', '📸'];
-$weGalleryPhotos = $pdo->query("SELECT * FROM website_gallery WHERE is_active = 1 ORDER BY sort_order ASC, id DESC")->fetchAll();
+$weGalleryPhotos = $pdo->query("SELECT * FROM website_gallery WHERE is_active = 1 AND (category IS NULL OR category = 'umum') ORDER BY sort_order ASC, id DESC")->fetchAll();
+$weLodgingPhotos = $pdo->query("SELECT * FROM website_gallery WHERE is_active = 1 AND category = 'penginapan' ORDER BY sort_order ASC, id DESC")->fetchAll();
 ?>
 
 <section class="we-section">
@@ -34,5 +35,23 @@ $weGalleryPhotos = $pdo->query("SELECT * FROM website_gallery WHERE is_active = 
         <?php endif; ?>
     </div>
 </section>
+
+<?php if ($weLodgingPhotos): ?>
+<section class="we-section" style="background:#f8fafc;">
+    <div class="we-container">
+        <div class="we-section-title">
+            <h2>Galeri Penginapan</h2>
+            <p>Pilihan penginapan yang kami sediakan untuk tamu</p>
+        </div>
+        <div class="we-gallery-grid">
+            <?php foreach ($weLodgingPhotos as $photo): ?>
+                <div class="we-gallery-item" style="padding:0;overflow:hidden;">
+                    <img src="<?php echo htmlspecialchars(sunseaAssetUrl($photo['image_path'])); ?>" alt="<?php echo htmlspecialchars($photo['caption'] ?: 'Penginapan'); ?>" style="width:100%;height:100%;object-fit:cover;display:block;">
+                </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+</section>
+<?php endif; ?>
 
 <?php require __DIR__ . '/includes/website-footer.php'; ?>

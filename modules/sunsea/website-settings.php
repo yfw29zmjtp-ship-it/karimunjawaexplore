@@ -84,8 +84,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $flashMsg = 'Pilih file gambar terlebih dahulu.';
             $flashType = 'error';
         } else {
-            $stmt = $pdo->prepare("INSERT INTO website_gallery (image_path, caption, sort_order) VALUES (?, ?, ?)");
-            $stmt->execute([$imgPath, trim($_POST['caption'] ?? ''), (int)($_POST['sort_order'] ?? 0)]);
+            $stmt = $pdo->prepare("INSERT INTO website_gallery (image_path, caption, category, sort_order) VALUES (?, ?, ?, ?)");
+            $stmt->execute([$imgPath, trim($_POST['caption'] ?? ''), $_POST['category'] ?? 'umum', (int)($_POST['sort_order'] ?? 0)]);
             $flashMsg = 'Foto galeri berhasil ditambahkan.';
             $flashType = 'success';
         }
@@ -115,7 +115,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // otomatis digeser lalu semua dinomori ulang 0,1,2,... supaya urutannya konsisten.
     if ($postTab === 'gallery_edit') {
         $gid = (int)($_POST['id'] ?? 0);
-        $pdo->prepare("UPDATE website_gallery SET caption = ? WHERE id = ?")->execute([trim($_POST['caption'] ?? ''), $gid]);
+        $pdo->prepare("UPDATE website_gallery SET caption = ?, category = ? WHERE id = ?")->execute([trim($_POST['caption'] ?? ''), $_POST['category'] ?? 'umum', $gid]);
 
         $orderedIds = $pdo->query("SELECT id FROM website_gallery ORDER BY sort_order ASC, id DESC")->fetchAll(PDO::FETCH_COLUMN);
         $orderedIds = array_values(array_diff($orderedIds, [$gid]));
@@ -233,7 +233,12 @@ $socialInstagram = sunseaSetting($pdo, 'website_social_instagram', '');
 $socialTiktok = sunseaSetting($pdo, 'website_social_tiktok', '');
 $socialYoutube = sunseaSetting($pdo, 'website_social_youtube', '');
 
+$galleryCategories = ['umum' => 'Umum', 'penginapan' => 'Penginapan'];
+$galleryFilter = $_GET['cat'] ?? '';
 $galleryItems = $pdo->query("SELECT * FROM website_gallery ORDER BY sort_order ASC, id DESC")->fetchAll();
+$galleryItemsFiltered = $galleryFilter !== ''
+    ? array_values(array_filter($galleryItems, fn($g) => ($g['category'] ?? 'umum') === $galleryFilter))
+    : $galleryItems;
 $galleryIntervalSec = (float)sunseaSetting($pdo, 'website_gallery_interval', 3);
 $blogItems = $pdo->query("SELECT * FROM website_blog ORDER BY created_at DESC")->fetchAll();
 $editBlog = null;
@@ -463,6 +468,14 @@ include 'layout-header.php';
                     <input type="file" name="gallery_image" accept="image/*" required style="width:100%;font-size:13px;">
                 </div>
                 <div>
+                    <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;">Kategori</label>
+                    <select name="category" style="width:100%;padding:9px 12px;border:1px solid #ccc;border-radius:5px;font-family:inherit;font-size:14px;box-sizing:border-box;">
+                        <?php foreach ($galleryCategories as $catKey => $catLabel): ?>
+                            <option value="<?php echo htmlspecialchars($catKey); ?>"><?php echo htmlspecialchars($catLabel); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div>
                     <label style="display:block;margin-bottom:5px;font-weight:600;font-size:13px;">Keterangan</label>
                     <input type="text" name="caption" style="width:100%;padding:9px 12px;border:1px solid #ccc;border-radius:5px;font-family:inherit;font-size:14px;box-sizing:border-box;">
                 </div>
@@ -474,22 +487,37 @@ include 'layout-header.php';
             </form>
         </div>
         <div style="background:#fff;border:1px solid #dde5ef;border-radius:8px;padding:20px;">
-            <div style="font-size:16px;font-weight:700;color:#0C4A6E;margin-bottom:4px;">🖼️ Foto Galeri (<?php echo count($galleryItems); ?>)</div>
-            <div style="font-size:11.5px;color:#888;margin-bottom:14px;">Klik foto untuk mengubah keterangan &amp; urutan (angka #1, #2, dst). Urutan ini menentukan urutan tampil foto di Beranda &amp; Tentang Kami — foto #1 tampil paling depan/jadi foto utama Tentang Kami.</div>
-            <?php if (!$galleryItems): ?>
+            <div style="font-size:16px;font-weight:700;color:#0C4A6E;margin-bottom:4px;">🖼️ Foto Galeri (<?php echo count($galleryItemsFiltered); ?>)</div>
+            <div style="font-size:11.5px;color:#888;margin-bottom:10px;">Klik foto untuk mengubah keterangan, kategori &amp; urutan (angka #1, #2, dst). Urutan ini menentukan urutan tampil foto di Beranda &amp; Tentang Kami — foto #1 tampil paling depan/jadi foto utama Tentang Kami.</div>
+            <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+                <a href="?tab=gallery" style="font-size:12px;padding:5px 12px;border-radius:14px;text-decoration:none;<?php echo $galleryFilter === '' ? 'background:#0C4A6E;color:#fff;' : 'background:#f1f5f9;color:#334155;'; ?>">Semua</a>
+                <?php foreach ($galleryCategories as $catKey => $catLabel): ?>
+                    <a href="?tab=gallery&cat=<?php echo urlencode($catKey); ?>" style="font-size:12px;padding:5px 12px;border-radius:14px;text-decoration:none;<?php echo $galleryFilter === $catKey ? 'background:#0C4A6E;color:#fff;' : 'background:#f1f5f9;color:#334155;'; ?>"><?php echo htmlspecialchars($catLabel); ?></a>
+                <?php endforeach; ?>
+            </div>
+            <?php if (!$galleryItemsFiltered): ?>
                 <div style="color:#888;font-size:13px;">Belum ada foto. Tambahkan lewat form di samping.</div>
             <?php else: ?>
                 <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:14px;">
-                    <?php foreach ($galleryItems as $gIdx => $g): ?>
+                    <?php foreach ($galleryItemsFiltered as $gIdx => $g): ?>
                         <div style="border:1px solid #e0e7ef;border-radius:8px;overflow:hidden;<?php echo $g['is_active'] ? '' : 'opacity:.45;'; ?>">
                             <details>
                                 <summary style="list-style:none;cursor:pointer;position:relative;">
                                     <img src="<?php echo htmlspecialchars(sunseaAssetUrl($g['image_path'])); ?>" alt="" style="width:100%;height:100px;object-fit:cover;display:block;">
                                     <span style="position:absolute;top:6px;left:6px;background:rgba(12,74,110,.85);color:#fff;font-size:11px;font-weight:700;padding:2px 7px;border-radius:10px;">#<?php echo $gIdx + 1; ?></span>
+                                    <span style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,.55);color:#fff;font-size:10px;font-weight:600;padding:2px 6px;border-radius:10px;"><?php echo htmlspecialchars($galleryCategories[$g['category'] ?? 'umum'] ?? 'Umum'); ?></span>
                                 </summary>
                                 <form method="POST" style="padding:8px;border-top:1px solid #e0e7ef;display:flex;flex-direction:column;gap:8px;">
                                     <input type="hidden" name="tab" value="gallery_edit">
                                     <input type="hidden" name="id" value="<?php echo (int)$g['id']; ?>">
+                                    <div>
+                                        <label style="display:block;margin-bottom:3px;font-weight:600;font-size:11px;">Kategori</label>
+                                        <select name="category" style="width:100%;padding:6px 8px;border:1px solid #ccc;border-radius:4px;font-family:inherit;font-size:12px;box-sizing:border-box;">
+                                            <?php foreach ($galleryCategories as $catKey => $catLabel): ?>
+                                                <option value="<?php echo htmlspecialchars($catKey); ?>" <?php echo ($g['category'] ?? 'umum') === $catKey ? 'selected' : ''; ?>><?php echo htmlspecialchars($catLabel); ?></option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </div>
                                     <div>
                                         <label style="display:block;margin-bottom:3px;font-weight:600;font-size:11px;">Keterangan</label>
                                         <input type="text" name="caption" value="<?php echo htmlspecialchars($g['caption'] ?? ''); ?>"
@@ -497,7 +525,7 @@ include 'layout-header.php';
                                     </div>
                                     <div>
                                         <label style="display:block;margin-bottom:3px;font-weight:600;font-size:11px;">Urutan</label>
-                                        <input type="number" name="sort_order" value="<?php echo $gIdx + 1; ?>" min="1" max="<?php echo count($galleryItems); ?>"
+                                        <input type="number" name="sort_order" value="<?php echo $gIdx + 1; ?>" min="1" max="<?php echo count($galleryItemsFiltered); ?>"
                                             style="width:100%;padding:6px 8px;border:1px solid #ccc;border-radius:4px;font-family:inherit;font-size:12px;box-sizing:border-box;">
                                     </div>
                                     <button type="submit" style="font-size:11px;padding:6px 8px;border:none;border-radius:4px;background:#0C4A6E;color:#fff;font-weight:700;cursor:pointer;">💾 Simpan</button>

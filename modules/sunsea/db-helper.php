@@ -688,10 +688,20 @@ function sunseaEnsureWebsiteContentSchema(PDO $pdo): void
             `id`          INT AUTO_INCREMENT PRIMARY KEY,
             `image_path`  VARCHAR(255) NOT NULL,
             `caption`     VARCHAR(150) NULL,
+            `category`    VARCHAR(30) NOT NULL DEFAULT 'umum',
             `sort_order`  INT DEFAULT 0,
             `is_active`   TINYINT(1) DEFAULT 1,
             `created_at`  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        // Add category column for galleries created before this feature existed.
+        try {
+            $hasCategory = $pdo->query("SHOW COLUMNS FROM website_gallery LIKE 'category'")->fetch();
+            if (!$hasCategory) {
+                $pdo->exec("ALTER TABLE website_gallery ADD COLUMN category VARCHAR(30) NOT NULL DEFAULT 'umum' AFTER caption");
+            }
+        } catch (Exception $e) {
+        }
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS `website_blog` (
             `id`             INT AUTO_INCREMENT PRIMARY KEY,
