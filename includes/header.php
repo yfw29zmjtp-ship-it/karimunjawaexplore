@@ -14,7 +14,8 @@ if (defined('ACTIVE_BUSINESS_ID') && ACTIVE_BUSINESS_ID === 'sunsea') {
         (strpos($requestUri, '/logout.php') !== false) ||
         (strpos($requestUri, '/select-business.php') !== false) ||
         (strpos($requestUri, '/developer/') !== false) ||
-        (strpos($requestUri, '/api/') !== false);
+        (strpos($requestUri, '/api/') !== false) ||
+        (strpos($requestUri, '/modules/email/') !== false);
 
     if (!$isSunseaModule && !$isAllowedPath) {
         header('Location: ' . BASE_URL . '/modules/sunsea/dashboard.php');
