@@ -306,8 +306,10 @@ if (php_sapi_name() !== 'cli') {
                 $__publicHome = $__isTravelBureau ? '/home.php' : null;
                 $__reqUri     = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
                 $__isRoot     = ($__reqUri === '/' || $__reqUri === '/index.php');
+                // Don't bounce an already-logged-in user back to the public website.
+                $__isLoggedIn = !empty($_SESSION['user_id']) || !empty($_SESSION['role']);
 
-                if ($__isRoot) {
+                if ($__isRoot && !$__isLoggedIn) {
                     $__proto = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
                     if ($__publicHome) {
                         header('Location: ' . $__proto . '://' . $_SERVER['HTTP_HOST'] . $__publicHome);
@@ -318,7 +320,7 @@ if (php_sapi_name() !== 'cli') {
                         exit;
                     }
                 }
-                unset($__landingMap, $__isTravelBureau, $__landing, $__publicHome, $__reqUri, $__isRoot);
+                unset($__landingMap, $__isTravelBureau, $__landing, $__publicHome, $__reqUri, $__isRoot, $__isLoggedIn);
             }
             unset($__domainPdo, $__domainStmt, $__domainBiz);
         } catch (Exception $__e) {
