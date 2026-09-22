@@ -37,7 +37,7 @@ if ($emailConfig === null) {
 
 try {
     $mailer = new SmtpMailer(
-        $emailConfig['host'],
+        $emailConfig['smtp_host'] ?? $emailConfig['host'],
         (int)($emailConfig['smtp_port'] ?? 465),
         $emailConfig['smtp_encryption'] ?? 'ssl',
         $emailConfig['user'],

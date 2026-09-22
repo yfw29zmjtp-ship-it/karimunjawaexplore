@@ -24,6 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $encryption = ($_POST['encryption'] ?? 'ssl') === 'tls' ? 'tls' : 'ssl';
     $user = trim((string)($_POST['user'] ?? ''));
     $pass = trim((string)($_POST['pass'] ?? ''));
+    $smtpHost = trim((string)($_POST['smtp_host'] ?? ''));
     $smtpPort = (int)($_POST['smtp_port'] ?? 465);
     $smtpEncryption = ($_POST['smtp_encryption'] ?? 'ssl') === 'tls' ? 'tls' : 'ssl';
 
@@ -38,6 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'encryption' => $encryption,
                 'user' => $user,
                 'pass' => $pass,
+                'smtp_host' => $smtpHost,
                 'smtp_port' => $smtpPort,
                 'smtp_encryption' => $smtpEncryption,
             ]);
@@ -56,6 +58,7 @@ $current = EmailHelper::resolveConfig($db) ?? [
     'encryption' => 'ssl',
     'user' => 'office@karimunjawaexplore.com',
     'pass' => '',
+    'smtp_host' => '',
     'smtp_port' => 465,
     'smtp_encryption' => 'ssl',
 ];
@@ -147,7 +150,7 @@ include '../sunsea/layout-header.php';
         <div style="background:var(--ss-sky);border:1px solid var(--ss-gray-2);border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:0.82rem;color:var(--ss-text);">
             <strong>Konfigurasi tersimpan saat ini:</strong><br>
             IMAP: <?php echo htmlspecialchars($current['host'] . ':' . $current['port'] . ' (' . strtoupper($current['encryption']) . ')'); ?><br>
-            SMTP: <?php echo htmlspecialchars($current['host'] . ':' . ($current['smtp_port'] ?? 465) . ' (' . strtoupper($current['smtp_encryption'] ?? 'ssl') . ')'); ?>
+            SMTP: <?php echo htmlspecialchars(($current['smtp_host'] ?? $current['host']) . ':' . ($current['smtp_port'] ?? 465) . ' (' . strtoupper($current['smtp_encryption'] ?? 'ssl') . ')'); ?>
         </div>
 
         <form method="post">
@@ -183,9 +186,15 @@ include '../sunsea/layout-header.php';
             </div>
 
             <div class="es-field">
+                <label>Outgoing Server Host (SMTP, untuk kirim email)</label>
+                <input type="text" name="smtp_host" value="<?php echo htmlspecialchars($current['smtp_host'] ?? ''); ?>" placeholder="<?php echo htmlspecialchars($current['host']); ?>">
+                <div class="es-hint">Kosongkan kalau sama dengan Incoming Server (IMAP Host) di atas. Isi kalau beda, mis. provider <strong>Titan Mail</strong>: IMAP host <code>imap.titan.email</code>, tapi SMTP host <code>smtp.titan.email</code>.</div>
+            </div>
+
+            <div class="es-field">
                 <label>Outgoing Server Port (SMTP, untuk kirim email)</label>
                 <input type="number" name="smtp_port" value="<?php echo (int)($current['smtp_port'] ?? 465); ?>" required>
-                <div class="es-hint">465 untuk SSL, 587 untuk TLS/STARTTLS. Host SMTP sama dengan Incoming Server di atas.</div>
+                <div class="es-hint">465 untuk SSL, 587 untuk TLS/STARTTLS.</div>
             </div>
 
             <div class="es-field">
