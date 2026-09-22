@@ -13,8 +13,9 @@ RewriteRule ^\.gitignore$ - [F,L]
 </IfModule>
 
 # Public "Login Admin" link target - route /admin to the login screen
+# view=system forces the staff dashboard instead of the owner dashboard for owner/admin/developer roles
 <IfModule mod_rewrite.c>
-RewriteRule ^admin/?$ login.php [L,QSA]
+RewriteRule ^admin/?$ login.php?view=system [L,QSA]
 </IfModule>
 
 # Block direct access to sensitive files (NOT webhook - it has PHP-level token auth)
