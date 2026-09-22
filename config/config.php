@@ -277,7 +277,7 @@ if (php_sapi_name() !== 'cli') {
                 [PDO::ATTR_ERRMODE => PDO::ERRMODE_SILENT, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]
             );
             $__domainStmt = $__domainPdo->prepare(
-                "SELECT slug FROM businesses WHERE LOWER(REPLACE(addon_domain,'www.','')) = ? AND is_active = 1 LIMIT 1"
+                "SELECT slug, business_type FROM businesses WHERE LOWER(REPLACE(addon_domain,'www.','')) = ? AND is_active = 1 LIMIT 1"
             );
             $__domainStmt->execute([$incomingHost]);
             $__domainBiz = $__domainStmt->fetch();
@@ -291,21 +291,19 @@ if (php_sapi_name() !== 'cli') {
                 }
 
                 // ── Auto-redirect root requests to the business landing page ──
-                // Map: business slug → login/admin landing file (used when no public homepage is set)
+                // Map: business slug → login/admin landing file, for businesses that need a
+                // dedicated custom landing page instead of the generic login.
                 $__landingMap = [
                     'pwf-furniture' => '/pwf-login.php',
-                    'sunsea'        => '/login.php?biz=sunsea',
-                    'explore-karimunjawa-copy' => '/login.php?biz=explore-karimunjawa-copy',
                     // add more: 'cqc-construction' => '/cqc.php', etc.
                 ];
-                // Map: business slug → public marketing homepage (root "/" shows this instead of login;
-                // the admin/login system stays reachable at /admin)
-                $__publicHomeMap = [
-                    'sunsea' => '/home.php',
-                    'explore-karimunjawa-copy' => '/home.php',
-                ];
-                $__landing    = $__landingMap[$__domainBiz['slug']] ?? null;
-                $__publicHome = $__publicHomeMap[$__domainBiz['slug']] ?? null;
+                // Any 'travel_bureau' business (Sunsea/Explore Karimunjawa clones) automatically
+                // shows the public marketing homepage at root "/" instead of the login screen -
+                // this way a NEW travel business + addon domain works out of the box, without
+                // needing a code change here every time. Admin login stays reachable at /admin.
+                $__isTravelBureau = ($__domainBiz['business_type'] ?? '') === 'travel_bureau';
+                $__landing    = $__landingMap[$__domainBiz['slug']] ?? ('/login.php?biz=' . $__domainBiz['slug']);
+                $__publicHome = $__isTravelBureau ? '/home.php' : null;
                 $__reqUri     = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
                 $__isRoot     = ($__reqUri === '/' || $__reqUri === '/index.php');
 
@@ -320,7 +318,7 @@ if (php_sapi_name() !== 'cli') {
                         exit;
                     }
                 }
-                unset($__landingMap, $__publicHomeMap, $__landing, $__publicHome, $__reqUri, $__isRoot);
+                unset($__landingMap, $__isTravelBureau, $__landing, $__publicHome, $__reqUri, $__isRoot);
             }
             unset($__domainPdo, $__domainStmt, $__domainBiz);
         } catch (Exception $__e) {
