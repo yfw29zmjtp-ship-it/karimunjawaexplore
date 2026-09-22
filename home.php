@@ -311,7 +311,7 @@ require __DIR__ . '/includes/website-header.php';
                             <div class="we-carousel-slide">
                                 <div class="we-card">
                                     <?php if (!empty($pkg['cover_image'])): ?>
-                                        <img src="<?php echo htmlspecialchars(sunseaAssetUrl($pkg['cover_image'])); ?>" alt="<?php echo htmlspecialchars($pkg['name']); ?>" class="we-card-img" style="width:100%;object-fit:cover;">
+                                        <img src="<?php echo htmlspecialchars(sunseaAssetUrl($pkg['cover_image'])); ?>" alt="<?php echo htmlspecialchars($pkg['name']); ?>" class="we-card-img">
                                     <?php else: ?>
                                         <div class="we-card-img">🏝️</div>
                                     <?php endif; ?>

@@ -457,6 +457,12 @@ a {
   font-size: 46px;
 }
 
+img.we-card-img {
+  width: 100%;
+  object-fit: contain;
+  background: #eef2f7;
+}
+
 .we-card-body {
   padding: 16px 18px;
   flex: 1;
