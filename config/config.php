@@ -247,8 +247,14 @@ if (php_sapi_name() !== 'cli') {
 
         // Hardcoded fallback for known domains — works even if the `businesses` table
         // doesn't have a matching addon_domain row yet (avoids depending on DB config).
-        $__hostPublicHomeMap = ['karimunjawaexplore.com' => '/home.php'];
-        $__hostLandingMap    = ['karimunjawaexplore.com' => '/login.php?biz=sunsea'];
+        $__hostPublicHomeMap = [
+            'karimunjawaexplore.com'  => '/home.php',
+            'linewisatakarimunjawa.com' => '/home.php',
+        ];
+        $__hostLandingMap    = [
+            'karimunjawaexplore.com'  => '/login.php?biz=sunsea',
+            'linewisatakarimunjawa.com' => '/login.php?biz=explore-karimunjawa-copy',
+        ];
         if (isset($__hostPublicHomeMap[$incomingHost]) || isset($__hostLandingMap[$incomingHost])) {
             $__reqUriFallback = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
             // Don't bounce already-logged-in staff away from /index.php back to the public homepage.
@@ -289,12 +295,14 @@ if (php_sapi_name() !== 'cli') {
                 $__landingMap = [
                     'pwf-furniture' => '/pwf-login.php',
                     'sunsea'        => '/login.php?biz=sunsea',
+                    'explore-karimunjawa-copy' => '/login.php?biz=explore-karimunjawa-copy',
                     // add more: 'cqc-construction' => '/cqc.php', etc.
                 ];
                 // Map: business slug → public marketing homepage (root "/" shows this instead of login;
                 // the admin/login system stays reachable at /admin)
                 $__publicHomeMap = [
                     'sunsea' => '/home.php',
+                    'explore-karimunjawa-copy' => '/home.php',
                 ];
                 $__landing    = $__landingMap[$__domainBiz['slug']] ?? null;
                 $__publicHome = $__publicHomeMap[$__domainBiz['slug']] ?? null;

@@ -12,6 +12,11 @@ RewriteRule ^.env - [F,L]
 RewriteRule ^\.gitignore$ - [F,L]
 </IfModule>
 
+# Public "Login Admin" link target - route /admin to the login screen
+<IfModule mod_rewrite.c>
+RewriteRule ^admin/?$ login.php [L,QSA]
+</IfModule>
+
 # Block direct access to sensitive files (NOT webhook - it has PHP-level token auth)
 <FilesMatch "(emergency-deploy\.php|test-cloudinary-upload\.php|\.cpanel\.yml|composer\.json|deploy\.sh|deploy-hosting\.sh|fix-.*\.php)$">
     <IfModule mod_authz_core.c>
