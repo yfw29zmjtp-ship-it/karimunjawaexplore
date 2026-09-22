@@ -12,7 +12,10 @@ $weAllPackages = $pdo->query(
      FROM trip_packages WHERE is_active = 1 ORDER BY name ASC"
 )->fetchAll();
 $weHomeGallery = $pdo->query(
-    "SELECT * FROM website_gallery WHERE is_active = 1 ORDER BY sort_order ASC, id DESC"
+    "SELECT * FROM website_gallery WHERE is_active = 1 AND (category IS NULL OR category = 'umum') ORDER BY sort_order ASC, id DESC"
+)->fetchAll();
+$weHomeLodgingGallery = $pdo->query(
+    "SELECT * FROM website_gallery WHERE is_active = 1 AND category = 'penginapan' ORDER BY sort_order ASC, id DESC"
 )->fetchAll();
 $weGalleryIntervalMs = (int)round((float)sunseaSetting($pdo, 'website_gallery_interval', 3) * 1000);
 
@@ -353,6 +356,37 @@ require __DIR__ . '/includes/website-header.php';
                             <div class="we-carousel-slide we-gallery-slide">
                                 <div class="we-gallery-slide-inner">
                                     <img src="<?php echo htmlspecialchars(sunseaAssetUrl($photo['image_path'])); ?>" alt="<?php echo htmlspecialchars($photo['caption'] ?: 'Tamu Karimunjawa Explore'); ?>">
+                                    <?php if (!empty($photo['caption'])): ?>
+                                        <div class="we-gallery-caption"><?php echo htmlspecialchars($photo['caption']); ?></div>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+                <button type="button" class="we-carousel-arrow we-next" aria-label="Berikutnya">&#8250;</button>
+                <div class="we-carousel-dots"></div>
+            </div>
+        </div>
+    </section>
+<?php endif; ?>
+
+<?php if ($weHomeLodgingGallery): ?>
+    <section class="we-section we-gallery-elegant we-section-alt">
+        <div class="we-container">
+            <div class="we-section-title">
+                <h2>Galeri Hotel &amp; Penginapan</h2>
+                <p>Kenyamanan tempat menginap yang kami sediakan untuk tamu selama berlibur di Karimunjawa</p>
+            </div>
+
+            <div class="we-carousel we-carousel-gallery" data-autoplay="<?php echo $weGalleryIntervalMs; ?>">
+                <button type="button" class="we-carousel-arrow we-prev" aria-label="Sebelumnya">&#8249;</button>
+                <div class="we-carousel-viewport">
+                    <div class="we-carousel-track">
+                        <?php foreach ($weHomeLodgingGallery as $photo): ?>
+                            <div class="we-carousel-slide we-gallery-slide">
+                                <div class="we-gallery-slide-inner">
+                                    <img src="<?php echo htmlspecialchars(sunseaAssetUrl($photo['image_path'])); ?>" alt="<?php echo htmlspecialchars($photo['caption'] ?: 'Penginapan Karimunjawa Explore'); ?>">
                                     <?php if (!empty($photo['caption'])): ?>
                                         <div class="we-gallery-caption"><?php echo htmlspecialchars($photo['caption']); ?></div>
                                     <?php endif; ?>
