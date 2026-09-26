@@ -15,6 +15,7 @@ if (!defined('APP_ACCESS')) define('APP_ACCESS', true);
 $sunseaNavItems = [
     'dashboard'     => ['icon' => 'home',       'label' => 'Dashboard',         'url' => BASE_URL . '/modules/sunsea/dashboard.php'],
     'owner_dashboard' => ['icon' => 'smartphone', 'label' => 'Owner Dashboard', 'url' => BASE_URL . '/modules/sunsea/owner-dashboard.php'],
+    'subscription_billing' => ['icon' => 'credit-card', 'label' => 'Tagihan Langganan', 'url' => BASE_URL . '/modules/sunsea/subscription-billing.php'],
     'database'      => ['icon' => 'database',   'label' => 'Database',          'url' => BASE_URL . '/modules/sunsea/database.php'],
     'bookings'      => ['icon' => 'briefcase',  'label' => 'Booking',           'url' => BASE_URL . '/modules/sunsea/bookings.php'],
     'calendar'      => ['icon' => 'calendar',   'label' => 'Kalender Booking',  'url' => BASE_URL . '/modules/sunsea/calendar.php'],
@@ -55,6 +56,7 @@ if (isset($pdo)) {
 // Owner Dashboard menu hanya untuk role Developer/Owner
 if (!in_array($currentUser['role'] ?? '', ['developer', 'owner'], true)) {
     unset($sunseaNavItems['owner_dashboard']);
+    unset($sunseaNavItems['subscription_billing']);
 }
 
 $visibleMenuKeys = array_keys($sunseaNavItems);
@@ -83,7 +85,7 @@ if (isset($pdo)) {
             if (is_array($__selected) && !empty($__selected)) {
                 $visibleMenuKeys = array_values(array_intersect(array_keys($sunseaNavItems), $__selected));
                 // Always show newly-added menus even for sidebar configs saved before they existed.
-                foreach (['website_settings', 'email', 'laporan'] as $__newKey) {
+                foreach (['website_settings', 'email', 'laporan', 'subscription_billing'] as $__newKey) {
                     if (isset($sunseaNavItems[$__newKey]) && !in_array($__newKey, $visibleMenuKeys, true)) {
                         $visibleMenuKeys[] = $__newKey;
                     }
@@ -1120,6 +1122,7 @@ if (empty($sunseaNavItemsVisible)) {
         }
 
         @media (max-width: 480px) {
+
             /* On very small phones, drop stat-card grids to a single column for legibility */
             div[style*="grid-template-columns:repeat(3"],
             div[style*="grid-template-columns:repeat(4"] {
@@ -1257,17 +1260,20 @@ if (empty($sunseaNavItemsVisible)) {
         </header>
 
         <script>
-        (function () {
-            var el = document.getElementById('ssLiveClock');
-            if (!el) return;
-            function tick() {
-                var d = new Date();
-                var pad = function (n) { return String(n).padStart(2, '0'); };
-                el.textContent = '🕒 ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
-            }
-            tick();
-            setInterval(tick, 1000);
-        })();
+            (function() {
+                var el = document.getElementById('ssLiveClock');
+                if (!el) return;
+
+                function tick() {
+                    var d = new Date();
+                    var pad = function(n) {
+                        return String(n).padStart(2, '0');
+                    };
+                    el.textContent = '🕒 ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+                }
+                tick();
+                setInterval(tick, 1000);
+            })();
         </script>
 
         <div class="ss-content">

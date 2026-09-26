@@ -745,6 +745,178 @@ function sunseaSetSetting(PDO $pdo, string $key, string $value): void
 }
 
 /**
+ * Ensure the subscription_invoices table exists (billing ADF System charges this
+ * business: flat monthly base fee + per-confirmed-guest fee).
+ */
+function sunseaEnsureSubscriptionBillingSchema(PDO $pdo): void
+{
+    try {
+        $pdo->exec("CREATE TABLE IF NOT EXISTS `subscription_invoices` (
+            `id`            INT AUTO_INCREMENT PRIMARY KEY,
+            `period`        VARCHAR(7) NOT NULL COMMENT 'YYYY-MM',
+            `base_fee`      DECIMAL(15,2) DEFAULT 0.00,
+            `guest_count`   INT DEFAULT 0,
+            `per_guest_fee` DECIMAL(15,2) DEFAULT 0.00,
+            `guest_total`   DECIMAL(15,2) DEFAULT 0.00,
+            `total_amount`  DECIMAL(15,2) DEFAULT 0.00,
+            `status`        ENUM('unpaid','paid','cancelled') DEFAULT 'unpaid',
+            `order_id`      VARCHAR(40) NULL,
+            `txn_id`        VARCHAR(100) NULL,
+            `payment_link`  VARCHAR(255) NULL,
+            `paid_at`       DATETIME NULL,
+            `created_at`    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            `updated_at`    TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY `uniq_period` (`period`),
+            INDEX idx_sub_status (`status`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    } catch (Exception $e) {
+        error_log('sunseaEnsureSubscriptionBillingSchema error: ' . $e->getMessage());
+    }
+}
+
+/**
+ * Read subscription billing configuration (base fee, per-guest fee, Pakasir
+ * merchant credentials) from the settings table.
+ */
+function sunseaSubscriptionConfig(PDO $pdo): array
+{
+    return [
+        'base_fee' => (float) sunseaSetting($pdo, 'subscription_base_fee', '150000'),
+        'per_guest_fee' => (float) sunseaSetting($pdo, 'subscription_per_guest_fee', '5000'),
+        'pakasir_slug' => sunseaSetting($pdo, 'subscription_pakasir_slug', ''),
+        'pakasir_api_key' => sunseaSetting($pdo, 'subscription_pakasir_api_key', ''),
+        'pakasir_webhook_secret' => sunseaSetting($pdo, 'subscription_pakasir_webhook_secret', ''),
+    ];
+}
+
+function sunseaSubscriptionIsConfigured(array $cfg): bool
+{
+    return $cfg['pakasir_slug'] !== '' && $cfg['pakasir_api_key'] !== '';
+}
+
+/**
+ * Count confirmed (or further along: ongoing/completed) guests whose trip
+ * `start_date` falls within the given period (YYYY-MM), and compute the charge.
+ */
+function sunseaCalculateSubscriptionCharge(PDO $pdo, string $period): array
+{
+    $cfg = sunseaSubscriptionConfig($pdo);
+    $start = $period . '-01';
+    $end = date('Y-m-t', strtotime($start));
+
+    $stmt = $pdo->prepare(
+        "SELECT COALESCE(SUM(pax_count), 0) FROM booking_orders
+         WHERE status IN ('confirmed', 'ongoing', 'completed')
+         AND start_date BETWEEN ? AND ?"
+    );
+    $stmt->execute([$start, $end]);
+    $guestCount = (int) $stmt->fetchColumn();
+
+    $guestTotal = $guestCount * $cfg['per_guest_fee'];
+    $totalAmount = $cfg['base_fee'] + $guestTotal;
+
+    return [
+        'base_fee' => $cfg['base_fee'],
+        'guest_count' => $guestCount,
+        'per_guest_fee' => $cfg['per_guest_fee'],
+        'guest_total' => $guestTotal,
+        'total_amount' => $totalAmount,
+    ];
+}
+
+/**
+ * Get the invoice row for a billing period, creating it if missing. If the
+ * period is still unpaid, the guest count/total is refreshed to reflect any
+ * bookings confirmed since the invoice was first generated. Paid/cancelled
+ * invoices are left untouched (immutable history).
+ */
+function sunseaGetOrRefreshSubscriptionInvoice(PDO $pdo, string $period): ?array
+{
+    $stmt = $pdo->prepare("SELECT * FROM subscription_invoices WHERE period = ? LIMIT 1");
+    $stmt->execute([$period]);
+    $invoice = $stmt->fetch();
+
+    $charge = sunseaCalculateSubscriptionCharge($pdo, $period);
+
+    if (!$invoice) {
+        $pdo->prepare(
+            "INSERT INTO subscription_invoices (period, base_fee, guest_count, per_guest_fee, guest_total, total_amount, status)
+             VALUES (?, ?, ?, ?, ?, ?, 'unpaid')"
+        )->execute([$period, $charge['base_fee'], $charge['guest_count'], $charge['per_guest_fee'], $charge['guest_total'], $charge['total_amount']]);
+    } elseif ($invoice['status'] === 'unpaid') {
+        $pdo->prepare(
+            "UPDATE subscription_invoices SET base_fee=?, guest_count=?, per_guest_fee=?, guest_total=?, total_amount=? WHERE period=?"
+        )->execute([$charge['base_fee'], $charge['guest_count'], $charge['per_guest_fee'], $charge['guest_total'], $charge['total_amount'], $period]);
+    }
+
+    $stmt->execute([$period]);
+    return $stmt->fetch() ?: null;
+}
+
+/**
+ * Minimal standalone Pakasir API v2 client (create payment link / check status).
+ * Separate from adfsystem-site's client since this app lives on its own hosting.
+ */
+function sunseaPakasirCreatePaymentLink(array $cfg, string $orderId, int $amount): ?array
+{
+    if (empty($cfg['pakasir_slug']) || empty($cfg['pakasir_api_key'])) {
+        return null;
+    }
+    $slug = rawurlencode($cfg['pakasir_slug']);
+    $orderIdEncoded = rawurlencode($orderId);
+    $url = "https://app.pakasir.com/api/v2/create-transaction/{$slug}/{$orderIdEncoded}";
+
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => json_encode(['method' => 'payment_link', 'amount' => $amount]),
+        CURLOPT_HTTPHEADER => ['Content-Type: application/json', 'X-Api-Key: ' . $cfg['pakasir_api_key']],
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT => 15,
+        CURLOPT_SSL_VERIFYPEER => true,
+    ]);
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($response === false || $httpCode < 200 || $httpCode >= 300) {
+        return null;
+    }
+    $data = json_decode($response, true);
+    if (!is_array($data) || empty($data['payment_link']) || empty($data['txn_id'])) {
+        return null;
+    }
+    return ['txn_id' => $data['txn_id'], 'payment_link' => $data['payment_link']];
+}
+
+function sunseaPakasirTransactionStatus(array $cfg, string $txnId): ?array
+{
+    if (empty($cfg['pakasir_slug']) || empty($cfg['pakasir_api_key'])) {
+        return null;
+    }
+    $slug = rawurlencode($cfg['pakasir_slug']);
+    $txnIdEncoded = rawurlencode($txnId);
+    $url = "https://app.pakasir.com/api/v2/transaction-status/{$slug}/{$txnIdEncoded}";
+
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_HTTPHEADER => ['X-Api-Key: ' . $cfg['pakasir_api_key']],
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT => 15,
+        CURLOPT_SSL_VERIFYPEER => true,
+    ]);
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($response === false || $httpCode < 200 || $httpCode >= 300) {
+        return null;
+    }
+    $data = json_decode($response, true);
+    return is_array($data) ? $data : null;
+}
+
+/**
  * Build a cache-busted BASE_URL for a stored uploads-relative path so a re-uploaded
  * file (same filename) shows immediately instead of a stale browser-cached version.
  */
