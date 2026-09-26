@@ -760,6 +760,7 @@ function sunseaEnsureSubscriptionBillingSchema(PDO $pdo): void
             `guest_total`   DECIMAL(15,2) DEFAULT 0.00,
             `total_amount`  DECIMAL(15,2) DEFAULT 0.00,
             `status`        ENUM('unpaid','paid','cancelled') DEFAULT 'unpaid',
+            `due_date`      DATE NULL,
             `order_id`      VARCHAR(40) NULL,
             `txn_id`        VARCHAR(100) NULL,
             `payment_link`  VARCHAR(255) NULL,
@@ -769,6 +770,15 @@ function sunseaEnsureSubscriptionBillingSchema(PDO $pdo): void
             UNIQUE KEY `uniq_period` (`period`),
             INDEX idx_sub_status (`status`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        // Add due_date for invoices created before this feature existed.
+        try {
+            $hasDueDate = $pdo->query("SHOW COLUMNS FROM subscription_invoices LIKE 'due_date'")->fetch();
+            if (!$hasDueDate) {
+                $pdo->exec("ALTER TABLE subscription_invoices ADD COLUMN due_date DATE NULL AFTER status");
+            }
+        } catch (Exception $e) {
+        }
     } catch (Exception $e) {
         error_log('sunseaEnsureSubscriptionBillingSchema error: ' . $e->getMessage());
     }
@@ -897,10 +907,11 @@ function sunseaGetOrRefreshSubscriptionInvoice(PDO $pdo, string $period): ?array
     $charge = sunseaCalculateSubscriptionCharge($pdo, $period);
 
     if (!$invoice) {
+        $dueDate = date('Y-m-t', strtotime($period . '-01'));
         $pdo->prepare(
-            "INSERT INTO subscription_invoices (period, base_fee, guest_count, per_guest_fee, guest_total, total_amount, status)
-             VALUES (?, ?, ?, ?, ?, ?, 'unpaid')"
-        )->execute([$period, $charge['base_fee'], $charge['guest_count'], $charge['per_guest_fee'], $charge['guest_total'], $charge['total_amount']]);
+            "INSERT INTO subscription_invoices (period, base_fee, guest_count, per_guest_fee, guest_total, total_amount, status, due_date)
+             VALUES (?, ?, ?, ?, ?, ?, 'unpaid', ?)"
+        )->execute([$period, $charge['base_fee'], $charge['guest_count'], $charge['per_guest_fee'], $charge['guest_total'], $charge['total_amount'], $dueDate]);
     } elseif ($invoice['status'] === 'unpaid') {
         $pdo->prepare(
             "UPDATE subscription_invoices SET base_fee=?, guest_count=?, per_guest_fee=?, guest_total=?, total_amount=? WHERE period=?"
@@ -909,6 +920,35 @@ function sunseaGetOrRefreshSubscriptionInvoice(PDO $pdo, string $period): ?array
 
     $stmt->execute([$period]);
     return $stmt->fetch() ?: null;
+}
+
+/**
+ * Find the nearest unpaid invoice whose due date is within 7 days (or already
+ * passed) so the topbar can show a "pay now" reminder banner. Returns null
+ * when nothing is due soon.
+ */
+function sunseaGetSubscriptionReminder(PDO $pdo): ?array
+{
+    try {
+        $stmt = $pdo->query(
+            "SELECT * FROM subscription_invoices WHERE status = 'unpaid' AND due_date IS NOT NULL
+             ORDER BY due_date ASC LIMIT 1"
+        );
+        $invoice = $stmt->fetch();
+    } catch (Exception $e) {
+        return null;
+    }
+
+    if (!$invoice) {
+        return null;
+    }
+
+    $daysLeft = (int) ceil((strtotime($invoice['due_date']) - strtotime(date('Y-m-d'))) / 86400);
+    if ($daysLeft > 7) {
+        return null;
+    }
+
+    return ['invoice' => $invoice, 'days_left' => $daysLeft, 'overdue' => $daysLeft < 0];
 }
 
 /**

@@ -1013,6 +1013,34 @@ if (empty($sunseaNavItemsVisible)) {
             color: #7C2D12;
         }
 
+        .ss-subscription-banner {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 20px;
+            background: #FEF3C7;
+            color: #92400E;
+            font-size: 13px;
+            font-weight: 500;
+            flex-wrap: wrap;
+        }
+
+        .ss-subscription-banner svg {
+            width: 18px;
+            height: 18px;
+            flex-shrink: 0;
+        }
+
+        .ss-subscription-banner span {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .ss-subscription-banner-overdue {
+            background: #FEE2E2;
+            color: #991B1B;
+        }
+
         /* ---- EMPTY STATE ---- */
         .ss-empty {
             text-align: center;
@@ -1258,6 +1286,34 @@ if (empty($sunseaNavItemsVisible)) {
                 </a>
             </div>
         </header>
+
+        <?php
+        $subscriptionReminder = null;
+        if (isset($pdo) && in_array($currentUser['role'] ?? '', ['developer', 'owner'], true) && $activePage !== 'subscription_billing') {
+            try {
+                sunseaEnsureSubscriptionBillingSchema($pdo);
+                $subscriptionReminder = sunseaGetSubscriptionReminder($pdo);
+            } catch (Exception $e) {
+            }
+        }
+        if ($subscriptionReminder):
+            $__inv = $subscriptionReminder['invoice'];
+            $__days = $subscriptionReminder['days_left'];
+            $__overdue = $subscriptionReminder['overdue'];
+        ?>
+            <div class="ss-subscription-banner<?php echo $__overdue ? ' ss-subscription-banner-overdue' : ''; ?>">
+                <i data-feather="<?php echo $__overdue ? 'alert-circle' : 'bell'; ?>"></i>
+                <span>
+                    <?php if ($__overdue): ?>
+                        Tagihan langganan periode <strong><?php echo htmlspecialchars($__inv['period']); ?></strong> sudah <strong>lewat jatuh tempo</strong>
+                    <?php else: ?>
+                        Tagihan langganan periode <strong><?php echo htmlspecialchars($__inv['period']); ?></strong> jatuh tempo dalam <strong><?php echo $__days; ?> hari</strong>
+                    <?php endif; ?>
+                    — total <strong><?php echo sunseaRupiah((float) $__inv['total_amount']); ?></strong>.
+                </span>
+                <a href="<?php echo BASE_URL; ?>/modules/sunsea/subscription-billing.php" class="ss-btn ss-btn-sm ss-btn-primary">Bayar Sekarang</a>
+            </div>
+        <?php endif; ?>
 
         <script>
             (function() {
