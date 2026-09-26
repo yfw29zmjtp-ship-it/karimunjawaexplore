@@ -258,6 +258,25 @@ if (isPost()) {
                 $masterId = $masterUser['id'];
                 $roleCode = $masterUser['role_code'];
 
+                // Block login for anyone except 'developer' while the subscription is overdue.
+                if ($roleCode !== 'developer') {
+                    try {
+                        require_once __DIR__ . '/modules/sunsea/db-helper.php';
+                        $subPdo = getSunseaConnection();
+                        sunseaEnsureSubscriptionBillingSchema($subPdo);
+                        $subReminder = sunseaGetSubscriptionReminder($subPdo);
+                    } catch (Exception $e) {
+                        $subReminder = null;
+                    }
+                    if ($subReminder && !empty($subReminder['overdue'])) {
+                        $error = 'Akses ditolak: tagihan langganan sistem sudah lewat jatuh tempo dan belum dibayar. Hubungi ADF System / developer untuk melunasi tagihan.';
+                        $auth->logout();
+                        $masterUser = null;
+                    }
+                }
+            }
+
+            if ($masterUser) {
                 // Build dynamic business code <-> slug mappings from DB
                 // Auto-add slug column if missing
                 try {
