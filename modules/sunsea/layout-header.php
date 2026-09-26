@@ -1041,6 +1041,56 @@ if (empty($sunseaNavItemsVisible)) {
             color: #991B1B;
         }
 
+        .ss-modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.55);
+            z-index: 999;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+
+        .ss-modal-box {
+            background: var(--ss-card-bg, #fff);
+            border-radius: 12px;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+            overflow: hidden;
+        }
+
+        .ss-modal-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 18px;
+            border-bottom: 1px solid var(--ss-border);
+            font-size: 14px;
+        }
+
+        .ss-modal-close {
+            background: none;
+            border: none;
+            font-size: 20px;
+            line-height: 1;
+            cursor: pointer;
+            color: var(--ss-muted);
+        }
+
+        .ss-modal-body {
+            padding: 16px 18px;
+        }
+
+        .ss-modal-foot {
+            display: flex;
+            gap: 8px;
+            padding: 14px 18px;
+            border-top: 1px solid var(--ss-border);
+            flex-wrap: wrap;
+        }
+
         /* ---- EMPTY STATE ---- */
         .ss-empty {
             text-align: center;
@@ -1289,6 +1339,7 @@ if (empty($sunseaNavItemsVisible)) {
 
         <?php
         $subscriptionReminder = null;
+        $subscriptionCfg = null;
         if (isset($pdo) && in_array($currentUser['role'] ?? '', ['developer', 'owner'], true) && $activePage !== 'subscription_billing') {
             try {
                 sunseaEnsureSubscriptionBillingSchema($pdo);
@@ -1300,6 +1351,7 @@ if (empty($sunseaNavItemsVisible)) {
                 }
                 sunseaGetOrRefreshSubscriptionInvoice($pdo, date('Y-m'));
                 $subscriptionReminder = sunseaGetSubscriptionReminder($pdo);
+                $subscriptionCfg = sunseaSubscriptionConfig($pdo);
             } catch (Exception $e) {
             }
         }
@@ -1307,6 +1359,7 @@ if (empty($sunseaNavItemsVisible)) {
             $__inv = $subscriptionReminder['invoice'];
             $__days = $subscriptionReminder['days_left'];
             $__overdue = $subscriptionReminder['overdue'];
+            $__configured = $subscriptionCfg ? sunseaSubscriptionIsConfigured($subscriptionCfg) : false;
         ?>
             <div class="ss-subscription-banner<?php echo $__overdue ? ' ss-subscription-banner-overdue' : ''; ?>">
                 <i data-feather="<?php echo $__overdue ? 'alert-circle' : 'bell'; ?>"></i>
@@ -1318,7 +1371,56 @@ if (empty($sunseaNavItemsVisible)) {
                     <?php endif; ?>
                     — total <strong><?php echo sunseaRupiah((float) $__inv['total_amount']); ?></strong>.
                 </span>
-                <a href="<?php echo BASE_URL; ?>/modules/sunsea/subscription-billing.php" class="ss-btn ss-btn-sm ss-btn-primary">Bayar Sekarang</a>
+                <button type="button" class="ss-btn ss-btn-sm ss-btn-primary" onclick="document.getElementById('ssSubBillModal').style.display='flex'">Bayar Sekarang</button>
+            </div>
+
+            <div id="ssSubBillModal" class="ss-modal-overlay">
+                <div class="ss-modal-box">
+                    <div class="ss-modal-head">
+                        <strong>Detail Tagihan Langganan — <?php echo htmlspecialchars($__inv['period']); ?></strong>
+                        <button type="button" class="ss-modal-close" onclick="document.getElementById('ssSubBillModal').style.display='none'">&times;</button>
+                    </div>
+                    <div class="ss-modal-body">
+                        <table style="width:100%;font-size:13px;">
+                            <tr>
+                                <td style="padding:5px 0;color:var(--ss-muted);">Biaya Dasar Bulanan</td>
+                                <td style="padding:5px 0;text-align:right;"><?php echo sunseaRupiah((float) $__inv['base_fee']); ?></td>
+                            </tr>
+                            <tr>
+                                <td style="padding:5px 0;color:var(--ss-muted);">Tamu Confirmed (<?php echo (int) $__inv['guest_count']; ?> &times; <?php echo sunseaRupiah((float) $__inv['per_guest_fee']); ?>)</td>
+                                <td style="padding:5px 0;text-align:right;"><?php echo sunseaRupiah((float) $__inv['guest_total']); ?></td>
+                            </tr>
+                            <?php if (!empty($__inv['due_date'])): ?>
+                            <tr>
+                                <td style="padding:5px 0;color:var(--ss-muted);">Jatuh Tempo</td>
+                                <td style="padding:5px 0;text-align:right;"><?php echo htmlspecialchars(date('d M Y', strtotime($__inv['due_date']))); ?></td>
+                            </tr>
+                            <?php endif; ?>
+                            <tr style="border-top:1px solid var(--ss-border);">
+                                <td style="padding:8px 0;font-weight:700;">Total Tagihan</td>
+                                <td style="padding:8px 0;text-align:right;font-weight:700;font-size:16px;"><?php echo sunseaRupiah((float) $__inv['total_amount']); ?></td>
+                            </tr>
+                        </table>
+                        <p style="font-size:12px;color:var(--ss-muted);margin-top:10px;">
+                            <strong>Cara bayar:</strong> klik "Bayar via Pakasir" di bawah, Anda akan diarahkan ke halaman pembayaran
+                            (QRIS / transfer bank / e-wallet). Setelah pembayaran berhasil, status tagihan akan otomatis berubah jadi
+                            Lunas.
+                        </p>
+                        <?php if (!$__configured): ?>
+                            <p style="font-size:12px;color:#dc2626;">Pengaturan Pakasir belum lengkap. Hubungi ADF System untuk melengkapi koneksi pembayaran.</p>
+                        <?php endif; ?>
+                    </div>
+                    <div class="ss-modal-foot">
+                        <?php if ($__configured): ?>
+                        <form method="POST" action="<?php echo BASE_URL; ?>/modules/sunsea/subscription-billing.php" style="margin:0;">
+                            <input type="hidden" name="action" value="pay">
+                            <input type="hidden" name="period" value="<?php echo htmlspecialchars($__inv['period']); ?>">
+                            <button type="submit" class="ss-btn ss-btn-primary"><i data-feather="credit-card"></i> Bayar via Pakasir</button>
+                        </form>
+                        <?php endif; ?>
+                        <a href="<?php echo BASE_URL; ?>/modules/sunsea/subscription-billing.php" class="ss-btn ss-btn-outline">Lihat Halaman Tagihan</a>
+                    </div>
+                </div>
             </div>
         <?php endif; ?>
 
