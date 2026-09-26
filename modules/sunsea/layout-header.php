@@ -1091,6 +1091,43 @@ if (empty($sunseaNavItemsVisible)) {
             flex-wrap: wrap;
         }
 
+        .ss-subscription-lock-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.85);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+
+        .ss-subscription-lock-box {
+            background: #fff;
+            border-radius: 14px;
+            width: 100%;
+            max-width: 440px;
+            padding: 28px 26px;
+            text-align: center;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+        }
+
+        .ss-subscription-lock-box svg {
+            width: 40px;
+            height: 40px;
+            color: #DC2626;
+        }
+
+        .ss-subscription-lock-box h2 {
+            font-size: 18px;
+            margin: 10px 0 6px;
+        }
+
+        .ss-subscription-lock-box p {
+            font-size: 13px;
+            color: var(--ss-muted);
+        }
+
         /* ---- EMPTY STATE ---- */
         .ss-empty {
             text-align: center;
@@ -1361,17 +1398,14 @@ if (empty($sunseaNavItemsVisible)) {
             $__overdue = $subscriptionReminder['overdue'];
             $__configured = $subscriptionCfg ? sunseaSubscriptionIsConfigured($subscriptionCfg) : false;
         ?>
-            <div class="ss-subscription-banner<?php echo $__overdue ? ' ss-subscription-banner-overdue' : ''; ?>">
-                <i data-feather="<?php echo $__overdue ? 'alert-circle' : 'bell'; ?>"></i>
+        <?php if (!$__overdue): ?>
+            <div class="ss-subscription-banner">
+                <i data-feather="bell"></i>
                 <span>
-                    <?php if ($__overdue): ?>
-                        Tagihan langganan periode <strong><?php echo htmlspecialchars($__inv['period']); ?></strong> sudah <strong>lewat jatuh tempo</strong>
-                    <?php else: ?>
-                        Tagihan langganan periode <strong><?php echo htmlspecialchars($__inv['period']); ?></strong> jatuh tempo dalam <strong><?php echo $__days; ?> hari</strong>
-                    <?php endif; ?>
+                    Tagihan langganan periode <strong><?php echo htmlspecialchars($__inv['period']); ?></strong> jatuh tempo dalam <strong><?php echo $__days; ?> hari</strong>
                     — total <strong><?php echo sunseaRupiah((float) $__inv['total_amount']); ?></strong>.
                 </span>
-                <button type="button" class="ss-btn ss-btn-sm ss-btn-primary" onclick="document.getElementById('ssSubBillModal').style.display='flex'">Bayar Sekarang</button>
+                <button type="button" class="ss-btn ss-btn-sm ss-btn-primary" onclick="document.getElementById('ssSubBillModal').style.display='flex'">Lihat Detail</button>
             </div>
 
             <div id="ssSubBillModal" class="ss-modal-overlay">
@@ -1402,26 +1436,36 @@ if (empty($sunseaNavItemsVisible)) {
                             </tr>
                         </table>
                         <p style="font-size:12px;color:var(--ss-muted);margin-top:10px;">
-                            <strong>Cara bayar:</strong> klik "Bayar via Pakasir" di bawah, Anda akan diarahkan ke halaman pembayaran
-                            (QRIS / transfer bank / e-wallet). Setelah pembayaran berhasil, status tagihan akan otomatis berubah jadi
-                            Lunas.
+                            Segera lakukan pembayaran sebelum jatuh tempo untuk menghindari pembatasan akses sistem.
                         </p>
-                        <?php if (!$__configured): ?>
-                            <p style="font-size:12px;color:#dc2626;">Pengaturan Pakasir belum lengkap. Hubungi ADF System untuk melengkapi koneksi pembayaran.</p>
-                        <?php endif; ?>
-                    </div>
-                    <div class="ss-modal-foot">
-                        <?php if ($__configured): ?>
-                        <form method="POST" action="<?php echo BASE_URL; ?>/modules/sunsea/subscription-billing.php" style="margin:0;">
-                            <input type="hidden" name="action" value="pay">
-                            <input type="hidden" name="period" value="<?php echo htmlspecialchars($__inv['period']); ?>">
-                            <button type="submit" class="ss-btn ss-btn-primary"><i data-feather="credit-card"></i> Bayar via Pakasir</button>
-                        </form>
-                        <?php endif; ?>
-                        <a href="<?php echo BASE_URL; ?>/modules/sunsea/subscription-billing.php" class="ss-btn ss-btn-outline">Lihat Halaman Tagihan</a>
                     </div>
                 </div>
             </div>
+        <?php else: ?>
+            <div class="ss-subscription-lock-overlay">
+                <div class="ss-subscription-lock-box">
+                    <i data-feather="alert-triangle"></i>
+                    <h2>Langganan Jatuh Tempo</h2>
+                    <p>Tagihan periode <strong><?php echo htmlspecialchars($__inv['period']); ?></strong> sudah lewat jatuh tempo dan belum dibayar.
+                        Akses sistem dibatasi sampai pembayaran diterima.</p>
+                    <table style="width:100%;font-size:13px;margin:14px 0;">
+                        <tr>
+                            <td style="padding:5px 0;color:var(--ss-muted);text-align:left;">Total Tagihan</td>
+                            <td style="padding:5px 0;text-align:right;font-weight:700;font-size:16px;"><?php echo sunseaRupiah((float) $__inv['total_amount']); ?></td>
+                        </tr>
+                    </table>
+                    <?php if ($__configured): ?>
+                        <form method="POST" action="<?php echo BASE_URL; ?>/modules/sunsea/subscription-billing.php">
+                            <input type="hidden" name="action" value="pay">
+                            <input type="hidden" name="period" value="<?php echo htmlspecialchars($__inv['period']); ?>">
+                            <button type="submit" class="ss-btn ss-btn-primary"><i data-feather="credit-card"></i> Bayar via Pakasir Sekarang</button>
+                        </form>
+                    <?php else: ?>
+                        <p style="font-size:12px;color:#dc2626;">Pengaturan Pakasir belum lengkap. Hubungi ADF System untuk melengkapi koneksi pembayaran.</p>
+                    <?php endif; ?>
+                </div>
+            </div>
+        <?php endif; ?>
         <?php endif; ?>
 
         <script>
