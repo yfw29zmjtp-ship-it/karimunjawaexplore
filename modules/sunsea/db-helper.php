@@ -942,6 +942,25 @@ function sunseaSubscriptionDueDate(string $period, string $startDate): string
 }
 
 /**
+ * If the nearest unpaid invoice already has a Pakasir txn_id (payment link was
+ * generated), re-check its status directly with Pakasir and mark it paid when
+ * completed. This is a safety net for missed/delayed webhook deliveries so the
+ * system unblocks itself even if the webhook never arrives.
+ */
+function sunseaReconcilePendingSubscriptionPayment(PDO $pdo, array $invoice): void
+{
+    if ($invoice['status'] !== 'unpaid' || empty($invoice['txn_id'])) {
+        return;
+    }
+    $cfg = sunseaSubscriptionConfig($pdo);
+    $status = sunseaPakasirTransactionStatus($cfg, $invoice['txn_id']);
+    if ($status !== null && ($status['status'] ?? '') === 'completed') {
+        $pdo->prepare("UPDATE subscription_invoices SET status='paid', paid_at=? WHERE period=?")
+            ->execute([$status['completed_at'] ?? date('c'), $invoice['period']]);
+    }
+}
+
+/**
  * Find the nearest unpaid invoice whose due date is within 7 days (or already
  * passed) so the topbar can show a "pay now" reminder banner. Returns null
  * when nothing is due soon.
@@ -954,6 +973,15 @@ function sunseaGetSubscriptionReminder(PDO $pdo): ?array
              ORDER BY due_date ASC LIMIT 1"
         );
         $invoice = $stmt->fetch();
+
+        if ($invoice && !empty($invoice['txn_id'])) {
+            sunseaReconcilePendingSubscriptionPayment($pdo, $invoice);
+            $stmt = $pdo->query(
+                "SELECT * FROM subscription_invoices WHERE status = 'unpaid' AND due_date IS NOT NULL
+                 ORDER BY due_date ASC LIMIT 1"
+            );
+            $invoice = $stmt->fetch();
+        }
     } catch (Exception $e) {
         return null;
     }
