@@ -39,8 +39,16 @@ try {
     $completedAt = $payload['completed_at'] ?? null;
 
     if ($status === 'completed') {
+        $paidAt = $completedAt ?? date('c');
         $pdo->prepare("UPDATE subscription_invoices SET status='paid', paid_at=? WHERE order_id=?")
-            ->execute([$completedAt ?? date('c'), $orderId]);
+            ->execute([$paidAt, $orderId]);
+
+        $stmt = $pdo->prepare("SELECT * FROM subscription_invoices WHERE order_id = ? LIMIT 1");
+        $stmt->execute([$orderId]);
+        $paidInvoice = $stmt->fetch();
+        if ($paidInvoice) {
+            sunseaNotifyAdfSystemPaymentSuccess($pdo, $paidInvoice);
+        }
     }
 
     http_response_code(200);

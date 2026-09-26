@@ -796,9 +796,14 @@ function sunseaSubscriptionConfig(PDO $pdo): array
         'base_fee' => (float) sunseaSetting($pdo, 'subscription_base_fee', '150000'),
         'per_guest_fee' => (float) sunseaSetting($pdo, 'subscription_per_guest_fee', '5000'),
         'subscription_start_date' => sunseaSetting($pdo, 'subscription_start_date', ''),
+        'client_name' => sunseaSetting($pdo, 'subscription_client_name', ''),
         'pakasir_slug' => sunseaSetting($pdo, 'subscription_pakasir_slug', ''),
         'pakasir_api_key' => sunseaSetting($pdo, 'subscription_pakasir_api_key', ''),
         'pakasir_webhook_secret' => sunseaSetting($pdo, 'subscription_pakasir_webhook_secret', ''),
+        'provider_name' => sunseaSetting($pdo, 'subscription_provider_name', 'ADF System'),
+        'provider_logo' => sunseaSetting($pdo, 'subscription_provider_logo', ''),
+        'provider_address' => sunseaSetting($pdo, 'subscription_provider_address', ''),
+        'provider_email' => sunseaSetting($pdo, 'subscription_provider_email', ''),
         'last_sync_at' => sunseaSetting($pdo, 'subscription_last_sync_at', ''),
         'last_sync_error' => sunseaSetting($pdo, 'subscription_last_sync_error', ''),
     ];
@@ -854,10 +859,15 @@ function sunseaSyncSubscriptionConfig(PDO $pdo): array
 
     sunseaSetSetting($pdo, 'subscription_base_fee', (string) $data['base_fee']);
     sunseaSetSetting($pdo, 'subscription_per_guest_fee', (string) $data['per_guest_fee']);
+    sunseaSetSetting($pdo, 'subscription_client_name', (string) ($data['client_name'] ?? ''));
     sunseaSetSetting($pdo, 'subscription_start_date', (string) ($data['subscription_start_date'] ?? ''));
     sunseaSetSetting($pdo, 'subscription_pakasir_slug', (string) ($data['pakasir_slug'] ?? ''));
     sunseaSetSetting($pdo, 'subscription_pakasir_api_key', (string) ($data['pakasir_api_key'] ?? ''));
     sunseaSetSetting($pdo, 'subscription_pakasir_webhook_secret', (string) ($data['pakasir_webhook_secret'] ?? ''));
+    sunseaSetSetting($pdo, 'subscription_provider_name', (string) ($data['provider_name'] ?? 'ADF System'));
+    sunseaSetSetting($pdo, 'subscription_provider_logo', (string) ($data['provider_logo'] ?? ''));
+    sunseaSetSetting($pdo, 'subscription_provider_address', (string) ($data['provider_address'] ?? ''));
+    sunseaSetSetting($pdo, 'subscription_provider_email', (string) ($data['provider_email'] ?? ''));
     sunseaSetSetting($pdo, 'subscription_last_sync_at', date('c'));
     sunseaSetSetting($pdo, 'subscription_last_sync_error', '');
 
@@ -955,8 +965,12 @@ function sunseaReconcilePendingSubscriptionPayment(PDO $pdo, array $invoice): vo
     $cfg = sunseaSubscriptionConfig($pdo);
     $status = sunseaPakasirTransactionStatus($cfg, $invoice['txn_id']);
     if ($status !== null && ($status['status'] ?? '') === 'completed') {
+        $paidAt = $status['completed_at'] ?? date('c');
         $pdo->prepare("UPDATE subscription_invoices SET status='paid', paid_at=? WHERE period=?")
-            ->execute([$status['completed_at'] ?? date('c'), $invoice['period']]);
+            ->execute([$paidAt, $invoice['period']]);
+        $invoice['status'] = 'paid';
+        $invoice['paid_at'] = $paidAt;
+        sunseaNotifyAdfSystemPaymentSuccess($pdo, $invoice);
     }
 }
 
@@ -1014,6 +1028,44 @@ function sunseaGetRecentPaidSubscriptionInvoice(PDO $pdo, int $withinHours = 72)
         return $stmt->fetch() ?: null;
     } catch (Exception $e) {
         return null;
+    }
+}
+
+/**
+ * Tell ADF System a subscription invoice just got paid so it can email the
+ * client's configured notify_email automatically (set up from ADF System's
+ * own admin panel). Fire-and-forget: failures are logged, never fatal.
+ */
+function sunseaNotifyAdfSystemPaymentSuccess(PDO $pdo, array $invoice): void
+{
+    $syncUrl = sunseaSetting($pdo, 'subscription_sync_url', 'https://adfsystem.store/api/subscription-config.php');
+    $notifyUrl = str_replace('subscription-config.php', 'subscription-payment-notify.php', $syncUrl);
+    $clientKey = sunseaSetting($pdo, 'subscription_client_key', '');
+    $clientToken = sunseaSetting($pdo, 'subscription_client_token', '');
+    if ($clientKey === '' || $clientToken === '') {
+        return;
+    }
+
+    try {
+        $ch = curl_init($notifyUrl);
+        curl_setopt_array($ch, [
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => json_encode([
+                'client_key' => $clientKey,
+                'client_token' => $clientToken,
+                'period' => $invoice['period'],
+                'total_amount' => (float) $invoice['total_amount'],
+                'paid_at' => $invoice['paid_at'] ?? date('c'),
+            ]),
+            CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 8,
+            CURLOPT_SSL_VERIFYPEER => true,
+        ]);
+        curl_exec($ch);
+        curl_close($ch);
+    } catch (Exception $e) {
+        error_log('sunseaNotifyAdfSystemPaymentSuccess error: ' . $e->getMessage());
     }
 }
 

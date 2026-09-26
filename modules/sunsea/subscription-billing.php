@@ -96,8 +96,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'check
     if ($invoice && !empty($invoice['txn_id'])) {
         $status = sunseaPakasirTransactionStatus($cfg, $invoice['txn_id']);
         if ($status !== null && ($status['status'] ?? '') === 'completed') {
+            $paidAt = $status['completed_at'] ?? date('c');
             $pdo->prepare("UPDATE subscription_invoices SET status='paid', paid_at=? WHERE period=?")
-                ->execute([$status['completed_at'] ?? date('c'), $period]);
+                ->execute([$paidAt, $period]);
+            $invoice['status'] = 'paid';
+            $invoice['paid_at'] = $paidAt;
+            sunseaNotifyAdfSystemPaymentSuccess($pdo, $invoice);
             $_SESSION['flash_message'] = 'Status diperbarui: pembayaran sudah lunas.';
             $_SESSION['flash_type'] = 'success';
         } else {

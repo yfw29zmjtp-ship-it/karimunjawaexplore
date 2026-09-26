@@ -29,10 +29,10 @@ if (!$invoice) {
     exit;
 }
 
-$companyName = sunseaSetting($pdo, 'company_name', 'Karimunjawa Explore');
-$companyAddress = sunseaSetting($pdo, 'company_address', '');
-$logoPath = sunseaSetting($pdo, 'company_logo', '');
-$logoSrc = $logoPath ? sunseaAssetUrl($logoPath) : '';
+$cfg = sunseaSubscriptionConfig($pdo);
+$companyName = $cfg['provider_name'] !== '' ? $cfg['provider_name'] : 'ADF System';
+$companyAddress = $cfg['provider_address'];
+$logoSrc = $cfg['provider_logo'];
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -197,6 +197,7 @@ $logoSrc = $logoPath ? sunseaAssetUrl($logoPath) : '';
 
         <h1>Invoice Pembayaran Langganan System</h1>
         <div class="sub">Periode <?php echo htmlspecialchars($invoice['period']); ?></div>
+        <div class="sub">Ditagihkan kepada: <strong><?php echo htmlspecialchars($cfg['client_name'] !== '' ? $cfg['client_name'] : sunseaSetting($pdo, 'company_name', 'Klien')); ?></strong></div>
         <span class="paid-badge">✓ LUNAS</span>
 
         <table>
