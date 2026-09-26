@@ -1438,7 +1438,19 @@ if (empty($sunseaNavItemsVisible)) {
                         <p style="font-size:12px;color:var(--ss-muted);margin-top:10px;">
                             Segera lakukan pembayaran sebelum jatuh tempo untuk menghindari pembatasan akses sistem.
                         </p>
+                        <?php if (!$__configured): ?>
+                            <p style="font-size:12px;color:#dc2626;">Pengaturan Pakasir belum lengkap. Hubungi ADF System untuk melengkapi koneksi pembayaran.</p>
+                        <?php endif; ?>
                     </div>
+                    <?php if ($__configured): ?>
+                    <div class="ss-modal-foot">
+                        <form method="POST" action="<?php echo BASE_URL; ?>/modules/sunsea/subscription-billing.php" style="margin:0;">
+                            <input type="hidden" name="action" value="pay">
+                            <input type="hidden" name="period" value="<?php echo htmlspecialchars($__inv['period']); ?>">
+                            <button type="submit" class="ss-btn ss-btn-primary"><i data-feather="credit-card"></i> Bayar Tagihan Sekarang</button>
+                        </form>
+                    </div>
+                    <?php endif; ?>
                 </div>
             </div>
         <?php else: ?>
