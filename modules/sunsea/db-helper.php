@@ -795,6 +795,7 @@ function sunseaSubscriptionConfig(PDO $pdo): array
     return [
         'base_fee' => (float) sunseaSetting($pdo, 'subscription_base_fee', '150000'),
         'per_guest_fee' => (float) sunseaSetting($pdo, 'subscription_per_guest_fee', '5000'),
+        'subscription_start_date' => sunseaSetting($pdo, 'subscription_start_date', ''),
         'pakasir_slug' => sunseaSetting($pdo, 'subscription_pakasir_slug', ''),
         'pakasir_api_key' => sunseaSetting($pdo, 'subscription_pakasir_api_key', ''),
         'pakasir_webhook_secret' => sunseaSetting($pdo, 'subscription_pakasir_webhook_secret', ''),
@@ -853,6 +854,7 @@ function sunseaSyncSubscriptionConfig(PDO $pdo): array
 
     sunseaSetSetting($pdo, 'subscription_base_fee', (string) $data['base_fee']);
     sunseaSetSetting($pdo, 'subscription_per_guest_fee', (string) $data['per_guest_fee']);
+    sunseaSetSetting($pdo, 'subscription_start_date', (string) ($data['subscription_start_date'] ?? ''));
     sunseaSetSetting($pdo, 'subscription_pakasir_slug', (string) ($data['pakasir_slug'] ?? ''));
     sunseaSetSetting($pdo, 'subscription_pakasir_api_key', (string) ($data['pakasir_api_key'] ?? ''));
     sunseaSetSetting($pdo, 'subscription_pakasir_webhook_secret', (string) ($data['pakasir_webhook_secret'] ?? ''));
@@ -905,21 +907,38 @@ function sunseaGetOrRefreshSubscriptionInvoice(PDO $pdo, string $period): ?array
     $invoice = $stmt->fetch();
 
     $charge = sunseaCalculateSubscriptionCharge($pdo, $period);
+    $cfg = sunseaSubscriptionConfig($pdo);
+    $dueDate = sunseaSubscriptionDueDate($period, $cfg['subscription_start_date']);
 
     if (!$invoice) {
-        $dueDate = date('Y-m-t', strtotime($period . '-01'));
         $pdo->prepare(
             "INSERT INTO subscription_invoices (period, base_fee, guest_count, per_guest_fee, guest_total, total_amount, status, due_date)
              VALUES (?, ?, ?, ?, ?, ?, 'unpaid', ?)"
         )->execute([$period, $charge['base_fee'], $charge['guest_count'], $charge['per_guest_fee'], $charge['guest_total'], $charge['total_amount'], $dueDate]);
     } elseif ($invoice['status'] === 'unpaid') {
         $pdo->prepare(
-            "UPDATE subscription_invoices SET base_fee=?, guest_count=?, per_guest_fee=?, guest_total=?, total_amount=? WHERE period=?"
-        )->execute([$charge['base_fee'], $charge['guest_count'], $charge['per_guest_fee'], $charge['guest_total'], $charge['total_amount'], $period]);
+            "UPDATE subscription_invoices SET base_fee=?, guest_count=?, per_guest_fee=?, guest_total=?, total_amount=?, due_date=COALESCE(due_date, ?) WHERE period=?"
+        )->execute([$charge['base_fee'], $charge['guest_count'], $charge['per_guest_fee'], $charge['guest_total'], $charge['total_amount'], $dueDate, $period]);
     }
 
     $stmt->execute([$period]);
     return $stmt->fetch() ?: null;
+}
+
+/**
+ * Compute the due date for a billing period based on the client's
+ * subscription start date (its day-of-month becomes the recurring due day).
+ * Falls back to the last day of the period's month if no start date is set,
+ * or if the anchor day doesn't exist in that month (e.g. 31st in Feb).
+ */
+function sunseaSubscriptionDueDate(string $period, string $startDate): string
+{
+    $daysInMonth = (int) date('t', strtotime($period . '-01'));
+    if ($startDate === '' || !strtotime($startDate)) {
+        return date('Y-m-t', strtotime($period . '-01'));
+    }
+    $day = min((int) date('j', strtotime($startDate)), $daysInMonth);
+    return sprintf('%s-%02d', $period, $day);
 }
 
 /**

@@ -164,6 +164,12 @@ include 'layout-header.php';
                         <td style="padding:10px 0;font-weight:700;">Total Tagihan</td>
                         <td style="padding:10px 0;text-align:right;font-weight:700;font-size:18px;"><?php echo sunseaRupiah((float) $invoice['total_amount']); ?></td>
                     </tr>
+                    <?php if (!empty($invoice['due_date'])): ?>
+                    <tr>
+                        <td style="padding:6px 0;color:var(--ss-muted);">Jatuh Tempo</td>
+                        <td style="padding:6px 0;text-align:right;"><?php echo htmlspecialchars(date('d M Y', strtotime($invoice['due_date']))); ?></td>
+                    </tr>
+                    <?php endif; ?>
                 </table>
 
                 <div style="margin-top:8px;">
