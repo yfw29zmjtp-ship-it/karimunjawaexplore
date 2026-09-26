@@ -34,6 +34,7 @@ if ($expectedToken === '' || !hash_equals($expectedToken, $providedToken)) {
 }
 
 $period = date('Y-m');
+sunseaSyncSubscriptionConfig($pdo);
 $invoice = sunseaGetOrRefreshSubscriptionInvoice($pdo, $period);
 
 if ($invoice) {

@@ -776,7 +776,9 @@ function sunseaEnsureSubscriptionBillingSchema(PDO $pdo): void
 
 /**
  * Read subscription billing configuration (base fee, per-guest fee, Pakasir
- * merchant credentials) from the settings table.
+ * merchant credentials) from the settings table. These values are only ever
+ * written by sunseaSyncSubscriptionConfig() — the local admin cannot edit
+ * them directly, they are controlled centrally by ADF System.
  */
 function sunseaSubscriptionConfig(PDO $pdo): array
 {
@@ -786,12 +788,68 @@ function sunseaSubscriptionConfig(PDO $pdo): array
         'pakasir_slug' => sunseaSetting($pdo, 'subscription_pakasir_slug', ''),
         'pakasir_api_key' => sunseaSetting($pdo, 'subscription_pakasir_api_key', ''),
         'pakasir_webhook_secret' => sunseaSetting($pdo, 'subscription_pakasir_webhook_secret', ''),
+        'last_sync_at' => sunseaSetting($pdo, 'subscription_last_sync_at', ''),
+        'last_sync_error' => sunseaSetting($pdo, 'subscription_last_sync_error', ''),
     ];
 }
 
 function sunseaSubscriptionIsConfigured(array $cfg): bool
 {
     return $cfg['pakasir_slug'] !== '' && $cfg['pakasir_api_key'] !== '';
+}
+
+/**
+ * Fetch the current pricing/gateway config from ADF System's central API and
+ * cache it locally into the settings table. ADF System is the sole source of
+ * truth for these numbers — this business's admin can only view them, not
+ * edit them. On network failure, the previously cached values are kept as-is
+ * and a `subscription_last_sync_error` note is recorded.
+ */
+function sunseaSyncSubscriptionConfig(PDO $pdo): array
+{
+    $syncUrl = sunseaSetting($pdo, 'subscription_sync_url', 'https://adfsystem.store/api/subscription-config.php');
+    $clientKey = sunseaSetting($pdo, 'subscription_client_key', '');
+    $clientToken = sunseaSetting($pdo, 'subscription_client_token', '');
+
+    if ($clientKey === '' || $clientToken === '') {
+        sunseaSetSetting($pdo, 'subscription_last_sync_error', 'Client Key/Token belum diisi.');
+        return sunseaSubscriptionConfig($pdo);
+    }
+
+    $ch = curl_init($syncUrl);
+    curl_setopt_array($ch, [
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => json_encode(['client_key' => $clientKey, 'client_token' => $clientToken]),
+        CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT => 8,
+        CURLOPT_SSL_VERIFYPEER => true,
+    ]);
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlError = curl_error($ch);
+    curl_close($ch);
+
+    if ($response === false || $httpCode < 200 || $httpCode >= 300) {
+        sunseaSetSetting($pdo, 'subscription_last_sync_error', $curlError ?: "HTTP {$httpCode} dari server ADF System.");
+        return sunseaSubscriptionConfig($pdo);
+    }
+
+    $data = json_decode($response, true);
+    if (!is_array($data) || !isset($data['base_fee'])) {
+        sunseaSetSetting($pdo, 'subscription_last_sync_error', $data['error'] ?? 'Respons tidak valid dari ADF System.');
+        return sunseaSubscriptionConfig($pdo);
+    }
+
+    sunseaSetSetting($pdo, 'subscription_base_fee', (string) $data['base_fee']);
+    sunseaSetSetting($pdo, 'subscription_per_guest_fee', (string) $data['per_guest_fee']);
+    sunseaSetSetting($pdo, 'subscription_pakasir_slug', (string) ($data['pakasir_slug'] ?? ''));
+    sunseaSetSetting($pdo, 'subscription_pakasir_api_key', (string) ($data['pakasir_api_key'] ?? ''));
+    sunseaSetSetting($pdo, 'subscription_pakasir_webhook_secret', (string) ($data['pakasir_webhook_secret'] ?? ''));
+    sunseaSetSetting($pdo, 'subscription_last_sync_at', date('c'));
+    sunseaSetSetting($pdo, 'subscription_last_sync_error', '');
+
+    return sunseaSubscriptionConfig($pdo);
 }
 
 /**

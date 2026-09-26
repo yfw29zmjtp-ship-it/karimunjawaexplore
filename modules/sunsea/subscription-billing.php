@@ -21,16 +21,36 @@ $pdo = getSunseaConnection();
 sunseaEnsureSubscriptionBillingSchema($pdo);
 sunseaEnsureBookingSchema($pdo);
 
-// ---- Save gateway/pricing settings ----
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_settings') {
-    sunseaSetSetting($pdo, 'subscription_base_fee', (string) (float) str_replace(['.', ','], ['', '.'], $_POST['base_fee'] ?? '0'));
-    sunseaSetSetting($pdo, 'subscription_per_guest_fee', (string) (float) str_replace(['.', ','], ['', '.'], $_POST['per_guest_fee'] ?? '0'));
-    sunseaSetSetting($pdo, 'subscription_pakasir_slug', trim($_POST['pakasir_slug'] ?? ''));
-    sunseaSetSetting($pdo, 'subscription_pakasir_api_key', trim($_POST['pakasir_api_key'] ?? ''));
-    sunseaSetSetting($pdo, 'subscription_pakasir_webhook_secret', trim($_POST['pakasir_webhook_secret'] ?? ''));
-    $_SESSION['flash_message'] = 'Pengaturan tagihan langganan tersimpan.';
-    $_SESSION['flash_type'] = 'success';
+// ---- Save connection to ADF System (client key/token only — pricing is NOT editable here) ----
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_connection') {
+    sunseaSetSetting($pdo, 'subscription_client_key', trim($_POST['client_key'] ?? ''));
+    sunseaSetSetting($pdo, 'subscription_client_token', trim($_POST['client_token'] ?? ''));
+    if (trim($_POST['sync_url'] ?? '') !== '') {
+        sunseaSetSetting($pdo, 'subscription_sync_url', trim($_POST['sync_url']));
+    }
+    $result = sunseaSyncSubscriptionConfig($pdo);
+    if ($result['last_sync_error'] !== '') {
+        $_SESSION['flash_message'] = 'Koneksi tersimpan, tapi sinkronisasi gagal: ' . $result['last_sync_error'];
+        $_SESSION['flash_type'] = 'error';
+    } else {
+        $_SESSION['flash_message'] = 'Koneksi tersimpan dan berhasil sinkron dengan ADF System.';
+        $_SESSION['flash_type'] = 'success';
+    }
     header('Location: subscription-billing.php');
+    exit;
+}
+
+// ---- Manually force a re-sync with ADF System ----
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'sync_now') {
+    $result = sunseaSyncSubscriptionConfig($pdo);
+    if ($result['last_sync_error'] !== '') {
+        $_SESSION['flash_message'] = 'Sinkronisasi gagal: ' . $result['last_sync_error'];
+        $_SESSION['flash_type'] = 'error';
+    } else {
+        $_SESSION['flash_message'] = 'Berhasil sinkron dengan ADF System.';
+        $_SESSION['flash_type'] = 'success';
+    }
+    header('Location: subscription-billing.php?period=' . urlencode($_POST['period'] ?? date('Y-m')));
     exit;
 }
 
@@ -92,6 +112,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'check
 $period = $_GET['period'] ?? date('Y-m');
 if (!preg_match('/^\d{4}-\d{2}$/', $period)) {
     $period = date('Y-m');
+}
+
+// Auto-refresh from ADF System at most once per hour so the page stays fast.
+$lastSyncAt = sunseaSetting($pdo, 'subscription_last_sync_at', '');
+if ($lastSyncAt === '' || (time() - strtotime($lastSyncAt)) > 3600) {
+    sunseaSyncSubscriptionConfig($pdo);
 }
 
 $isCurrentPeriod = $period === date('Y-m');
@@ -213,34 +239,53 @@ include 'layout-header.php';
         </div>
     </div>
 
+    <div class="ss-card" style="margin-bottom:18px;">
+        <div class="ss-card-title" style="margin-bottom:12px;">Biaya Langganan</div>
+        <p style="font-size:12px;color:var(--ss-muted);margin-bottom:10px;">
+            Ditentukan oleh ADF System, hanya bisa dilihat di sini.
+        </p>
+        <table style="width:100%;font-size:13px;">
+            <tr>
+                <td style="padding:4px 0;color:var(--ss-muted);">Biaya Dasar / Bulan</td>
+                <td style="padding:4px 0;text-align:right;font-weight:600;"><?php echo sunseaRupiah((float) $cfg['base_fee']); ?></td>
+            </tr>
+            <tr>
+                <td style="padding:4px 0;color:var(--ss-muted);">Biaya per Tamu Confirmed</td>
+                <td style="padding:4px 0;text-align:right;font-weight:600;"><?php echo sunseaRupiah((float) $cfg['per_guest_fee']); ?></td>
+            </tr>
+        </table>
+        <p style="font-size:11px;color:var(--ss-muted);margin-top:10px;">
+            Terakhir sinkron: <?php echo $cfg['last_sync_at'] ? htmlspecialchars(date('d M Y, H:i', strtotime($cfg['last_sync_at']))) : 'belum pernah'; ?>
+            <?php if ($cfg['last_sync_error'] !== ''): ?>
+                <br><span style="color:#dc2626;">Error: <?php echo htmlspecialchars($cfg['last_sync_error']); ?></span>
+            <?php endif; ?>
+        </p>
+        <form method="POST" style="margin-top:8px;">
+            <input type="hidden" name="action" value="sync_now">
+            <input type="hidden" name="period" value="<?php echo htmlspecialchars($period); ?>">
+            <button type="submit" class="ss-btn ss-btn-outline ss-btn-sm"><i data-feather="refresh-cw"></i> Sync Sekarang</button>
+        </form>
+    </div>
+
     <div class="ss-card">
-        <div class="ss-card-title" style="margin-bottom:12px;">Pengaturan</div>
+        <div class="ss-card-title" style="margin-bottom:12px;">Koneksi ke ADF System</div>
+        <p style="font-size:12px;color:var(--ss-muted);margin-bottom:8px;">Isi sekali saja dengan Client Key &amp; Client Token yang diberikan admin ADF System.</p>
         <form method="POST">
-            <input type="hidden" name="action" value="save_settings">
+            <input type="hidden" name="action" value="save_connection">
             <div class="ss-form-group">
-                <label class="ss-label">Biaya Dasar / Bulan (Rp)</label>
-                <input class="ss-input" name="base_fee" value="<?php echo htmlspecialchars((string) $cfg['base_fee']); ?>">
+                <label class="ss-label">Client Key</label>
+                <input class="ss-input" name="client_key" value="<?php echo htmlspecialchars(sunseaSetting($pdo, 'subscription_client_key', '')); ?>">
             </div>
             <div class="ss-form-group">
-                <label class="ss-label">Biaya per Tamu Confirmed (Rp)</label>
-                <input class="ss-input" name="per_guest_fee" value="<?php echo htmlspecialchars((string) $cfg['per_guest_fee']); ?>">
-            </div>
-            <hr style="border-color:var(--ss-border);margin:14px 0;">
-            <p style="font-size:12px;color:var(--ss-muted);margin-bottom:8px;">Kredensial project Pakasir milik ADF System (penerima pembayaran).</p>
-            <div class="ss-form-group">
-                <label class="ss-label">Slug Proyek Pakasir</label>
-                <input class="ss-input" name="pakasir_slug" value="<?php echo htmlspecialchars($cfg['pakasir_slug']); ?>">
+                <label class="ss-label">Client Token</label>
+                <input class="ss-input" name="client_token" value="<?php echo htmlspecialchars(sunseaSetting($pdo, 'subscription_client_token', '')); ?>">
             </div>
             <div class="ss-form-group">
-                <label class="ss-label">API Key</label>
-                <input class="ss-input" name="pakasir_api_key" value="<?php echo htmlspecialchars($cfg['pakasir_api_key']); ?>">
+                <label class="ss-label">URL Sinkronisasi</label>
+                <input class="ss-input" name="sync_url" value="<?php echo htmlspecialchars(sunseaSetting($pdo, 'subscription_sync_url', 'https://adfsystem.store/api/subscription-config.php')); ?>">
             </div>
-            <div class="ss-form-group">
-                <label class="ss-label">Webhook Secret</label>
-                <input class="ss-input" name="pakasir_webhook_secret" value="<?php echo htmlspecialchars($cfg['pakasir_webhook_secret']); ?>">
-            </div>
-            <p style="font-size:12px;color:var(--ss-muted);">Webhook URL: <code><?php echo htmlspecialchars(BASE_URL . '/api/subscription-webhook.php'); ?></code></p>
-            <button class="ss-btn ss-btn-primary" type="submit"><i data-feather="save"></i> Simpan Pengaturan</button>
+            <p style="font-size:12px;color:var(--ss-muted);">Webhook pembayaran: <code><?php echo htmlspecialchars(BASE_URL . '/api/subscription-webhook.php'); ?></code></p>
+            <button class="ss-btn ss-btn-primary" type="submit"><i data-feather="save"></i> Simpan &amp; Sync</button>
         </form>
     </div>
 </div>
