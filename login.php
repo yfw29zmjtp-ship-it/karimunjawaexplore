@@ -1036,6 +1036,16 @@ if (isset($_GET['biz'])) {
                     <div class="alert-danger" role="alert" aria-live="assertive">
                         <span style="font-weight:800;color:#991b1b !important;opacity:1 !important;-webkit-text-fill-color:#991b1b !important;">&#9888; <?php echo htmlspecialchars($error); ?></span>
                     </div>
+                    <?php if (strpos($error, 'jatuh tempo') !== false): ?>
+                        <a href="<?php echo BASE_URL; ?>/pay-subscription.php" style="display:block;text-align:center;background:#ea580c;color:#fff;font-weight:700;padding:10px 14px;border-radius:8px;text-decoration:none;margin:-6px 0 16px;">
+                            Bayar Tagihan Sekarang
+                        </a>
+                    <?php endif; ?>
+                <?php endif; ?>
+                <?php if (isset($_GET['pay_error'])): ?>
+                    <div class="alert-danger" role="alert" aria-live="assertive">
+                        <span style="font-weight:800;color:#991b1b !important;opacity:1 !important;-webkit-text-fill-color:#991b1b !important;">&#9888; Gagal membuat link pembayaran. Hubungi ADF System / developer.</span>
+                    </div>
                 <?php endif; ?>
 
                 <form method="POST" action="" autocomplete="on" onkeydown="if(event.key==='Enter' && event.target.tagName==='INPUT'){event.preventDefault();document.getElementById(window.__lastLoginBtn || 'btnSystemLogin').click();}">
