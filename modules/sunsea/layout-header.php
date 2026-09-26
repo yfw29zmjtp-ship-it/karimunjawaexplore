@@ -1480,6 +1480,28 @@ if (empty($sunseaNavItemsVisible)) {
         <?php endif; ?>
         <?php endif; ?>
 
+        <?php
+        $subscriptionPaidNotice = null;
+        if (isset($pdo) && in_array($currentUser['role'] ?? '', ['developer', 'owner'], true)) {
+            try {
+                $subscriptionPaidNotice = sunseaGetRecentPaidSubscriptionInvoice($pdo);
+            } catch (Exception $e) {
+            }
+        }
+        if ($subscriptionPaidNotice):
+        ?>
+            <div style="display:flex;align-items:center;gap:10px;padding:12px 20px;background:#DCFCE7;color:#166534;font-size:13px;font-weight:500;flex-wrap:wrap;">
+                <i data-feather="check-circle"></i>
+                <span style="flex:1;min-width:200px;">
+                    Pembayaran tagihan langganan periode <strong><?php echo htmlspecialchars($subscriptionPaidNotice['period']); ?></strong> berhasil
+                    — total <strong><?php echo sunseaRupiah((float) $subscriptionPaidNotice['total_amount']); ?></strong>.
+                </span>
+                <a href="<?php echo BASE_URL; ?>/modules/sunsea/subscription-invoice-print.php?period=<?php echo urlencode($subscriptionPaidNotice['period']); ?>" target="_blank" class="ss-btn ss-btn-sm ss-btn-primary">
+                    <i data-feather="printer"></i> Cetak Invoice
+                </a>
+            </div>
+        <?php endif; ?>
+
         <script>
             (function() {
                 var el = document.getElementById('ssLiveClock');

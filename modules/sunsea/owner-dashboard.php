@@ -84,6 +84,7 @@ $userName = $currentUser['full_name'] ?? $currentUser['username'] ?? 'Owner';
 
 $subscriptionReminder = null;
 $subscriptionCfg = null;
+$subscriptionPaidNotice = null;
 try {
     sunseaEnsureSubscriptionBillingSchema($pdo);
     $lastSyncAt = sunseaSetting($pdo, 'subscription_last_sync_at', '');
@@ -93,6 +94,7 @@ try {
     sunseaGetOrRefreshSubscriptionInvoice($pdo, date('Y-m'));
     $subscriptionReminder = sunseaGetSubscriptionReminder($pdo);
     $subscriptionCfg = sunseaSubscriptionConfig($pdo);
+    $subscriptionPaidNotice = sunseaGetRecentPaidSubscriptionInvoice($pdo);
 } catch (Exception $e) {
 }
 
@@ -641,6 +643,17 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
                 </div>
             </div>
         <?php endif; ?>
+    <?php endif; ?>
+
+    <?php if ($subscriptionPaidNotice): ?>
+        <div style="display:flex;align-items:center;gap:10px;padding:12px 18px;background:#DCFCE7;color:#166534;font-size:12.5px;font-weight:500;flex-wrap:wrap;">
+            <span style="flex:1;min-width:200px;">
+                ✅ Pembayaran tagihan langganan periode <strong><?php echo htmlspecialchars($subscriptionPaidNotice['period']); ?></strong> berhasil
+                — total <strong><?php echo sunseaRupiah((float) $subscriptionPaidNotice['total_amount']); ?></strong>.
+            </span>
+            <a href="<?php echo BASE_URL; ?>/modules/sunsea/subscription-invoice-print.php?period=<?php echo urlencode($subscriptionPaidNotice['period']); ?>" target="_blank"
+                style="background:#166534;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12.5px;font-weight:700;text-decoration:none;">🖨️ Cetak Invoice</a>
+        </div>
     <?php endif; ?>
 
     <div class="ob-container">

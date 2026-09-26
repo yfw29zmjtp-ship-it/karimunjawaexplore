@@ -999,6 +999,25 @@ function sunseaGetSubscriptionReminder(PDO $pdo): ?array
 }
 
 /**
+ * Most recently paid subscription invoice, if paid within the last $withinHours
+ * (default 72h) — used to show a one-off "payment successful" banner + print
+ * invoice link after a payment gets confirmed (via webhook or reconciliation).
+ */
+function sunseaGetRecentPaidSubscriptionInvoice(PDO $pdo, int $withinHours = 72): ?array
+{
+    try {
+        $stmt = $pdo->prepare(
+            "SELECT * FROM subscription_invoices WHERE status = 'paid' AND paid_at IS NOT NULL
+             AND paid_at >= ? ORDER BY paid_at DESC LIMIT 1"
+        );
+        $stmt->execute([date('Y-m-d H:i:s', time() - $withinHours * 3600)]);
+        return $stmt->fetch() ?: null;
+    } catch (Exception $e) {
+        return null;
+    }
+}
+
+/**
  * Minimal standalone Pakasir API v2 client (create payment link / check status).
  * Separate from adfsystem-site's client since this app lives on its own hosting.
  */
