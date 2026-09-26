@@ -1292,6 +1292,13 @@ if (empty($sunseaNavItemsVisible)) {
         if (isset($pdo) && in_array($currentUser['role'] ?? '', ['developer', 'owner'], true) && $activePage !== 'subscription_billing') {
             try {
                 sunseaEnsureSubscriptionBillingSchema($pdo);
+                // Keep this self-sufficient: sync + generate the current invoice here too,
+                // so the reminder doesn't depend on someone having opened the billing page first.
+                $lastSyncAt = sunseaSetting($pdo, 'subscription_last_sync_at', '');
+                if ($lastSyncAt === '' || (time() - strtotime($lastSyncAt)) > 3600) {
+                    sunseaSyncSubscriptionConfig($pdo);
+                }
+                sunseaGetOrRefreshSubscriptionInvoice($pdo, date('Y-m'));
                 $subscriptionReminder = sunseaGetSubscriptionReminder($pdo);
             } catch (Exception $e) {
             }
