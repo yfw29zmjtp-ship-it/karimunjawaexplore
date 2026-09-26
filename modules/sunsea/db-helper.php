@@ -917,7 +917,7 @@ function sunseaGetOrRefreshSubscriptionInvoice(PDO $pdo, string $period): ?array
         )->execute([$period, $charge['base_fee'], $charge['guest_count'], $charge['per_guest_fee'], $charge['guest_total'], $charge['total_amount'], $dueDate]);
     } elseif ($invoice['status'] === 'unpaid') {
         $pdo->prepare(
-            "UPDATE subscription_invoices SET base_fee=?, guest_count=?, per_guest_fee=?, guest_total=?, total_amount=?, due_date=COALESCE(due_date, ?) WHERE period=?"
+            "UPDATE subscription_invoices SET base_fee=?, guest_count=?, per_guest_fee=?, guest_total=?, total_amount=?, due_date=? WHERE period=?"
         )->execute([$charge['base_fee'], $charge['guest_count'], $charge['per_guest_fee'], $charge['guest_total'], $charge['total_amount'], $dueDate, $period]);
     }
 
