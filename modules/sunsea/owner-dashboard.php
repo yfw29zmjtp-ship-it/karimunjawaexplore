@@ -85,6 +85,8 @@ $userName = $currentUser['full_name'] ?? $currentUser['username'] ?? 'Owner';
 $subscriptionReminder = null;
 $subscriptionCfg = null;
 $subscriptionPaidNotice = null;
+$subscriptionStatusInvoice = null;
+$subscriptionLastPaid = null;
 try {
     sunseaEnsureSubscriptionBillingSchema($pdo);
     $lastSyncAt = sunseaSetting($pdo, 'subscription_last_sync_at', '');
@@ -95,7 +97,8 @@ try {
     sunseaGetOrRefreshSubscriptionInvoice($pdo, date('Y-m'));
     $subscriptionReminder = sunseaGetSubscriptionReminder($pdo);
     $subscriptionCfg = sunseaSubscriptionConfig($pdo);
-    $subscriptionPaidNotice = sunseaGetRecentPaidSubscriptionInvoice($pdo);
+    $subscriptionStatusInvoice = sunseaGetNearestUnpaidSubscriptionInvoice($pdo);
+    $subscriptionLastPaid = sunseaGetRecentPaidSubscriptionInvoice($pdo, null);
 } catch (Exception $e) {
 }
 
@@ -594,6 +597,11 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
                 Karimunjawa Explore
             </div>
             <div class="ob-user">
+                <?php if ($subscriptionStatusInvoice && !($subscriptionReminder['overdue'] ?? false)): ?>
+                    <span onclick="document.getElementById('obSubStatusModal').style.display='flex'" style="cursor:pointer;background:rgba(255,255,255,.25);color:#fff;border-radius:20px;padding:4px 10px;font-size:11px;font-weight:700;white-space:nowrap;">
+                        🟢 Aktif sampai <?php echo htmlspecialchars(date('d M Y', strtotime($subscriptionStatusInvoice['due_date']))); ?>
+                    </span>
+                <?php endif; ?>
                 <div class="ob-avatar"><?php echo strtoupper(substr($userName, 0, 1)); ?></div>
                 <?php echo htmlspecialchars($userName); ?>
                 <a href="<?php echo BASE_URL; ?>/logout.php?redirect=owner" class="ob-logout-btn" title="Logout">
@@ -604,6 +612,46 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
         <div class="ob-greeting">Welcome back,</div>
         <div class="ob-title">Owner Dashboard</div>
     </div>
+
+    <?php if ($subscriptionStatusInvoice && !($subscriptionReminder['overdue'] ?? false)): ?>
+    <div id="obSubStatusModal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.85);z-index:9999;align-items:center;justify-content:center;padding:16px;">
+        <div style="background:#fff;border-radius:14px;width:100%;max-width:420px;padding:22px;box-shadow:0 20px 50px rgba(0,0,0,.35);">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+                <strong style="font-size:15px;color:#111827;">Status Langganan</strong>
+                <button type="button" onclick="document.getElementById('obSubStatusModal').style.display='none'" style="background:none;border:none;font-size:18px;color:#6b7280;cursor:pointer;">&times;</button>
+            </div>
+            <table style="width:100%;font-size:13px;">
+                <tr>
+                    <td style="padding:5px 0;color:#6b7280;">Status</td>
+                    <td style="padding:5px 0;text-align:right;font-weight:700;color:#166534;">🟢 Aktif</td>
+                </tr>
+                <tr>
+                    <td style="padding:5px 0;color:#6b7280;">Berlaku Hingga</td>
+                    <td style="padding:5px 0;text-align:right;"><?php echo htmlspecialchars(date('d M Y', strtotime($subscriptionStatusInvoice['due_date']))); ?></td>
+                </tr>
+                <?php if ($subscriptionLastPaid): ?>
+                    <tr style="border-top:1px solid #e5e7eb;">
+                        <td style="padding:8px 0 2px;color:#6b7280;">Pembayaran Terakhir</td>
+                        <td style="padding:8px 0 2px;text-align:right;"><?php echo htmlspecialchars(date('d M Y', strtotime($subscriptionLastPaid['paid_at']))); ?></td>
+                    </tr>
+                    <tr>
+                        <td style="padding:2px 0;color:#6b7280;"><?php echo ($subscriptionLastPaid['type'] ?? 'recurring') === 'manual' ? htmlspecialchars($subscriptionLastPaid['description'] ?: 'Tagihan Manual') : ('Periode ' . htmlspecialchars($subscriptionLastPaid['period'])); ?></td>
+                        <td style="padding:2px 0;text-align:right;font-weight:700;"><?php echo sunseaRupiah((float) $subscriptionLastPaid['total_amount']); ?></td>
+                    </tr>
+                <?php endif; ?>
+            </table>
+            <?php if ($subscriptionLastPaid): ?>
+                <p style="margin-top:10px;">
+                    <a href="<?php echo BASE_URL; ?>/modules/sunsea/subscription-invoice-print.php?period=<?php echo urlencode($subscriptionLastPaid['period']); ?>" target="_blank"
+                        style="background:#166534;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12.5px;font-weight:700;text-decoration:none;">🖨️ Cetak Invoice Terakhir</a>
+                </p>
+            <?php endif; ?>
+            <p style="font-size:12px;color:#6b7280;margin-top:10px;">
+                <a href="<?php echo BASE_URL; ?>/modules/sunsea/subscription-billing.php">Lihat riwayat tagihan lengkap</a>
+            </p>
+        </div>
+    </div>
+    <?php endif; ?>
 
     <?php if ($subscriptionReminder):
         $__inv = $subscriptionReminder['invoice'];
@@ -645,17 +693,6 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
                 </div>
             </div>
         <?php endif; ?>
-    <?php endif; ?>
-
-    <?php if ($subscriptionPaidNotice): ?>
-        <div style="display:flex;align-items:center;gap:10px;padding:12px 18px;background:#DCFCE7;color:#166534;font-size:12.5px;font-weight:500;flex-wrap:wrap;">
-            <span style="flex:1;min-width:200px;">
-                ✅ Pembayaran tagihan langganan periode <strong><?php echo htmlspecialchars($subscriptionPaidNotice['period']); ?></strong> berhasil
-                — total <strong><?php echo sunseaRupiah((float) $subscriptionPaidNotice['total_amount']); ?></strong>.
-            </span>
-            <a href="<?php echo BASE_URL; ?>/modules/sunsea/subscription-invoice-print.php?period=<?php echo urlencode($subscriptionPaidNotice['period']); ?>" target="_blank"
-                style="background:#166534;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12.5px;font-weight:700;text-decoration:none;">🖨️ Cetak Invoice</a>
-        </div>
     <?php endif; ?>
 
     <div class="ob-container">

@@ -1044,11 +1044,13 @@ function sunseaReconcilePendingSubscriptionPayment(PDO $pdo, array $invoice): vo
 }
 
 /**
- * Find the nearest unpaid invoice whose due date is within 7 days (or already
- * passed) so the topbar can show a "pay now" reminder banner. Returns null
- * when nothing is due soon.
+ * Nearest unpaid invoice by due date, regardless of how far away it is —
+ * used both by the 7-day reminder banner and the always-on header status
+ * badge. Reconciles a pending Pakasir payment first so a missed webhook
+ * doesn't show a stale unpaid invoice. Returns null when fully caught up
+ * (no unpaid invoice exists at all).
  */
-function sunseaGetSubscriptionReminder(PDO $pdo): ?array
+function sunseaGetNearestUnpaidSubscriptionInvoice(PDO $pdo): ?array
 {
     try {
         $stmt = $pdo->query(
@@ -1069,6 +1071,17 @@ function sunseaGetSubscriptionReminder(PDO $pdo): ?array
         return null;
     }
 
+    return $invoice ?: null;
+}
+
+/**
+ * Find the nearest unpaid invoice whose due date is within 7 days (or already
+ * passed) so the topbar can show a "pay now" reminder banner. Returns null
+ * when nothing is due soon.
+ */
+function sunseaGetSubscriptionReminder(PDO $pdo): ?array
+{
+    $invoice = sunseaGetNearestUnpaidSubscriptionInvoice($pdo);
     if (!$invoice) {
         return null;
     }
@@ -1083,12 +1096,20 @@ function sunseaGetSubscriptionReminder(PDO $pdo): ?array
 
 /**
  * Most recently paid subscription invoice, if paid within the last $withinHours
- * (default 72h) — used to show a one-off "payment successful" banner + print
- * invoice link after a payment gets confirmed (via webhook or reconciliation).
+ * (default 72h, pass null for no time limit) — used for the "last payment"
+ * line in the always-on subscription status popup and (within the window) the
+ * one-off "payment successful" banner + print invoice link.
  */
-function sunseaGetRecentPaidSubscriptionInvoice(PDO $pdo, int $withinHours = 72): ?array
+function sunseaGetRecentPaidSubscriptionInvoice(PDO $pdo, ?int $withinHours = 72): ?array
 {
     try {
+        if ($withinHours === null) {
+            $stmt = $pdo->query(
+                "SELECT * FROM subscription_invoices WHERE status = 'paid' AND paid_at IS NOT NULL
+                 ORDER BY paid_at DESC LIMIT 1"
+            );
+            return $stmt->fetch() ?: null;
+        }
         $stmt = $pdo->prepare(
             "SELECT * FROM subscription_invoices WHERE status = 'paid' AND paid_at IS NOT NULL
              AND paid_at >= ? ORDER BY paid_at DESC LIMIT 1"
