@@ -37,6 +37,7 @@ if ($invoice) {
             'paid_at' => $invoice['paid_at'] ?? date('c'),
         ]),
         CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+        CURLOPT_USERAGENT => 'KarimunjawaExplore-SubscriptionNotify/1.0',
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_TIMEOUT => 10,
         CURLOPT_SSL_VERIFYPEER => true,
