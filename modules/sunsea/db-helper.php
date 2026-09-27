@@ -1056,12 +1056,17 @@ function sunseaReconcilePendingSubscriptionPayment(PDO $pdo, array $invoice): vo
  * badge. Reconciles a pending Pakasir payment first so a missed webhook
  * doesn't show a stale unpaid invoice. Returns null when fully caught up
  * (no unpaid invoice exists at all).
+ *
+ * @param bool $recurringOnly When true, ignores ad-hoc 'manual' invoices —
+ *        used by the "Aktif sampai" status badge, which should reflect the
+ *        core recurring subscription's due date, not one-off manual charges.
  */
-function sunseaGetNearestUnpaidSubscriptionInvoice(PDO $pdo): ?array
+function sunseaGetNearestUnpaidSubscriptionInvoice(PDO $pdo, bool $recurringOnly = false): ?array
 {
+    $typeFilter = $recurringOnly ? "AND type = 'recurring'" : '';
     try {
         $stmt = $pdo->query(
-            "SELECT * FROM subscription_invoices WHERE status = 'unpaid' AND due_date IS NOT NULL
+            "SELECT * FROM subscription_invoices WHERE status = 'unpaid' AND due_date IS NOT NULL {$typeFilter}
              ORDER BY due_date ASC LIMIT 1"
         );
         $invoice = $stmt->fetch();
@@ -1069,7 +1074,7 @@ function sunseaGetNearestUnpaidSubscriptionInvoice(PDO $pdo): ?array
         if ($invoice && !empty($invoice['txn_id'])) {
             sunseaReconcilePendingSubscriptionPayment($pdo, $invoice);
             $stmt = $pdo->query(
-                "SELECT * FROM subscription_invoices WHERE status = 'unpaid' AND due_date IS NOT NULL
+                "SELECT * FROM subscription_invoices WHERE status = 'unpaid' AND due_date IS NOT NULL {$typeFilter}
                  ORDER BY due_date ASC LIMIT 1"
             );
             $invoice = $stmt->fetch();

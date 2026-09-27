@@ -1391,7 +1391,7 @@ if (empty($sunseaNavItemsVisible)) {
                     }
                     $subscriptionReminder = sunseaGetSubscriptionReminder($pdo);
                     $subscriptionCfg = sunseaSubscriptionConfig($pdo);
-                    $subscriptionStatusInvoice = sunseaGetNearestUnpaidSubscriptionInvoice($pdo);
+                    $subscriptionStatusInvoice = sunseaGetNearestUnpaidSubscriptionInvoice($pdo, true);
                     $subscriptionLastPaid = sunseaGetRecentPaidSubscriptionInvoice($pdo, null);
                 } catch (Exception $e) {
                 }
