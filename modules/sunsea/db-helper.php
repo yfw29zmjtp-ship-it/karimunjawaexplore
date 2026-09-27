@@ -753,7 +753,9 @@ function sunseaEnsureSubscriptionBillingSchema(PDO $pdo): void
     try {
         $pdo->exec("CREATE TABLE IF NOT EXISTS `subscription_invoices` (
             `id`            INT AUTO_INCREMENT PRIMARY KEY,
-            `period`        VARCHAR(7) NOT NULL COMMENT 'YYYY-MM',
+            `period`        VARCHAR(40) NOT NULL COMMENT 'YYYY-MM for recurring, MANUAL-<id> for manual',
+            `type`          ENUM('recurring','manual') DEFAULT 'recurring',
+            `description`   VARCHAR(255) NULL COMMENT 'Only used for manual invoices',
             `base_fee`      DECIMAL(15,2) DEFAULT 0.00,
             `guest_count`   INT DEFAULT 0,
             `per_guest_fee` DECIMAL(15,2) DEFAULT 0.00,
@@ -777,6 +779,18 @@ function sunseaEnsureSubscriptionBillingSchema(PDO $pdo): void
             if (!$hasDueDate) {
                 $pdo->exec("ALTER TABLE subscription_invoices ADD COLUMN due_date DATE NULL AFTER status");
             }
+        } catch (Exception $e) {
+        }
+
+        // Add type/description for invoices created before manual billing existed,
+        // and widen period so it can hold both "YYYY-MM" and "MANUAL-<id>" values.
+        try {
+            $hasType = $pdo->query("SHOW COLUMNS FROM subscription_invoices LIKE 'type'")->fetch();
+            if (!$hasType) {
+                $pdo->exec("ALTER TABLE subscription_invoices ADD COLUMN type ENUM('recurring','manual') DEFAULT 'recurring' AFTER period");
+                $pdo->exec("ALTER TABLE subscription_invoices ADD COLUMN description VARCHAR(255) NULL AFTER type");
+            }
+            $pdo->exec("ALTER TABLE subscription_invoices MODIFY COLUMN period VARCHAR(40) NOT NULL");
         } catch (Exception $e) {
         }
     } catch (Exception $e) {
@@ -872,6 +886,61 @@ function sunseaSyncSubscriptionConfig(PDO $pdo): array
     sunseaSetSetting($pdo, 'subscription_last_sync_error', '');
 
     return sunseaSubscriptionConfig($pdo);
+}
+
+/**
+ * Pull ad-hoc "manual" invoices ADF System created for this client (e.g. a
+ * one-off addon fee) and insert any not already present locally. Idempotent:
+ * each manual invoice keeps a deterministic period "MANUAL-<id>" so re-running
+ * this never creates duplicates.
+ */
+function sunseaSyncManualInvoices(PDO $pdo): void
+{
+    $syncUrl = sunseaSetting($pdo, 'subscription_sync_url', 'https://adfsystem.store/api/subscription-config.php');
+    $manualUrl = str_replace('subscription-config.php', 'subscription-manual-invoices.php', $syncUrl);
+    $clientKey = sunseaSetting($pdo, 'subscription_client_key', '');
+    $clientToken = sunseaSetting($pdo, 'subscription_client_token', '');
+    if ($clientKey === '' || $clientToken === '') {
+        return;
+    }
+
+    try {
+        $ch = curl_init($manualUrl);
+        curl_setopt_array($ch, [
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => json_encode(['client_key' => $clientKey, 'client_token' => $clientToken]),
+            CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 8,
+            CURLOPT_SSL_VERIFYPEER => true,
+        ]);
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($response === false || $httpCode < 200 || $httpCode >= 300) {
+            return;
+        }
+        $data = json_decode($response, true);
+        if (!is_array($data) || !isset($data['manual_invoices'])) {
+            return;
+        }
+
+        foreach ($data['manual_invoices'] as $item) {
+            $period = 'MANUAL-' . $item['id'];
+            $stmt = $pdo->prepare("SELECT id FROM subscription_invoices WHERE period = ? LIMIT 1");
+            $stmt->execute([$period]);
+            if ($stmt->fetch()) {
+                continue;
+            }
+            $pdo->prepare(
+                "INSERT INTO subscription_invoices (period, type, description, base_fee, guest_count, per_guest_fee, guest_total, total_amount, status, due_date)
+                 VALUES (?, 'manual', ?, ?, 0, 0, 0, ?, 'unpaid', ?)"
+            )->execute([$period, $item['description'], (float) $item['amount'], (float) $item['amount'], $item['due_date']]);
+        }
+    } catch (Exception $e) {
+        error_log('sunseaSyncManualInvoices error: ' . $e->getMessage());
+    }
 }
 
 /**

@@ -90,6 +90,7 @@ try {
     $lastSyncAt = sunseaSetting($pdo, 'subscription_last_sync_at', '');
     if ($lastSyncAt === '' || (time() - strtotime($lastSyncAt)) > 3600) {
         sunseaSyncSubscriptionConfig($pdo);
+        sunseaSyncManualInvoices($pdo);
     }
     sunseaGetOrRefreshSubscriptionInvoice($pdo, date('Y-m'));
     $subscriptionReminder = sunseaGetSubscriptionReminder($pdo);
@@ -609,11 +610,12 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
         $__days = $subscriptionReminder['days_left'];
         $__overdue = $subscriptionReminder['overdue'];
         $__configured = $subscriptionCfg ? sunseaSubscriptionIsConfigured($subscriptionCfg) : false;
+        $__label = ($__inv['type'] ?? 'recurring') === 'manual' ? ($__inv['description'] ?: 'Tagihan Manual') : ('periode ' . $__inv['period']);
     ?>
         <?php if (!$__overdue): ?>
             <div style="display:flex;align-items:center;gap:10px;padding:12px 18px;background:#FEF3C7;color:#92400E;font-size:12.5px;font-weight:500;flex-wrap:wrap;">
                 <span style="flex:1;min-width:200px;">
-                    ⏰ Tagihan langganan periode <strong><?php echo htmlspecialchars($__inv['period']); ?></strong> jatuh tempo dalam <strong><?php echo $__days; ?> hari</strong>
+                    ⏰ Tagihan langganan <strong><?php echo htmlspecialchars($__label); ?></strong> jatuh tempo dalam <strong><?php echo $__days; ?> hari</strong>
                     — total <strong><?php echo sunseaRupiah((float) $__inv['total_amount']); ?></strong>.
                 </span>
                 <?php if ($__configured): ?>
@@ -629,7 +631,7 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
                 <div style="background:#fff;border-radius:14px;width:100%;max-width:420px;padding:26px 22px;text-align:center;box-shadow:0 20px 50px rgba(0,0,0,.35);">
                     <div style="font-size:34px;">⚠️</div>
                     <h2 style="font-size:17px;margin:10px 0 6px;color:#111827;">Langganan Jatuh Tempo</h2>
-                    <p style="font-size:12.5px;color:#6b7280;">Tagihan periode <strong><?php echo htmlspecialchars($__inv['period']); ?></strong> sudah lewat jatuh tempo dan belum dibayar.</p>
+                    <p style="font-size:12.5px;color:#6b7280;">Tagihan <strong><?php echo htmlspecialchars($__label); ?></strong> sudah lewat jatuh tempo dan belum dibayar.</p>
                     <div style="font-weight:700;font-size:18px;margin:12px 0;color:#111827;"><?php echo sunseaRupiah((float) $__inv['total_amount']); ?></div>
                     <?php if ($__configured): ?>
                         <form method="POST" action="<?php echo BASE_URL; ?>/modules/sunsea/subscription-billing.php">

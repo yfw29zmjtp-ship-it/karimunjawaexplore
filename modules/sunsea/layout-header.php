@@ -1385,6 +1385,7 @@ if (empty($sunseaNavItemsVisible)) {
                 $lastSyncAt = sunseaSetting($pdo, 'subscription_last_sync_at', '');
                 if ($lastSyncAt === '' || (time() - strtotime($lastSyncAt)) > 3600) {
                     sunseaSyncSubscriptionConfig($pdo);
+                    sunseaSyncManualInvoices($pdo);
                 }
                 sunseaGetOrRefreshSubscriptionInvoice($pdo, date('Y-m'));
                 $subscriptionReminder = sunseaGetSubscriptionReminder($pdo);
@@ -1397,12 +1398,14 @@ if (empty($sunseaNavItemsVisible)) {
             $__days = $subscriptionReminder['days_left'];
             $__overdue = $subscriptionReminder['overdue'];
             $__configured = $subscriptionCfg ? sunseaSubscriptionIsConfigured($subscriptionCfg) : false;
+            $__isManual = ($__inv['type'] ?? 'recurring') === 'manual';
+            $__label = $__isManual ? ($__inv['description'] ?: 'Tagihan Manual') : ('periode ' . $__inv['period']);
         ?>
         <?php if (!$__overdue): ?>
             <div class="ss-subscription-banner">
                 <i data-feather="bell"></i>
                 <span>
-                    Tagihan langganan periode <strong><?php echo htmlspecialchars($__inv['period']); ?></strong> jatuh tempo dalam <strong><?php echo $__days; ?> hari</strong>
+                    Tagihan langganan <strong><?php echo htmlspecialchars($__label); ?></strong> jatuh tempo dalam <strong><?php echo $__days; ?> hari</strong>
                     — total <strong><?php echo sunseaRupiah((float) $__inv['total_amount']); ?></strong>.
                 </span>
                 <button type="button" class="ss-btn ss-btn-sm ss-btn-primary" onclick="document.getElementById('ssSubBillModal').style.display='flex'">Lihat Detail</button>
@@ -1411,11 +1414,17 @@ if (empty($sunseaNavItemsVisible)) {
             <div id="ssSubBillModal" class="ss-modal-overlay">
                 <div class="ss-modal-box">
                     <div class="ss-modal-head">
-                        <strong>Detail Tagihan Langganan — <?php echo htmlspecialchars($__inv['period']); ?></strong>
+                        <strong>Detail Tagihan Langganan — <?php echo htmlspecialchars($__label); ?></strong>
                         <button type="button" class="ss-modal-close" onclick="document.getElementById('ssSubBillModal').style.display='none'">&times;</button>
                     </div>
                     <div class="ss-modal-body">
                         <table style="width:100%;font-size:13px;">
+                            <?php if ($__isManual): ?>
+                            <tr>
+                                <td style="padding:5px 0;color:var(--ss-muted);"><?php echo htmlspecialchars($__inv['description'] ?: 'Tagihan Manual'); ?></td>
+                                <td style="padding:5px 0;text-align:right;"><?php echo sunseaRupiah((float) $__inv['total_amount']); ?></td>
+                            </tr>
+                            <?php else: ?>
                             <tr>
                                 <td style="padding:5px 0;color:var(--ss-muted);">Biaya Dasar Bulanan</td>
                                 <td style="padding:5px 0;text-align:right;"><?php echo sunseaRupiah((float) $__inv['base_fee']); ?></td>
@@ -1424,6 +1433,7 @@ if (empty($sunseaNavItemsVisible)) {
                                 <td style="padding:5px 0;color:var(--ss-muted);">Tamu Confirmed (<?php echo (int) $__inv['guest_count']; ?> &times; <?php echo sunseaRupiah((float) $__inv['per_guest_fee']); ?>)</td>
                                 <td style="padding:5px 0;text-align:right;"><?php echo sunseaRupiah((float) $__inv['guest_total']); ?></td>
                             </tr>
+                            <?php endif; ?>
                             <?php if (!empty($__inv['due_date'])): ?>
                             <tr>
                                 <td style="padding:5px 0;color:var(--ss-muted);">Jatuh Tempo</td>
@@ -1458,7 +1468,7 @@ if (empty($sunseaNavItemsVisible)) {
                 <div class="ss-subscription-lock-box">
                     <i data-feather="alert-triangle"></i>
                     <h2>Langganan Jatuh Tempo</h2>
-                    <p>Tagihan periode <strong><?php echo htmlspecialchars($__inv['period']); ?></strong> sudah lewat jatuh tempo dan belum dibayar.
+                    <p>Tagihan <strong><?php echo htmlspecialchars($__label); ?></strong> sudah lewat jatuh tempo dan belum dibayar.
                         Akses sistem dibatasi sampai pembayaran diterima.</p>
                     <table style="width:100%;font-size:13px;margin:14px 0;">
                         <tr>

@@ -114,7 +114,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'check
 }
 
 $period = $_GET['period'] ?? date('Y-m');
-if (!preg_match('/^\d{4}-\d{2}$/', $period)) {
+if (!preg_match('/^(\d{4}-\d{2}|MANUAL-.+)$/', $period)) {
     $period = date('Y-m');
 }
 
@@ -122,10 +122,14 @@ if (!preg_match('/^\d{4}-\d{2}$/', $period)) {
 $lastSyncAt = sunseaSetting($pdo, 'subscription_last_sync_at', '');
 if ($lastSyncAt === '' || (time() - strtotime($lastSyncAt)) > 3600) {
     sunseaSyncSubscriptionConfig($pdo);
+    sunseaSyncManualInvoices($pdo);
 }
 
-$isCurrentPeriod = $period === date('Y-m');
-if ($isCurrentPeriod) {
+// Recurring periods (current month or any not-yet-arrived future month) are
+// generated/refreshed on demand so admins can preview an upcoming bill early;
+// past periods and manual invoices are only ever looked up, never (re)computed.
+$isGeneratablePeriod = preg_match('/^\d{4}-\d{2}$/', $period) && $period >= date('Y-m');
+if ($isGeneratablePeriod) {
     $invoice = sunseaGetOrRefreshSubscriptionInvoice($pdo, $period);
 } else {
     $stmt = $pdo->prepare("SELECT * FROM subscription_invoices WHERE period = ? LIMIT 1");
@@ -156,6 +160,12 @@ include 'layout-header.php';
                 <p style="color:var(--ss-muted);">Belum ada tagihan untuk periode ini.</p>
             <?php else: ?>
                 <table style="width:100%;font-size:14px;">
+                    <?php if (($invoice['type'] ?? 'recurring') === 'manual'): ?>
+                    <tr>
+                        <td style="padding:6px 0;color:var(--ss-muted);"><?php echo htmlspecialchars($invoice['description'] ?? 'Tagihan Manual'); ?></td>
+                        <td style="padding:6px 0;text-align:right;"><?php echo sunseaRupiah((float) $invoice['total_amount']); ?></td>
+                    </tr>
+                    <?php else: ?>
                     <tr>
                         <td style="padding:6px 0;color:var(--ss-muted);">Biaya Dasar Bulanan</td>
                         <td style="padding:6px 0;text-align:right;"><?php echo sunseaRupiah((float) $invoice['base_fee']); ?></td>
@@ -164,6 +174,7 @@ include 'layout-header.php';
                         <td style="padding:6px 0;color:var(--ss-muted);">Tamu Confirmed (<?php echo (int) $invoice['guest_count']; ?> tamu &times; <?php echo sunseaRupiah((float) $invoice['per_guest_fee']); ?>)</td>
                         <td style="padding:6px 0;text-align:right;"><?php echo sunseaRupiah((float) $invoice['guest_total']); ?></td>
                     </tr>
+                    <?php endif; ?>
                     <tr style="border-top:1px solid var(--ss-border);">
                         <td style="padding:10px 0;font-weight:700;">Total Tagihan</td>
                         <td style="padding:10px 0;text-align:right;font-weight:700;font-size:18px;"><?php echo sunseaRupiah((float) $invoice['total_amount']); ?></td>
@@ -215,7 +226,7 @@ include 'layout-header.php';
                 <table class="ss-table">
                     <thead>
                         <tr>
-                            <th>Periode</th>
+                            <th>Periode / Keterangan</th>
                             <th>Tamu</th>
                             <th>Total</th>
                             <th>Status</th>
@@ -225,8 +236,8 @@ include 'layout-header.php';
                     <tbody>
                         <?php foreach ($history as $row): ?>
                         <tr>
-                            <td><?php echo htmlspecialchars($row['period']); ?></td>
-                            <td><?php echo (int) $row['guest_count']; ?></td>
+                            <td><?php echo ($row['type'] ?? 'recurring') === 'manual' ? htmlspecialchars($row['description'] ?? 'Tagihan Manual') : htmlspecialchars($row['period']); ?></td>
+                            <td><?php echo ($row['type'] ?? 'recurring') === 'manual' ? '-' : (int) $row['guest_count']; ?></td>
                             <td><?php echo sunseaRupiah((float) $row['total_amount']); ?></td>
                             <td>
                                 <?php if ($row['status'] === 'paid'): ?>

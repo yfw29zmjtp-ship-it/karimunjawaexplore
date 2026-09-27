@@ -196,11 +196,21 @@ $logoSrc = $cfg['provider_logo'];
         </div>
 
         <h1>Invoice Pembayaran Langganan System</h1>
+        <?php if (($invoice['type'] ?? 'recurring') === 'manual'): ?>
+        <div class="sub"><?php echo htmlspecialchars($invoice['description'] ?: 'Tagihan Manual'); ?></div>
+        <?php else: ?>
         <div class="sub">Periode <?php echo htmlspecialchars($invoice['period']); ?></div>
+        <?php endif; ?>
         <div class="sub">Ditagihkan kepada: <strong><?php echo htmlspecialchars($cfg['client_name'] !== '' ? $cfg['client_name'] : sunseaSetting($pdo, 'company_name', 'Klien')); ?></strong></div>
         <span class="paid-badge">✓ LUNAS</span>
 
         <table>
+            <?php if (($invoice['type'] ?? 'recurring') === 'manual'): ?>
+            <tr class="muted">
+                <td><?php echo htmlspecialchars($invoice['description'] ?: 'Tagihan Manual'); ?></td>
+                <td style="text-align:right;"><?php echo sunseaRupiah((float) $invoice['total_amount']); ?></td>
+            </tr>
+            <?php else: ?>
             <tr class="muted">
                 <td>Biaya Dasar Bulanan</td>
                 <td style="text-align:right;"><?php echo sunseaRupiah((float) $invoice['base_fee']); ?></td>
@@ -209,6 +219,7 @@ $logoSrc = $cfg['provider_logo'];
                 <td>Tamu Confirmed (<?php echo (int) $invoice['guest_count']; ?> &times; <?php echo sunseaRupiah((float) $invoice['per_guest_fee']); ?>)</td>
                 <td style="text-align:right;"><?php echo sunseaRupiah((float) $invoice['guest_total']); ?></td>
             </tr>
+            <?php endif; ?>
             <tr class="total">
                 <td>Total Dibayar</td>
                 <td style="text-align:right;"><?php echo sunseaRupiah((float) $invoice['total_amount']); ?></td>
