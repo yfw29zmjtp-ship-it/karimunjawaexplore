@@ -994,6 +994,13 @@ function sunseaGetOrRefreshSubscriptionInvoice(PDO $pdo, string $period): ?array
             "INSERT INTO subscription_invoices (period, base_fee, guest_count, per_guest_fee, guest_total, total_amount, status, due_date)
              VALUES (?, ?, ?, ?, ?, ?, 'unpaid', ?)"
         )->execute([$period, $charge['base_fee'], $charge['guest_count'], $charge['per_guest_fee'], $charge['guest_total'], $charge['total_amount'], $dueDate]);
+
+        $stmt->execute([$period]);
+        $newInvoice = $stmt->fetch() ?: null;
+        if ($newInvoice) {
+            sunseaNotifyAdfSystemInvoiceCreated($pdo, $newInvoice);
+        }
+        return $newInvoice;
     } elseif ($invoice['status'] === 'unpaid') {
         $pdo->prepare(
             "UPDATE subscription_invoices SET base_fee=?, guest_count=?, per_guest_fee=?, guest_total=?, total_amount=?, due_date=? WHERE period=?"
@@ -1165,6 +1172,54 @@ function sunseaNotifyAdfSystemPaymentSuccess(PDO $pdo, array $invoice): void
         }
     } catch (Exception $e) {
         error_log('sunseaNotifyAdfSystemPaymentSuccess error: ' . $e->getMessage());
+    }
+}
+
+/**
+ * Tell ADF System a new subscription invoice/tagihan was just generated so it
+ * can email the client's configured notify_email a billing notice. Fire-and-
+ * forget: failures are logged, never fatal. Only called for genuinely NEW
+ * invoices (not on every unpaid-invoice refresh).
+ */
+function sunseaNotifyAdfSystemInvoiceCreated(PDO $pdo, array $invoice): void
+{
+    $syncUrl = sunseaSetting($pdo, 'subscription_sync_url', 'https://adfsystem.store/api/subscription-config.php');
+    $notifyUrl = str_replace('subscription-config.php', 'subscription-invoice-notify.php', $syncUrl);
+    $clientKey = sunseaSetting($pdo, 'subscription_client_key', '');
+    $clientToken = sunseaSetting($pdo, 'subscription_client_token', '');
+    if ($clientKey === '' || $clientToken === '') {
+        error_log('sunseaNotifyAdfSystemInvoiceCreated skipped: client_key/client_token not configured');
+        return;
+    }
+
+    try {
+        $ch = curl_init($notifyUrl);
+        curl_setopt_array($ch, [
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => json_encode([
+                'client_key' => $clientKey,
+                'client_token' => $clientToken,
+                'period' => $invoice['period'],
+                'total_amount' => (float) $invoice['total_amount'],
+                'due_date' => $invoice['due_date'],
+            ]),
+            CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+            CURLOPT_USERAGENT => 'KarimunjawaExplore-SubscriptionNotify/1.0',
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 8,
+            CURLOPT_SSL_VERIFYPEER => true,
+        ]);
+        $response = curl_exec($ch);
+        $curlError = curl_error($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        if ($curlError !== '' || $httpCode >= 400) {
+            error_log("sunseaNotifyAdfSystemInvoiceCreated failed: url={$notifyUrl} http_code={$httpCode} curl_error={$curlError} response={$response}");
+        } else {
+            error_log("sunseaNotifyAdfSystemInvoiceCreated ok: http_code={$httpCode} response={$response}");
+        }
+    } catch (Exception $e) {
+        error_log('sunseaNotifyAdfSystemInvoiceCreated error: ' . $e->getMessage());
     }
 }
 
