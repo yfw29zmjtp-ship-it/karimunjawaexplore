@@ -1133,6 +1133,7 @@ function sunseaNotifyAdfSystemPaymentSuccess(PDO $pdo, array $invoice): void
     $clientKey = sunseaSetting($pdo, 'subscription_client_key', '');
     $clientToken = sunseaSetting($pdo, 'subscription_client_token', '');
     if ($clientKey === '' || $clientToken === '') {
+        error_log('sunseaNotifyAdfSystemPaymentSuccess skipped: client_key/client_token not configured');
         return;
     }
 
@@ -1152,8 +1153,15 @@ function sunseaNotifyAdfSystemPaymentSuccess(PDO $pdo, array $invoice): void
             CURLOPT_TIMEOUT => 8,
             CURLOPT_SSL_VERIFYPEER => true,
         ]);
-        curl_exec($ch);
+        $response = curl_exec($ch);
+        $curlError = curl_error($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
+        if ($curlError !== '' || $httpCode >= 400) {
+            error_log("sunseaNotifyAdfSystemPaymentSuccess failed: url={$notifyUrl} http_code={$httpCode} curl_error={$curlError} response={$response}");
+        } else {
+            error_log("sunseaNotifyAdfSystemPaymentSuccess ok: http_code={$httpCode} response={$response}");
+        }
     } catch (Exception $e) {
         error_log('sunseaNotifyAdfSystemPaymentSuccess error: ' . $e->getMessage());
     }
