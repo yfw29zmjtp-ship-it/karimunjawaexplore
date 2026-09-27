@@ -12,7 +12,7 @@ $auth = new Auth();
 $auth->requireLogin();
 
 $currentUser = $auth->getCurrentUser();
-if (!in_array($currentUser['role'] ?? '', ['developer', 'owner'], true)) {
+if (!in_array($currentUser['role'] ?? '', ['developer', 'owner', 'manager'], true)) {
     header('Location: dashboard.php');
     exit;
 }
@@ -161,29 +161,29 @@ include 'layout-header.php';
             <?php else: ?>
                 <table style="width:100%;font-size:14px;">
                     <?php if (($invoice['type'] ?? 'recurring') === 'manual'): ?>
-                    <tr>
-                        <td style="padding:6px 0;color:var(--ss-muted);"><?php echo htmlspecialchars($invoice['description'] ?? 'Tagihan Manual'); ?></td>
-                        <td style="padding:6px 0;text-align:right;"><?php echo sunseaRupiah((float) $invoice['total_amount']); ?></td>
-                    </tr>
+                        <tr>
+                            <td style="padding:6px 0;color:var(--ss-muted);"><?php echo htmlspecialchars($invoice['description'] ?? 'Tagihan Manual'); ?></td>
+                            <td style="padding:6px 0;text-align:right;"><?php echo sunseaRupiah((float) $invoice['total_amount']); ?></td>
+                        </tr>
                     <?php else: ?>
-                    <tr>
-                        <td style="padding:6px 0;color:var(--ss-muted);">Biaya Dasar Bulanan</td>
-                        <td style="padding:6px 0;text-align:right;"><?php echo sunseaRupiah((float) $invoice['base_fee']); ?></td>
-                    </tr>
-                    <tr>
-                        <td style="padding:6px 0;color:var(--ss-muted);">Tamu Confirmed (<?php echo (int) $invoice['guest_count']; ?> tamu &times; <?php echo sunseaRupiah((float) $invoice['per_guest_fee']); ?>)</td>
-                        <td style="padding:6px 0;text-align:right;"><?php echo sunseaRupiah((float) $invoice['guest_total']); ?></td>
-                    </tr>
+                        <tr>
+                            <td style="padding:6px 0;color:var(--ss-muted);">Biaya Dasar Bulanan</td>
+                            <td style="padding:6px 0;text-align:right;"><?php echo sunseaRupiah((float) $invoice['base_fee']); ?></td>
+                        </tr>
+                        <tr>
+                            <td style="padding:6px 0;color:var(--ss-muted);">Tamu Confirmed (<?php echo (int) $invoice['guest_count']; ?> tamu &times; <?php echo sunseaRupiah((float) $invoice['per_guest_fee']); ?>)</td>
+                            <td style="padding:6px 0;text-align:right;"><?php echo sunseaRupiah((float) $invoice['guest_total']); ?></td>
+                        </tr>
                     <?php endif; ?>
                     <tr style="border-top:1px solid var(--ss-border);">
                         <td style="padding:10px 0;font-weight:700;">Total Tagihan</td>
                         <td style="padding:10px 0;text-align:right;font-weight:700;font-size:18px;"><?php echo sunseaRupiah((float) $invoice['total_amount']); ?></td>
                     </tr>
                     <?php if (!empty($invoice['due_date'])): ?>
-                    <tr>
-                        <td style="padding:6px 0;color:var(--ss-muted);">Jatuh Tempo</td>
-                        <td style="padding:6px 0;text-align:right;"><?php echo htmlspecialchars(date('d M Y', strtotime($invoice['due_date']))); ?></td>
-                    </tr>
+                        <tr>
+                            <td style="padding:6px 0;color:var(--ss-muted);">Jatuh Tempo</td>
+                            <td style="padding:6px 0;text-align:right;"><?php echo htmlspecialchars(date('d M Y', strtotime($invoice['due_date']))); ?></td>
+                        </tr>
                     <?php endif; ?>
                 </table>
 
@@ -235,24 +235,26 @@ include 'layout-header.php';
                     </thead>
                     <tbody>
                         <?php foreach ($history as $row): ?>
-                        <tr>
-                            <td><?php echo ($row['type'] ?? 'recurring') === 'manual' ? htmlspecialchars($row['description'] ?? 'Tagihan Manual') : htmlspecialchars($row['period']); ?></td>
-                            <td><?php echo ($row['type'] ?? 'recurring') === 'manual' ? '-' : (int) $row['guest_count']; ?></td>
-                            <td><?php echo sunseaRupiah((float) $row['total_amount']); ?></td>
-                            <td>
-                                <?php if ($row['status'] === 'paid'): ?>
-                                    <span class="ss-status ss-status-approved">Lunas</span>
-                                <?php elseif ($row['status'] === 'cancelled'): ?>
-                                    <span class="ss-status ss-status-draft">Dibatalkan</span>
-                                <?php else: ?>
-                                    <span class="ss-status ss-status-partial">Belum Dibayar</span>
-                                <?php endif; ?>
-                            </td>
-                            <td><a href="subscription-billing.php?period=<?php echo urlencode($row['period']); ?>" class="ss-btn ss-btn-outline ss-btn-sm">Lihat</a></td>
-                        </tr>
+                            <tr>
+                                <td><?php echo ($row['type'] ?? 'recurring') === 'manual' ? htmlspecialchars($row['description'] ?? 'Tagihan Manual') : htmlspecialchars($row['period']); ?></td>
+                                <td><?php echo ($row['type'] ?? 'recurring') === 'manual' ? '-' : (int) $row['guest_count']; ?></td>
+                                <td><?php echo sunseaRupiah((float) $row['total_amount']); ?></td>
+                                <td>
+                                    <?php if ($row['status'] === 'paid'): ?>
+                                        <span class="ss-status ss-status-approved">Lunas</span>
+                                    <?php elseif ($row['status'] === 'cancelled'): ?>
+                                        <span class="ss-status ss-status-draft">Dibatalkan</span>
+                                    <?php else: ?>
+                                        <span class="ss-status ss-status-partial">Belum Dibayar</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td><a href="subscription-billing.php?period=<?php echo urlencode($row['period']); ?>" class="ss-btn ss-btn-outline ss-btn-sm">Lihat</a></td>
+                            </tr>
                         <?php endforeach; ?>
                         <?php if (empty($history)): ?>
-                        <tr><td colspan="5" style="text-align:center;color:var(--ss-muted);">Belum ada riwayat.</td></tr>
+                            <tr>
+                                <td colspan="5" style="text-align:center;color:var(--ss-muted);">Belum ada riwayat.</td>
+                            </tr>
                         <?php endif; ?>
                     </tbody>
                 </table>

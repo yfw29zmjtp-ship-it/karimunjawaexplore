@@ -56,6 +56,9 @@ if (isset($pdo)) {
 // Owner Dashboard menu hanya untuk role Developer/Owner
 if (!in_array($currentUser['role'] ?? '', ['developer', 'owner'], true)) {
     unset($sunseaNavItems['owner_dashboard']);
+}
+// Tagihan Langganan juga bisa dilihat/dibayar oleh Manager, selain Developer/Owner
+if (!in_array($currentUser['role'] ?? '', ['developer', 'owner', 'manager'], true)) {
     unset($sunseaNavItems['subscription_billing']);
 }
 
@@ -1370,7 +1373,7 @@ if (empty($sunseaNavItemsVisible)) {
             $subscriptionCfg = null;
             $subscriptionStatusInvoice = null;
             $subscriptionLastPaid = null;
-            if (isset($pdo) && in_array($currentUser['role'] ?? '', ['developer', 'owner'], true) && $activePage !== 'subscription_billing') {
+            if (isset($pdo) && in_array($currentUser['role'] ?? '', ['developer', 'owner', 'manager'], true) && $activePage !== 'subscription_billing') {
                 try {
                     sunseaEnsureSubscriptionBillingSchema($pdo);
                     // Keep this self-sufficient: sync + generate the current invoice here too,
