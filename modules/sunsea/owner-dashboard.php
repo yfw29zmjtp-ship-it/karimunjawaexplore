@@ -94,7 +94,12 @@ try {
         sunseaSyncSubscriptionConfig($pdo);
         sunseaSyncManualInvoices($pdo);
     }
-    sunseaGetOrRefreshSubscriptionInvoice($pdo, date('Y-m'));
+    $currentSubInvoice = sunseaGetOrRefreshSubscriptionInvoice($pdo, date('Y-m'));
+    if ($currentSubInvoice && $currentSubInvoice['status'] === 'paid') {
+        // Nothing unpaid left this month — pre-generate next month's invoice
+        // so the header status badge always has an upcoming due date to show.
+        sunseaGetOrRefreshSubscriptionInvoice($pdo, date('Y-m', strtotime('first day of next month')));
+    }
     $subscriptionReminder = sunseaGetSubscriptionReminder($pdo);
     $subscriptionCfg = sunseaSubscriptionConfig($pdo);
     $subscriptionStatusInvoice = sunseaGetNearestUnpaidSubscriptionInvoice($pdo);
