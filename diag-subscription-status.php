@@ -24,7 +24,15 @@ echo "\n\n== sunseaGetSubscriptionReminder() ==\n";
 var_export(sunseaGetSubscriptionReminder($pdo));
 
 echo "\n\n== current month invoice via sunseaGetOrRefreshSubscriptionInvoice() ==\n";
-var_export(sunseaGetOrRefreshSubscriptionInvoice($pdo, date('Y-m')));
+$currentSubInvoice = sunseaGetOrRefreshSubscriptionInvoice($pdo, date('Y-m'));
+var_export($currentSubInvoice);
+
+echo "\n\n== next month invoice (generated because current is paid) ==\n";
+if ($currentSubInvoice && $currentSubInvoice['status'] === 'paid') {
+    var_export(sunseaGetOrRefreshSubscriptionInvoice($pdo, date('Y-m', strtotime('first day of next month'))));
+} else {
+    echo "SKIPPED — current month invoice status is: " . ($currentSubInvoice['status'] ?? 'NULL');
+}
 
 echo "\n\n== after that, nearest unpaid again ==\n";
 var_export(sunseaGetNearestUnpaidSubscriptionInvoice($pdo));
