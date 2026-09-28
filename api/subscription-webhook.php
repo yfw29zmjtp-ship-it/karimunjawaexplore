@@ -40,8 +40,18 @@ try {
 
     if ($status === 'completed') {
         $paidAt = $completedAt ?? date('c');
-        $pdo->prepare("UPDATE subscription_invoices SET status='paid', paid_at=? WHERE order_id=?")
-            ->execute([$paidAt, $orderId]);
+        $updated = $pdo->prepare("UPDATE subscription_invoices SET status='paid', paid_at=?, order_id=? WHERE order_id=?");
+        $updated->execute([$paidAt, $orderId, $orderId]);
+
+        // Manual invoice payment links are generated directly by ADF System with
+        // order_id = 'manual-<id>', which never gets written locally beforehand
+        // (unlike recurring invoices paid via pay-subscription.php). Fall back to
+        // matching by period so those payments still get marked paid here.
+        if ($updated->rowCount() === 0 && preg_match('/^manual-(.+)$/i', $orderId, $m)) {
+            $period = 'MANUAL-' . $m[1];
+            $pdo->prepare("UPDATE subscription_invoices SET status='paid', paid_at=?, order_id=? WHERE period=? AND type='manual'")
+                ->execute([$paidAt, $orderId, $period]);
+        }
 
         $stmt = $pdo->prepare("SELECT * FROM subscription_invoices WHERE order_id = ? LIMIT 1");
         $stmt->execute([$orderId]);
