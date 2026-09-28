@@ -22,7 +22,12 @@ sunseaEnsureSubscriptionBillingSchema($pdo);
 sunseaEnsureBookingSchema($pdo);
 
 // ---- Save connection to ADF System (client key/token only — pricing is NOT editable here) ----
+// Developer-only, even if someone crafts the POST directly (UI form is hidden for other roles).
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_connection') {
+    if (($currentUser['role'] ?? '') !== 'developer') {
+        header('Location: subscription-billing.php');
+        exit;
+    }
     sunseaSetSetting($pdo, 'subscription_client_key', trim($_POST['client_key'] ?? ''));
     sunseaSetSetting($pdo, 'subscription_client_token', trim($_POST['client_token'] ?? ''));
     if (trim($_POST['sync_url'] ?? '') !== '') {
@@ -262,6 +267,7 @@ include 'layout-header.php';
         </div>
     </div>
 
+    <div>
     <div class="ss-card" style="margin-bottom:18px;">
         <div class="ss-card-title" style="margin-bottom:12px;">Biaya Langganan</div>
         <p style="font-size:12px;color:var(--ss-muted);margin-bottom:10px;">
@@ -290,6 +296,7 @@ include 'layout-header.php';
         </form>
     </div>
 
+    <?php if (($currentUser['role'] ?? '') === 'developer'): ?>
     <div class="ss-card">
         <div class="ss-card-title" style="margin-bottom:12px;">Koneksi ke ADF System</div>
         <p style="font-size:12px;color:var(--ss-muted);margin-bottom:8px;">Isi sekali saja dengan Client Key &amp; Client Token yang diberikan admin ADF System.</p>
@@ -310,6 +317,8 @@ include 'layout-header.php';
             <p style="font-size:12px;color:var(--ss-muted);">Webhook pembayaran: <code><?php echo htmlspecialchars(BASE_URL . '/api/subscription-webhook.php'); ?></code></p>
             <button class="ss-btn ss-btn-primary" type="submit"><i data-feather="save"></i> Simpan &amp; Sync</button>
         </form>
+    </div>
+    <?php endif; ?>
     </div>
 </div>
 
