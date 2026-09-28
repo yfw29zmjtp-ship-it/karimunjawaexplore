@@ -926,8 +926,10 @@ function sunseaSyncManualInvoices(PDO $pdo): void
             return;
         }
 
+        $seenPeriods = [];
         foreach ($data['manual_invoices'] as $item) {
             $period = 'MANUAL-' . $item['id'];
+            $seenPeriods[] = $period;
             $stmt = $pdo->prepare("SELECT id FROM subscription_invoices WHERE period = ? LIMIT 1");
             $stmt->execute([$period]);
             if ($stmt->fetch()) {
@@ -937,6 +939,17 @@ function sunseaSyncManualInvoices(PDO $pdo): void
                 "INSERT INTO subscription_invoices (period, type, description, base_fee, guest_count, per_guest_fee, guest_total, total_amount, status, due_date)
                  VALUES (?, 'manual', ?, ?, 0, 0, 0, ?, 'unpaid', ?)"
             )->execute([$period, $item['description'], (float) $item['amount'], (float) $item['amount'], $item['due_date']]);
+        }
+
+        // Remove local manual invoices that were deleted on ADF System's side.
+        // Only unpaid ones are pruned so paid history stays intact.
+        $stmt = $pdo->query("SELECT period FROM subscription_invoices WHERE type = 'manual' AND status = 'unpaid'");
+        $localPeriods = $stmt->fetchAll(PDO::FETCH_COLUMN);
+        $stalePeriods = array_diff($localPeriods, $seenPeriods);
+        if (!empty($stalePeriods)) {
+            $placeholders = implode(',', array_fill(0, count($stalePeriods), '?'));
+            $pdo->prepare("DELETE FROM subscription_invoices WHERE type = 'manual' AND status = 'unpaid' AND period IN ({$placeholders})")
+                ->execute(array_values($stalePeriods));
         }
     } catch (Exception $e) {
         error_log('sunseaSyncManualInvoices error: ' . $e->getMessage());
