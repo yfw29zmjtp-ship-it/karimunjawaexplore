@@ -90,7 +90,7 @@ $subscriptionLastPaid = null;
 try {
     sunseaEnsureSubscriptionBillingSchema($pdo);
     $lastSyncAt = sunseaSetting($pdo, 'subscription_last_sync_at', '');
-    if ($lastSyncAt === '' || (time() - strtotime($lastSyncAt)) > 3600) {
+    if ($lastSyncAt === '' || (time() - strtotime($lastSyncAt)) > 300) {
         sunseaSyncSubscriptionConfig($pdo);
         sunseaSyncManualInvoices($pdo);
     }

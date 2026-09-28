@@ -123,9 +123,9 @@ if (!preg_match('/^(\d{4}-\d{2}|MANUAL-.+)$/', $period)) {
     $period = date('Y-m');
 }
 
-// Auto-refresh from ADF System at most once per hour so the page stays fast.
+// Auto-refresh from ADF System at most once per 5 minutes so the page stays fast.
 $lastSyncAt = sunseaSetting($pdo, 'subscription_last_sync_at', '');
-if ($lastSyncAt === '' || (time() - strtotime($lastSyncAt)) > 3600) {
+if ($lastSyncAt === '' || (time() - strtotime($lastSyncAt)) > 300) {
     sunseaSyncSubscriptionConfig($pdo);
     sunseaSyncManualInvoices($pdo);
 }

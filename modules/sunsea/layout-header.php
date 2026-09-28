@@ -1458,7 +1458,7 @@ if (empty($sunseaNavItemsVisible)) {
                     // Keep this self-sufficient: sync + generate the current invoice here too,
                     // so the reminder doesn't depend on someone having opened the billing page first.
                     $lastSyncAt = sunseaSetting($pdo, 'subscription_last_sync_at', '');
-                    if ($lastSyncAt === '' || (time() - strtotime($lastSyncAt)) > 3600) {
+                    if ($lastSyncAt === '' || (time() - strtotime($lastSyncAt)) > 300) {
                         sunseaSyncSubscriptionConfig($pdo);
                         sunseaSyncManualInvoices($pdo);
                     }
