@@ -186,7 +186,6 @@ if (empty($sunseaNavItemsVisible)) {
             display: flex;
             zoom: 80%;
             overflow-x: hidden;
-            max-width: 100vw;
         }
 
         /* ---- SIDEBAR ---- */
