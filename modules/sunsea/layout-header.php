@@ -80,18 +80,16 @@ if (isset($pdo)) {
             }
         }
 
-        $__menuRaw = $pdo->prepare("SELECT setting_value FROM settings WHERE setting_key='sidebar_visible_menu_keys' LIMIT 1");
-        $__menuRaw->execute();
-        $__menuJson = $__menuRaw->fetchColumn();
-        if ($__menuJson) {
-            $__selected = json_decode((string)$__menuJson, true);
-            if (is_array($__selected) && !empty($__selected)) {
-                $visibleMenuKeys = array_values(array_intersect(array_keys($sunseaNavItems), $__selected));
-                // Always show newly-added menus even for sidebar configs saved before they existed.
-                foreach (['website_settings', 'email', 'laporan', 'subscription_billing'] as $__newKey) {
-                    if (isset($sunseaNavItems[$__newKey]) && !in_array($__newKey, $visibleMenuKeys, true)) {
-                        $visibleMenuKeys[] = $__newKey;
-                    }
+        $__menuRaw = $pdo->prepare("SELECT setting_value FROM settings WHERE setting_key=? LIMIT 1");
+        // Developer/Owner selalu akses penuh; hak akses sidebar per-role hanya berlaku untuk Manager/Staff.
+        $__sidebarRoleKey = $currentUser['role'] ?? 'staff';
+        if ($__sidebarRoleKey !== 'developer') {
+            $__menuRaw->execute(['sidebar_visible_menu_keys_' . $__sidebarRoleKey]);
+            $__menuJson = $__menuRaw->fetchColumn();
+            if ($__menuJson) {
+                $__selected = json_decode((string)$__menuJson, true);
+                if (is_array($__selected) && !empty($__selected)) {
+                    $visibleMenuKeys = array_values(array_intersect(array_keys($sunseaNavItems), $__selected));
                 }
             }
         }
@@ -187,6 +185,8 @@ if (empty($sunseaNavItemsVisible)) {
             min-height: 100vh;
             display: flex;
             zoom: 80%;
+            overflow-x: hidden;
+            max-width: 100vw;
         }
 
         /* ---- SIDEBAR ---- */
@@ -482,12 +482,16 @@ if (empty($sunseaNavItemsVisible)) {
             font-size: 16px;
             font-weight: 700;
             color: var(--ss-text);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .ss-topbar-actions {
             display: flex;
             align-items: center;
             gap: 12px;
+            flex-shrink: 0;
         }
 
         .ss-badge {
@@ -1044,6 +1048,28 @@ if (empty($sunseaNavItemsVisible)) {
             color: #991B1B;
         }
 
+        @media (max-width: 768px) {
+            .ss-subscription-banner {
+                padding: 8px 14px;
+                gap: 8px;
+                font-size: 11.5px;
+            }
+
+            .ss-subscription-banner svg {
+                width: 15px;
+                height: 15px;
+            }
+
+            .ss-subscription-banner span {
+                min-width: 0;
+            }
+
+            .ss-subscription-banner .ss-btn {
+                font-size: 11px;
+                padding: 4px 10px;
+            }
+        }
+
         .ss-modal-overlay {
             display: none;
             position: fixed;
@@ -1194,11 +1220,38 @@ if (empty($sunseaNavItemsVisible)) {
             }
 
             .ss-topbar {
-                padding: 0 14px;
+                padding: 0 12px;
+                gap: 8px;
+                height: auto;
+                min-height: 52px;
+                flex-wrap: wrap;
+                row-gap: 6px;
+            }
+
+            .ss-topbar>div:first-child {
+                min-width: 0;
+                flex: 1 1 auto;
+            }
+
+            .ss-page-title {
+                font-size: 13px;
+                max-width: 42vw;
+            }
+
+            .ss-topbar-actions {
+                gap: 6px;
+                flex-wrap: wrap;
+                justify-content: flex-end;
+            }
+
+            .ss-badge {
+                padding: 2px 8px;
+                font-size: 10px;
             }
 
             .ss-content {
                 padding: 14px;
+                overflow-x: hidden;
             }
 
             .ss-form-grid.cols-2,
@@ -1245,6 +1298,33 @@ if (empty($sunseaNavItemsVisible)) {
             div[style*="grid-template-columns:repeat(3"],
             div[style*="grid-template-columns:repeat(4"] {
                 grid-template-columns: minmax(0, 1fr) !important;
+            }
+
+            .ss-page-title {
+                max-width: 34vw;
+                font-size: 12px;
+            }
+
+            .ss-badge {
+                padding: 2px 6px;
+                font-size: 9.5px;
+                gap: 2px;
+            }
+
+            .ss-subscription-banner {
+                padding: 7px 10px;
+                font-size: 11px;
+            }
+
+            .ss-subscription-banner span {
+                min-width: 100%;
+                order: 1;
+            }
+
+            .ss-subscription-banner .ss-btn {
+                order: 2;
+                width: 100%;
+                text-align: center;
             }
         }
     </style>
