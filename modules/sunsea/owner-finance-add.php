@@ -67,7 +67,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$customers = $pdo->query("SELECT id, name, phone FROM customers WHERE is_active=1 ORDER BY name")->fetchAll();
+// Hanya tampilkan tamu yang masih "aktif": ada invoice yang belum lunas, ATAU
+// tanggal trip-nya belum lewat. Tamu yang reservasinya sudah selesai (tanggal
+// trip sudah lewat DAN invoice-nya sudah lunas) disembunyikan supaya dropdown
+// tidak kepanjangan.
+$customers = $pdo->query("
+    SELECT DISTINCT c.id, c.name, c.phone
+    FROM customers c
+    JOIN invoices i ON i.customer_id = c.id
+    WHERE c.is_active = 1
+      AND i.status != 'cancelled'
+      AND NOT (
+          i.status = 'paid'
+          AND COALESCE(i.trip_end_date, i.trip_date) IS NOT NULL
+          AND COALESCE(i.trip_end_date, i.trip_date) < CURDATE()
+      )
+    ORDER BY c.name
+")->fetchAll();
 
 $pageTitle = 'Input Transaksi';
 $backUrl = 'owner-finance.php';
