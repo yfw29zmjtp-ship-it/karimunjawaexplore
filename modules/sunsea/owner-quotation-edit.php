@@ -52,6 +52,29 @@ if ($quotation['status'] === 'converted') {
 
 $errorMsg = '';
 
+// Pecah teks itinerary mentah jadi kelompok per hari + baris jam, supaya bisa diedit
+// per hari/per waktu (tetap disimpan sebagai teks polos yang sama di kolom itinerary).
+$itineraryDays = [];
+if (!empty($quotation['itinerary'])) {
+    foreach (preg_split('/\r\n|\r|\n/', trim($quotation['itinerary'])) as $itLine) {
+        $itLine = trim($itLine);
+        if ($itLine === '') continue;
+        if (preg_match('/^\.?\s*(day|hari)\s*(\d+)/i', $itLine, $dm)) {
+            $itineraryDays[] = ['header' => strtoupper($dm[1]) . ' ' . $dm[2], 'rows' => []];
+            continue;
+        }
+        if (empty($itineraryDays)) {
+            $itineraryDays[] = ['header' => '', 'rows' => []];
+        }
+        $lastIdx = count($itineraryDays) - 1;
+        $timeMatch = preg_match('/^([\d.:\/]+\s*WIB)\s*:\s*(.+)$/i', $itLine, $tm);
+        $itineraryDays[$lastIdx]['rows'][] = $timeMatch ? ['time' => $tm[1], 'desc' => $tm[2]] : ['time' => '', 'desc' => $itLine];
+    }
+}
+if (empty($itineraryDays)) {
+    $itineraryDays[] = ['header' => 'DAY 1', 'rows' => [['time' => '', 'desc' => '']]];
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $itinerary           = trim($_POST['itinerary'] ?? '');
     $accommodationManual = trim($_POST['accommodation_manual'] ?? '');
@@ -324,6 +347,77 @@ include 'owner-mobile-header.php';
         margin-top: 10px;
     }
 
+    .ob-itin-day-card {
+        background: var(--sky);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 10px;
+        margin-bottom: 10px;
+    }
+
+    .ob-itin-day-head {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+
+    .ob-itin-day-head .ob-form-input {
+        flex: 1;
+        font-weight: 700;
+    }
+
+    .ob-itin-day-remove {
+        flex-shrink: 0;
+        background: none;
+        border: none;
+        color: var(--danger);
+        font-size: 11px;
+        font-weight: 700;
+        cursor: pointer;
+        padding: 6px 4px;
+        white-space: nowrap;
+    }
+
+    .ob-itin-row {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        margin-bottom: 6px;
+    }
+
+    .ob-itin-time {
+        flex: 0 0 96px;
+    }
+
+    .ob-itin-desc {
+        flex: 1;
+    }
+
+    .ob-itin-row-remove {
+        flex-shrink: 0;
+        background: none;
+        border: none;
+        color: var(--danger);
+        font-size: 16px;
+        font-weight: 700;
+        cursor: pointer;
+        padding: 4px 6px;
+        line-height: 1;
+    }
+
+    .ob-itin-add-row-btn {
+        width: 100%;
+        padding: 7px;
+        border-radius: 8px;
+        border: 1.5px dashed var(--ocean);
+        background: #fff;
+        color: var(--ocean);
+        font-size: 11.5px;
+        font-weight: 700;
+        cursor: pointer;
+    }
+
     .ob-save-btn {
         width: 100%;
         padding: 13px;
@@ -462,9 +556,29 @@ include 'owner-mobile-header.php';
         <div class="ob-section-head">
             <div class="ob-section-title"><i data-feather="map"></i> Itinerary</div>
         </div>
-        <div class="ob-form-group">
-            <textarea class="ob-form-textarea" name="itinerary" placeholder="Rincian perjalanan hari per hari..."><?php echo htmlspecialchars($quotation['itinerary'] ?? ''); ?></textarea>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Atur rincian perjalanan per hari, lalu tambahkan jam &amp; kegiatan satu per satu.</div>
+        <div id="obItinWrap">
+            <?php foreach ($itineraryDays as $day): ?>
+                <div class="ob-itin-day-card">
+                    <div class="ob-itin-day-head">
+                        <input type="text" class="ob-form-input ob-itin-day-label" placeholder="Contoh: DAY 1" value="<?php echo htmlspecialchars($day['header']); ?>">
+                        <button type="button" class="ob-itin-day-remove" onclick="obRemoveItinDay(this)">Hapus Hari</button>
+                    </div>
+                    <div class="ob-itin-rows">
+                        <?php foreach ($day['rows'] as $row): ?>
+                            <div class="ob-itin-row">
+                                <input type="text" class="ob-form-input ob-itin-time" placeholder="Jam (mis. 06.00 WIB)" value="<?php echo htmlspecialchars($row['time']); ?>">
+                                <input type="text" class="ob-form-input ob-itin-desc" placeholder="Kegiatan" value="<?php echo htmlspecialchars($row['desc']); ?>">
+                                <button type="button" class="ob-itin-row-remove" onclick="obRemoveItinRow(this)">&times;</button>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                    <button type="button" class="ob-itin-add-row-btn" onclick="obAddItinRow(this)">+ Tambah Jam</button>
+                </div>
+            <?php endforeach; ?>
         </div>
+        <button type="button" class="ob-add-item-btn" onclick="obAddItinDay()">+ Tambah Hari</button>
+        <textarea name="itinerary" id="obItinRaw" style="display:none;"><?php echo htmlspecialchars($quotation['itinerary'] ?? ''); ?></textarea>
     </div>
 
     <button type="submit" class="ob-save-btn">Simpan Perubahan</button>
@@ -581,6 +695,79 @@ include 'owner-mobile-header.php';
         el.addEventListener('input', obRecalcTotal);
     });
     obRecalcTotal();
+
+    function obMakeItinRow(time, desc) {
+        var row = document.createElement('div');
+        row.className = 'ob-itin-row';
+        row.innerHTML = '<input type="text" class="ob-form-input ob-itin-time" placeholder="Jam (mis. 06.00 WIB)" value="' + (time || '').replace(/"/g, '&quot;') + '">' +
+            '<input type="text" class="ob-form-input ob-itin-desc" placeholder="Kegiatan" value="' + (desc || '').replace(/"/g, '&quot;') + '">' +
+            '<button type="button" class="ob-itin-row-remove" onclick="obRemoveItinRow(this)">&times;</button>';
+        return row;
+    }
+
+    function obAddItinRow(btn) {
+        var card = btn.closest('.ob-itin-day-card');
+        var rowsWrap = card.querySelector('.ob-itin-rows');
+        var row = obMakeItinRow('', '');
+        rowsWrap.appendChild(row);
+        row.querySelector('.ob-itin-desc').focus();
+    }
+
+    function obRemoveItinRow(btn) {
+        var rowsWrap = btn.closest('.ob-itin-rows');
+        if (rowsWrap.children.length <= 1) {
+            rowsWrap.querySelectorAll('input').forEach(function(inp) { inp.value = ''; });
+            return;
+        }
+        btn.closest('.ob-itin-row').remove();
+    }
+
+    function obMakeItinDayCard(label) {
+        var card = document.createElement('div');
+        card.className = 'ob-itin-day-card';
+        card.innerHTML = '<div class="ob-itin-day-head">' +
+            '<input type="text" class="ob-form-input ob-itin-day-label" placeholder="Contoh: DAY 1" value="' + (label || '').replace(/"/g, '&quot;') + '">' +
+            '<button type="button" class="ob-itin-day-remove" onclick="obRemoveItinDay(this)">Hapus Hari</button>' +
+            '</div>' +
+            '<div class="ob-itin-rows"></div>' +
+            '<button type="button" class="ob-itin-add-row-btn" onclick="obAddItinRow(this)">+ Tambah Jam</button>';
+        return card;
+    }
+
+    function obAddItinDay() {
+        var wrap = document.getElementById('obItinWrap');
+        var dayNo = wrap.querySelectorAll('.ob-itin-day-card').length + 1;
+        var card = obMakeItinDayCard('DAY ' + dayNo);
+        wrap.appendChild(card);
+        card.querySelector('.ob-itin-rows').appendChild(obMakeItinRow('', ''));
+        card.querySelector('.ob-itin-day-label').focus();
+    }
+
+    function obRemoveItinDay(btn) {
+        var wrap = document.getElementById('obItinWrap');
+        if (wrap.querySelectorAll('.ob-itin-day-card').length <= 1) return;
+        btn.closest('.ob-itin-day-card').remove();
+    }
+
+    function obSerializeItinerary() {
+        var lines = [];
+        document.querySelectorAll('#obItinWrap .ob-itin-day-card').forEach(function(card) {
+            var label = card.querySelector('.ob-itin-day-label').value.trim();
+            var rowLines = [];
+            card.querySelectorAll('.ob-itin-row').forEach(function(row) {
+                var time = row.querySelector('.ob-itin-time').value.trim();
+                var desc = row.querySelector('.ob-itin-desc').value.trim();
+                if (desc === '') return;
+                rowLines.push(time !== '' ? (time + ': ' + desc) : desc);
+            });
+            if (label === '' && rowLines.length === 0) return;
+            if (label !== '') lines.push(label);
+            lines = lines.concat(rowLines);
+        });
+        document.getElementById('obItinRaw').value = lines.join('\n');
+    }
+
+    document.getElementById('obQuotationEditForm').addEventListener('submit', obSerializeItinerary);
 </script>
 
 <?php include 'owner-mobile-footer.php'; ?>
