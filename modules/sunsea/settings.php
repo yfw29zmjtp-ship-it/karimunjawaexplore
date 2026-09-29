@@ -16,6 +16,9 @@ $auth->requireLogin();
 $pdo = getSunseaConnection();
 sunseaEnsureUserSchema($pdo);
 $currentUser = $auth->getCurrentUser();
+// Hak akses sidebar (menu mana yang tampil untuk Manager/Staff) hanya boleh diatur oleh Developer/Owner.
+$isDeveloper = ($currentUser['role'] ?? '') === 'developer';
+$sidebarConfigurableRoles = ['manager' => 'Manager', 'staff' => 'Staff'];
 
 // Auto-create settings table if not exists
 try {
@@ -51,12 +54,16 @@ function setSetting(PDO $pdo, string $key, string $value): void
 }
 
 $tab = $_GET['tab'] ?? 'company';
+if ($tab === 'sidebar' && !$isDeveloper) {
+    $tab = 'company';
+}
 $flashMsg = '';
 $flashType = '';
 
 $sidebarMenuOptions = [
     'dashboard'    => 'Dashboard',
     'owner_dashboard' => 'Owner Dashboard',
+    'subscription_billing' => 'Tagihan Langganan',
     'database'     => 'Database',
     'bookings'     => 'Booking',
     'calendar'     => 'Kalender Booking',
@@ -222,21 +229,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($postTab === 'sidebar') {
-        $selected = $_POST['sidebar_menu'] ?? [];
-        if (!is_array($selected)) {
-            $selected = [];
+        if (!$isDeveloper) {
+            $flashMsg = 'Hanya role Developer / Owner yang bisa mengatur hak akses sidebar.';
+            $flashType = 'error';
+            $tab = 'company';
+        } else {
+            $sidebarRole = $_POST['sidebar_role'] ?? 'manager';
+            if (!isset($sidebarConfigurableRoles[$sidebarRole])) {
+                $sidebarRole = 'manager';
+            }
+
+            $selected = $_POST['sidebar_menu'] ?? [];
+            if (!is_array($selected)) {
+                $selected = [];
+            }
+
+            $selected = array_values(array_intersect(array_keys($sidebarMenuOptions), $selected));
+            if (empty($selected)) {
+                $selected = ['bookings'];
+            }
+
+            setSetting($pdo, 'sidebar_visible_menu_keys_' . $sidebarRole, json_encode($selected));
+
+            $flashMsg = 'Hak akses sidebar untuk role "' . $sidebarConfigurableRoles[$sidebarRole] . '" berhasil disimpan.';
+            $flashType = 'success';
+            $tab = 'sidebar';
         }
-
-        $selected = array_values(array_intersect(array_keys($sidebarMenuOptions), $selected));
-        if (empty($selected)) {
-            $selected = ['bookings'];
-        }
-
-        setSetting($pdo, 'sidebar_visible_menu_keys', json_encode($selected));
-
-        $flashMsg = 'Pengaturan sidebar berhasil disimpan.';
-        $flashType = 'success';
-        $tab = 'sidebar';
     }
 
     if ($postTab === 'reset') {
@@ -378,11 +396,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $flashType = 'error';
             } elseif ($uid > 0 && in_array($roleId, $validRoleIds, true)) {
                 $pdo->prepare("UPDATE users SET role_id = ?, updated_at = NOW() WHERE id = ?")->execute([$roleId, $uid]);
-                $flashMsg = 'Role user berhasil diubah. Owner Dashboard hanya bisa diakses role "Developer / Owner".';
+                $flashMsg = 'Role user berhasil diubah. Owner Dashboard hanya bisa diakses role "Developer / Owner", kecuali diberi Hak Akses Khusus.';
                 $flashType = 'success';
             } else {
                 $flashMsg = 'Role tidak valid.';
                 $flashType = 'error';
+            }
+        } elseif ($userAction === 'update_permissions') {
+            $uid = (int)($_POST['user_id'] ?? 0);
+            if (!$isDeveloper) {
+                $flashMsg = 'Hanya Developer / Owner yang bisa mengatur hak akses khusus.';
+                $flashType = 'error';
+            } elseif ($uid > 0) {
+                $selectedKeys = array_keys(sunseaExtraPermissionOptions());
+                $granted = array_values(array_intersect($selectedKeys, (array)($_POST['extra_permissions'] ?? [])));
+                $pdo->prepare("UPDATE users SET extra_permissions = ?, updated_at = NOW() WHERE id = ?")
+                    ->execute([$granted ? implode(',', $granted) : null, $uid]);
+                $flashMsg = 'Hak akses khusus user berhasil disimpan.';
+                $flashType = 'success';
             }
         }
         $tab = 'users';
@@ -476,13 +507,18 @@ $cfg['invoice_valid_days'] = $cfg['invoice_valid_days'] ?: '7';
 $cfg['company_name']       = $cfg['company_name']       ?: 'Explore Karimunjawa';
 $cfg['company_tagline']    = $cfg['company_tagline']    ?: 'Your Trusted Travel Partner in Karimunjawa';
 
-$visibleSidebarMenus = json_decode($cfg['sidebar_visible_menu_keys'] ?? '[]', true);
-if (!is_array($visibleSidebarMenus) || empty($visibleSidebarMenus)) {
-    $visibleSidebarMenus = array_keys($sidebarMenuOptions);
+// Which role's sidebar access is being viewed/edited on the Setup Sidebar tab (Developer selalu akses penuh, tidak diatur di sini).
+$sidebarRoleView = $_GET['role'] ?? 'manager';
+if (!isset($sidebarConfigurableRoles[$sidebarRoleView])) {
+    $sidebarRoleView = 'manager';
 }
-$visibleSidebarMenus = array_values(array_intersect(array_keys($sidebarMenuOptions), $visibleSidebarMenus));
-if (empty($visibleSidebarMenus)) {
-    $visibleSidebarMenus = ['bookings'];
+$visibleSidebarMenusByRole = json_decode(getSetting($pdo, 'sidebar_visible_menu_keys_' . $sidebarRoleView, '[]'), true);
+if (!is_array($visibleSidebarMenusByRole) || empty($visibleSidebarMenusByRole)) {
+    $visibleSidebarMenusByRole = array_keys($sidebarMenuOptions);
+}
+$visibleSidebarMenusByRole = array_values(array_intersect(array_keys($sidebarMenuOptions), $visibleSidebarMenusByRole));
+if (empty($visibleSidebarMenusByRole)) {
+    $visibleSidebarMenusByRole = ['bookings'];
 }
 
 // Load users + roles for the "User" tab
@@ -496,8 +532,10 @@ if (empty($roles)) {
 }
 $roleNameById = [];
 foreach ($roles as $r) $roleNameById[$r['id']] = $r['role_name'];
+$developerRoleIds = array_map('intval', array_column(array_filter($roles, fn($r) => $r['role_code'] === 'developer'), 'id'));
 
-$sunseaUsers = $pdo->query("SELECT id, username, full_name, email, role_id, is_active, last_login FROM users ORDER BY id")->fetchAll();
+$sunseaUsers = $pdo->query("SELECT id, username, full_name, email, role_id, is_active, last_login, extra_permissions FROM users ORDER BY id")->fetchAll();
+$extraPermissionOptions = sunseaExtraPermissionOptions();
 
 $pageTitle = 'Pengaturan';
 $activePage = 'settings';
@@ -525,10 +563,12 @@ $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : '
         <?php echo $tab === 'invoice' ? 'border-bottom-color:#C2410C;color:#C2410C;' : 'color:#666;'; ?>">
         🧾 Invoice & Pembayaran
     </a>
-    <a href="?tab=sidebar" style="padding:10px 24px;font-weight:600;text-decoration:none;border-bottom:2px solid transparent;margin-bottom:-2px;
-        <?php echo $tab === 'sidebar' ? 'border-bottom-color:#C2410C;color:#C2410C;' : 'color:#666;'; ?>">
-        🧭 Setup Sidebar
-    </a>
+    <?php if ($isDeveloper): ?>
+        <a href="?tab=sidebar" style="padding:10px 24px;font-weight:600;text-decoration:none;border-bottom:2px solid transparent;margin-bottom:-2px;
+            <?php echo $tab === 'sidebar' ? 'border-bottom-color:#C2410C;color:#C2410C;' : 'color:#666;'; ?>">
+            🧭 Setup Sidebar
+        </a>
+    <?php endif; ?>
     <a href="?tab=users" style="padding:10px 24px;font-weight:600;text-decoration:none;border-bottom:2px solid transparent;margin-bottom:-2px;
         <?php echo $tab === 'users' ? 'border-bottom-color:#C2410C;color:#C2410C;' : 'color:#666;'; ?>">
         👤 User
@@ -827,19 +867,28 @@ $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : '
     </form>
 
     <!-- TAB: SIDEBAR -->
-<?php elseif ($tab === 'sidebar'): ?>
+<?php elseif ($tab === 'sidebar' && $isDeveloper): ?>
+    <div style="display:flex;gap:8px;margin-bottom:14px;">
+        <?php foreach ($sidebarConfigurableRoles as $roleCode => $roleLabel): ?>
+            <a href="?tab=sidebar&role=<?php echo urlencode($roleCode); ?>" style="padding:8px 18px;border-radius:6px;text-decoration:none;font-weight:600;font-size:13px;
+                <?php echo $sidebarRoleView === $roleCode ? 'background:#C2410C;color:#fff;' : 'background:#f1f5f9;color:#334155;'; ?>">
+                Hak Akses <?php echo htmlspecialchars($roleLabel); ?>
+            </a>
+        <?php endforeach; ?>
+    </div>
     <form method="POST">
         <input type="hidden" name="tab" value="sidebar">
+        <input type="hidden" name="sidebar_role" value="<?php echo htmlspecialchars($sidebarRoleView); ?>">
         <div style="display:grid;grid-template-columns:1fr 320px;gap:18px;align-items:start;">
             <div style="background:#fff;border:1px solid #dde5ef;border-radius:8px;padding:20px;">
-                <div style="font-size:16px;font-weight:700;color:#7C2D12;margin-bottom:8px;">🧭 Setup Sidebar</div>
-                <div style="font-size:13px;color:#666;margin-bottom:16px;">Centang menu yang ingin ditampilkan di sidebar Explore Karimunjawa.</div>
+                <div style="font-size:16px;font-weight:700;color:#7C2D12;margin-bottom:8px;">🧭 Setup Sidebar — Role <?php echo htmlspecialchars($sidebarConfigurableRoles[$sidebarRoleView]); ?></div>
+                <div style="font-size:13px;color:#666;margin-bottom:16px;">Centang menu yang boleh diakses role <strong><?php echo htmlspecialchars($sidebarConfigurableRoles[$sidebarRoleView]); ?></strong>. Role Developer / Owner selalu memiliki akses penuh dan tidak diatur di sini.</div>
 
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
                     <?php foreach ($sidebarMenuOptions as $key => $label): ?>
                         <label style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid #d9e2ec;border-radius:6px;cursor:pointer;background:#fafcff;">
                             <input type="checkbox" name="sidebar_menu[]" value="<?php echo htmlspecialchars($key); ?>"
-                                <?php echo in_array($key, $visibleSidebarMenus, true) ? 'checked' : ''; ?>>
+                                <?php echo in_array($key, $visibleSidebarMenusByRole, true) ? 'checked' : ''; ?>>
                             <span style="font-size:13px;font-weight:600;color:#334155;"><?php echo htmlspecialchars($label); ?></span>
                         </label>
                     <?php endforeach; ?>
@@ -857,9 +906,9 @@ $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : '
             </div>
 
             <div style="background:#fff;border:1px solid #dde5ef;border-radius:8px;padding:20px;">
-                <div style="font-size:14px;font-weight:700;color:#7C2D12;margin-bottom:12px;">👁️ Preview Menu Aktif</div>
+                <div style="font-size:14px;font-weight:700;color:#7C2D12;margin-bottom:12px;">👁️ Preview Menu Aktif — <?php echo htmlspecialchars($sidebarConfigurableRoles[$sidebarRoleView]); ?></div>
                 <div style="display:flex;flex-direction:column;gap:8px;">
-                    <?php foreach ($visibleSidebarMenus as $mKey): ?>
+                    <?php foreach ($visibleSidebarMenusByRole as $mKey): ?>
                         <div style="padding:8px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;color:#334155;background:#f8fafc;">
                             <?php echo htmlspecialchars($sidebarMenuOptions[$mKey] ?? $mKey); ?>
                         </div>
@@ -875,7 +924,7 @@ $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : '
         <div style="background:#fff;border:1px solid #dde5ef;border-radius:8px;padding:20px;">
             <div style="font-size:16px;font-weight:700;color:#7C2D12;margin-bottom:8px;">👤 Daftar User</div>
             <div style="background:#FFF7ED;border:1px solid #FDE4CC;border-radius:6px;padding:10px 14px;font-size:12px;color:#7C2D12;margin-bottom:14px;">
-                📱 Menu <strong>Owner Dashboard</strong> (ringkasan Booking, Kalender, Invoice &amp; Finance untuk HP) hanya tampil dan bisa diakses oleh user dengan role <strong>Developer / Owner</strong>. Atur role tiap user di kolom "Role" di bawah.
+                📱 Menu <strong>Owner Dashboard</strong> (ringkasan Booking, Kalender, Invoice &amp; Finance untuk HP) hanya tampil dan bisa diakses oleh user dengan role <strong>Developer / Owner</strong>, atau user lain yang sudah diberi <strong>Hak Akses Khusus</strong> di kolom terakhir tabel di bawah.
             </div>
             <div style="overflow-x:auto;">
                 <table style="width:100%;border-collapse:collapse;font-size:13px;">
@@ -885,6 +934,7 @@ $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : '
                             <th style="padding:8px 10px;border-bottom:1px solid #e2e8f0;">Nama</th>
                             <th style="padding:8px 10px;border-bottom:1px solid #e2e8f0;">Role</th>
                             <th style="padding:8px 10px;border-bottom:1px solid #e2e8f0;">Status</th>
+                            <th style="padding:8px 10px;border-bottom:1px solid #e2e8f0;">Hak Akses Khusus</th>
                             <th style="padding:8px 10px;border-bottom:1px solid #e2e8f0;">Aksi</th>
                         </tr>
                     </thead>
@@ -925,6 +975,37 @@ $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : '
                                         <span style="padding:2px 8px;border-radius:99px;background:#fee2e2;color:#991b1b;font-size:11px;font-weight:600;">Nonaktif</span>
                                     <?php endif; ?>
                                 </td>
+                                <td style="padding:8px 10px;border-bottom:1px solid #f1f5f9;">
+                                    <?php if (in_array((int)$u['role_id'], $developerRoleIds, true)): ?>
+                                        <span style="font-size:11px;color:#0369a1;">Semua akses (Developer/Owner)</span>
+                                    <?php else: ?>
+                                        <?php $userExtraPerms = array_filter(array_map('trim', explode(',', (string)($u['extra_permissions'] ?? '')))); ?>
+                                        <?php if (empty($userExtraPerms)): ?>
+                                            <span style="font-size:11px;color:#94a3b8;">Tidak ada</span>
+                                        <?php else: ?>
+                                            <?php foreach ($userExtraPerms as $pk): ?>
+                                                <span style="display:inline-block;margin:1px 2px;padding:2px 7px;border-radius:99px;background:#e0f2fe;color:#0369a1;font-size:10px;font-weight:600;"><?php echo htmlspecialchars($extraPermissionOptions[$pk] ?? $pk); ?></span>
+                                            <?php endforeach; ?>
+                                        <?php endif; ?>
+                                        <?php if ($isDeveloper): ?>
+                                            <br>
+                                            <button type="button" onclick="togglePermRow(<?php echo (int)$u['id']; ?>)"
+                                                style="margin-top:4px;padding:3px 7px;font-size:10px;border:1px solid #0369a1;color:#0369a1;background:#fff;border-radius:4px;cursor:pointer;">Atur Akses</button>
+                                            <form method="POST" id="permForm<?php echo (int)$u['id']; ?>" style="display:none;margin-top:6px;">
+                                                <input type="hidden" name="tab" value="users">
+                                                <input type="hidden" name="user_action" value="update_permissions">
+                                                <input type="hidden" name="user_id" value="<?php echo (int)$u['id']; ?>">
+                                                <?php foreach ($extraPermissionOptions as $pKey => $pLabel): ?>
+                                                    <label style="display:block;font-size:11px;font-weight:400;margin-bottom:3px;">
+                                                        <input type="checkbox" name="extra_permissions[]" value="<?php echo htmlspecialchars($pKey); ?>" <?php echo in_array($pKey, $userExtraPerms, true) ? 'checked' : ''; ?>>
+                                                        <?php echo htmlspecialchars($pLabel); ?>
+                                                    </label>
+                                                <?php endforeach; ?>
+                                                <button type="submit" style="margin-top:4px;padding:5px 8px;font-size:11px;background:#0369a1;color:#fff;border:none;border-radius:4px;cursor:pointer;">Simpan Akses</button>
+                                            </form>
+                                        <?php endif; ?>
+                                    <?php endif; ?>
+                                </td>
                                 <td style="padding:8px 10px;border-bottom:1px solid #f1f5f9;white-space:nowrap;">
                                     <button type="button" onclick="toggleResetPasswordRow(<?php echo (int)$u['id']; ?>)"
                                         style="padding:4px 8px;font-size:11px;border:1px solid #C2410C;color:#C2410C;background:#fff;border-radius:4px;cursor:pointer;">Reset Password</button>
@@ -951,7 +1032,7 @@ $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : '
                         <?php endforeach; ?>
                         <?php if (empty($sunseaUsers)): ?>
                             <tr>
-                                <td colspan="5" style="padding:16px;text-align:center;color:#888;">Belum ada user.</td>
+                                <td colspan="6" style="padding:16px;text-align:center;color:#888;">Belum ada user.</td>
                             </tr>
                         <?php endif; ?>
                     </tbody>
@@ -1007,6 +1088,10 @@ $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : '
     <script>
         function toggleResetPasswordRow(id) {
             var f = document.getElementById('resetPassForm' + id);
+            f.style.display = (f.style.display === 'none' || !f.style.display) ? 'block' : 'none';
+        }
+        function togglePermRow(id) {
+            var f = document.getElementById('permForm' + id);
             f.style.display = (f.style.display === 'none' || !f.style.display) ? 'block' : 'none';
         }
     </script>

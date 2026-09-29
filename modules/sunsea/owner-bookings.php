@@ -18,12 +18,12 @@ if (!$auth->isLoggedIn()) {
 $auth->requireLogin();
 
 $currentUser = $auth->getCurrentUser();
-if (!in_array($currentUser['role'] ?? '', ['developer', 'owner'], true)) {
+$pdo = getSunseaConnection();
+if (!sunseaCanAccessMenu($pdo, $currentUser, 'owner_dashboard')) {
     header('Location: dashboard.php');
     exit;
 }
 
-$pdo = getSunseaConnection();
 sunseaEnsureBookingSchema($pdo);
 
 $statusFilter = $_GET['status'] ?? '';

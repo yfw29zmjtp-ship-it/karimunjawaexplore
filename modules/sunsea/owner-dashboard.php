@@ -20,12 +20,12 @@ if (!$auth->isLoggedIn()) {
 $auth->requireLogin();
 
 $currentUser = $auth->getCurrentUser();
-if (!in_array($currentUser['role'] ?? '', ['developer', 'owner'], true)) {
+$pdo = getSunseaConnection();
+if (!sunseaCanAccessMenu($pdo, $currentUser, 'owner_dashboard')) {
     header('Location: dashboard.php');
     exit;
 }
 
-$pdo = getSunseaConnection();
 sunseaEnsureBookingSchema($pdo);
 sunseaEnsureFinanceSchema($pdo);
 
@@ -852,34 +852,34 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
         </div>
 
         <?php if ($webQuotationCount > 0): ?>
-        <div class="ob-section" style="border-left:3px solid var(--ocean);">
-            <div class="ob-section-head">
-                <div class="ob-section-title"><i data-feather="globe"></i> Booking dari Web <span class="ob-notif-badge"><?php echo $webQuotationCount; ?></span></div>
-                <a href="quotations.php?status=draft" class="ob-section-link">Lihat Semua →</a>
-            </div>
-            <?php foreach ($webQuotations as $wq): ?>
-                <div class="ob-row" style="align-items:flex-start;">
-                    <div class="ob-row-avatar" style="background:linear-gradient(135deg,#7C3AED,#A78BFA);"><?php echo htmlspecialchars(mb_strtoupper(mb_substr($wq['customer_name'], 0, 1))); ?></div>
-                    <div class="ob-row-body">
-                        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
-                            <div>
-                                <div class="ob-row-title"><?php echo htmlspecialchars($wq['customer_name']); ?></div>
-                                <div class="ob-row-sub"><?php echo htmlspecialchars($wq['quotation_no']); ?><?php echo $wq['package_name'] ? ' · ' . htmlspecialchars($wq['package_name']) : ''; ?></div>
+            <div class="ob-section" style="border-left:3px solid var(--ocean);">
+                <div class="ob-section-head">
+                    <div class="ob-section-title"><i data-feather="globe"></i> Booking dari Web <span class="ob-notif-badge"><?php echo $webQuotationCount; ?></span></div>
+                    <a href="quotations.php?status=draft" class="ob-section-link">Lihat Semua →</a>
+                </div>
+                <?php foreach ($webQuotations as $wq): ?>
+                    <div class="ob-row" style="align-items:flex-start;">
+                        <div class="ob-row-avatar" style="background:linear-gradient(135deg,#7C3AED,#A78BFA);"><?php echo htmlspecialchars(mb_strtoupper(mb_substr($wq['customer_name'], 0, 1))); ?></div>
+                        <div class="ob-row-body">
+                            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+                                <div>
+                                    <div class="ob-row-title"><?php echo htmlspecialchars($wq['customer_name']); ?></div>
+                                    <div class="ob-row-sub"><?php echo htmlspecialchars($wq['quotation_no']); ?><?php echo $wq['package_name'] ? ' · ' . htmlspecialchars($wq['package_name']) : ''; ?></div>
+                                </div>
+                                <div style="font-size:10px;font-weight:800;color:var(--ocean);text-align:right;flex-shrink:0;">
+                                    <?php echo sunseaRupiah((float)$wq['total_amount']); ?>
+                                </div>
                             </div>
-                            <div style="font-size:10px;font-weight:800;color:var(--ocean);text-align:right;flex-shrink:0;">
-                                <?php echo sunseaRupiah((float)$wq['total_amount']); ?>
+                            <div style="display:flex;gap:8px;align-items:center;margin-top:7px;">
+                                <a href="owner-quotation-detail.php?id=<?php echo $wq['id']; ?>" class="ob-mini-btn">Lihat &amp; Proses</a>
+                                <?php if ($wq['wa_link']): ?>
+                                    <a href="<?php echo htmlspecialchars($wq['wa_link']); ?>" target="_blank" class="ob-mini-btn" style="background:#25D366;color:#fff;border-color:#25D366;">Kirim WA</a>
+                                <?php endif; ?>
                             </div>
-                        </div>
-                        <div style="display:flex;gap:8px;align-items:center;margin-top:7px;">
-                            <a href="owner-quotation-detail.php?id=<?php echo $wq['id']; ?>" class="ob-mini-btn">Lihat &amp; Proses</a>
-                            <?php if ($wq['wa_link']): ?>
-                                <a href="<?php echo htmlspecialchars($wq['wa_link']); ?>" target="_blank" class="ob-mini-btn" style="background:#25D366;color:#fff;border-color:#25D366;">Kirim WA</a>
-                            <?php endif; ?>
                         </div>
                     </div>
-                </div>
-            <?php endforeach; ?>
-        </div>
+                <?php endforeach; ?>
+            </div>
         <?php endif; ?>
 
         <div class="ob-section">

@@ -630,9 +630,55 @@ function sunseaEnsureUserSchema(PDO $pdo): void
             `updated_at`      TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             INDEX idx_username (`username`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        // Kolom untuk hak akses tambahan PER USER (di luar role), mis. izinkan satu user
+        // Manager/Staff tertentu mengakses menu "Owner Dashboard" tanpa mengubah role-nya.
+        // Disimpan sebagai daftar menu key dipisah koma, mis. "owner_dashboard,finance".
+        $hasExtraPerm = $pdo->query("SHOW COLUMNS FROM `users` LIKE 'extra_permissions'")->fetch();
+        if (!$hasExtraPerm) {
+            $pdo->exec("ALTER TABLE `users` ADD COLUMN `extra_permissions` TEXT NULL AFTER `business_access`");
+        }
     } catch (Exception $e) {
         error_log('sunseaEnsureUserSchema error: ' . $e->getMessage());
     }
+}
+
+/**
+ * Daftar menu key yang izin aksesnya bisa diberikan per-user (di luar role),
+ * lewat kolom users.extra_permissions. Dipakai bareng di Setting > User dan
+ * di pengecekan akses (owner-*.php, layout-header.php).
+ */
+function sunseaExtraPermissionOptions(): array
+{
+    return [
+        'owner_dashboard' => 'Owner Dashboard (Booking, Kalender, Invoice & Finance versi HP)',
+    ];
+}
+
+/** Ambil daftar menu key yang di-grant khusus untuk satu user (dari kolom extra_permissions). */
+function sunseaUserExtraPermissions(PDO $pdo, int $userId): array
+{
+    if ($userId <= 0) return [];
+    try {
+        $stmt = $pdo->prepare("SELECT extra_permissions FROM users WHERE id = ?");
+        $stmt->execute([$userId]);
+        $raw = (string)$stmt->fetchColumn();
+        if ($raw === '') return [];
+        return array_values(array_filter(array_map('trim', explode(',', $raw)), fn($k) => $k !== ''));
+    } catch (Exception $e) {
+        return [];
+    }
+}
+
+/**
+ * Cek apakah user saat ini boleh mengakses satu menu tertentu: selalu true untuk
+ * Developer/Owner, atau kalau menu itu ada di daftar extra_permissions user tsb.
+ */
+function sunseaCanAccessMenu(PDO $pdo, ?array $currentUser, string $menuKey): bool
+{
+    $role = $currentUser['role'] ?? '';
+    if (in_array($role, ['developer', 'owner'], true)) return true;
+    return in_array($menuKey, sunseaUserExtraPermissions($pdo, (int)($currentUser['id'] ?? 0)), true);
 }
 
 /**

@@ -53,8 +53,9 @@ if (isset($pdo)) {
     }
 }
 
-// Owner Dashboard menu hanya untuk role Developer/Owner
-if (!in_array($currentUser['role'] ?? '', ['developer', 'owner'], true)) {
+// Owner Dashboard menu: role Developer/Owner selalu bisa, atau user lain yang sudah
+// di-grant permission khusus lewat Setting > User > Hak Akses Khusus.
+if (isset($pdo) && !sunseaCanAccessMenu($pdo, $currentUser, 'owner_dashboard')) {
     unset($sunseaNavItems['owner_dashboard']);
 }
 // Tagihan Langganan juga bisa dilihat/dibayar oleh Manager, selain Developer/Owner

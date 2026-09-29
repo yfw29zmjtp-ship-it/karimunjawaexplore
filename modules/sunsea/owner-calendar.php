@@ -18,12 +18,12 @@ if (!$auth->isLoggedIn()) {
 $auth->requireLogin();
 
 $currentUser = $auth->getCurrentUser();
-if (!in_array($currentUser['role'] ?? '', ['developer', 'owner'], true)) {
+$pdo = getSunseaConnection();
+if (!sunseaCanAccessMenu($pdo, $currentUser, 'owner_dashboard')) {
     header('Location: dashboard.php');
     exit;
 }
 
-$pdo = getSunseaConnection();
 sunseaEnsureBookingSchema($pdo);
 sunseaEnsureFinanceSchema($pdo);
 
@@ -563,18 +563,19 @@ include 'owner-mobile-header.php';
             <?php endif; ?>
         </div>
         <div class="cal-timeline-scroll" id="calTimelineScroll" data-prev-month="<?php echo $prevMonth; ?>" data-next-month="<?php echo $nextMonth; ?>">
-        <div class="cal-timeline" id="calTimeline" style="--cal-days:<?php echo $calTotalDays; ?>;">
-            <div class="cal-day-row cal-month-label-row">
-                <div class="cal-month-label" style="grid-column: 1 / span <?php echo $daysInMonth; ?>;"><?php echo date('F Y', strtotime($startMonth)); ?></div>
-                <div class="cal-month-label cal-month-boundary" style="grid-column: <?php echo 1 + $daysInMonth; ?> / span <?php echo $daysInNextMonth; ?>;"><?php echo date('F Y', strtotime($nextMonth . '-01')); ?></div>
-            </div>
-            <div class="cal-day-row">
-                <?php foreach ($calDates as $cd):
-                    $isWeekend = $cd['dow'] >= 6;
-                    $isToday = $cd['date'] === date('Y-m-d');
-                ?>
-                    <div<?php echo $isToday ? ' id="calTodayCol"' : ''; ?> class="cal-day-col<?php echo $isWeekend ? ' is-weekend' : ''; ?><?php echo $isToday ? ' is-today' : ''; ?><?php echo $cd['isMonthStart'] ? ' cal-month-boundary' : ''; ?>" data-month-label="<?php echo htmlspecialchars(date('F Y', strtotime($cd['date']))); ?>"><?php echo $cd['day']; ?></div>
-                <?php endforeach; ?>
+            <div class="cal-timeline" id="calTimeline" style="--cal-days:<?php echo $calTotalDays; ?>;">
+                <div class="cal-day-row cal-month-label-row">
+                    <div class="cal-month-label" style="grid-column: 1 / span <?php echo $daysInMonth; ?>;"><?php echo date('F Y', strtotime($startMonth)); ?></div>
+                    <div class="cal-month-label cal-month-boundary" style="grid-column: <?php echo 1 + $daysInMonth; ?> / span <?php echo $daysInNextMonth; ?>;"><?php echo date('F Y', strtotime($nextMonth . '-01')); ?></div>
+                </div>
+                <div class="cal-day-row">
+                    <?php foreach ($calDates as $cd):
+                        $isWeekend = $cd['dow'] >= 6;
+                        $isToday = $cd['date'] === date('Y-m-d');
+                    ?>
+                        <div<?php echo $isToday ? ' id="calTodayCol"' : ''; ?> class="cal-day-col<?php echo $isWeekend ? ' is-weekend' : ''; ?><?php echo $isToday ? ' is-today' : ''; ?><?php echo $cd['isMonthStart'] ? ' cal-month-boundary' : ''; ?>" data-month-label="<?php echo htmlspecialchars(date('F Y', strtotime($cd['date']))); ?>"><?php echo $cd['day']; ?>
+                </div>
+            <?php endforeach; ?>
             </div>
 
             <?php foreach ($bookings as $b):
@@ -628,17 +629,17 @@ include 'owner-mobile-header.php';
                 </div>
             <?php endif; ?>
         </div>
-        </div>
     </div>
-    <div class="ob-cal-legend">
-        <?php foreach ($obCalLegend as $label => $color): ?>
-            <span style="display:inline-flex;align-items:center;gap:4px;">
-                <span class="dot" style="background:<?php echo $color; ?>;"></span>
-                <?php echo htmlspecialchars($label); ?>
-            </span>
-        <?php endforeach; ?>
-        <span style="color:var(--muted);">&middot; Geser ke samping untuk lihat tanggal lain (bulan depan tetap tersambung)</span>
-    </div>
+</div>
+<div class="ob-cal-legend">
+    <?php foreach ($obCalLegend as $label => $color): ?>
+        <span style="display:inline-flex;align-items:center;gap:4px;">
+            <span class="dot" style="background:<?php echo $color; ?>;"></span>
+            <?php echo htmlspecialchars($label); ?>
+        </span>
+    <?php endforeach; ?>
+    <span style="color:var(--muted);">&middot; Geser ke samping untuk lihat tanggal lain (bulan depan tetap tersambung)</span>
+</div>
 </div>
 
 
@@ -1075,7 +1076,9 @@ include 'owner-mobile-header.php';
                 ticking = true;
                 window.requestAnimationFrame(syncMonthLabel);
             }
-        }, { passive: true });
+        }, {
+            passive: true
+        });
 
         syncMonthLabel();
     })();
