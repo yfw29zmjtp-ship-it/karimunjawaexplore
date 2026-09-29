@@ -102,8 +102,10 @@ $loginBgSrc  = $loginBgFile ? sunseaAssetUrl('uploads/backgrounds/' . $loginBgFi
         .ol-card {
             width: 100%;
             max-width: 360px;
-            background: rgba(255, 255, 255, .92);
-            backdrop-filter: blur(14px);
+            background: rgba(255, 255, 255, .32);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            border: 1px solid rgba(255, 255, 255, .45);
             border-radius: 22px;
             padding: 30px 26px;
             box-shadow: 0 20px 50px rgba(3, 105, 161, .25);
