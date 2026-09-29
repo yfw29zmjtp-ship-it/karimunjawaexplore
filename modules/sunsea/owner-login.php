@@ -155,7 +155,7 @@ $loginBgSrc  = $loginBgFile ? sunseaAssetUrl('uploads/backgrounds/' . $loginBgFi
         .ol-label {
             font-size: 11.5px;
             font-weight: 600;
-            color: var(--muted);
+            color: #fff;
             margin-bottom: 5px;
             display: block;
         }
@@ -194,7 +194,7 @@ $loginBgSrc  = $loginBgFile ? sunseaAssetUrl('uploads/backgrounds/' . $loginBgFi
             height: 32px;
             border: none;
             background: none;
-            color: var(--muted);
+            color: var(--text);
             cursor: pointer;
             display: flex;
             align-items: center;
@@ -232,7 +232,7 @@ $loginBgSrc  = $loginBgFile ? sunseaAssetUrl('uploads/backgrounds/' . $loginBgFi
         .ol-foot {
             margin-top: 18px;
             font-size: 11px;
-            color: var(--muted);
+            color: rgba(255, 255, 255, .9);
         }
     </style>
 </head>
