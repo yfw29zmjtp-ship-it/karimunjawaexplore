@@ -56,6 +56,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $companyName = sunseaSetting($pdo, 'company_name', 'Karimunjawa Explore');
 $logoPath = sunseaSetting($pdo, 'company_logo', '');
 $logoSrc  = $logoPath ? sunseaAssetUrl($logoPath) : '';
+$loginBgFile = sunseaSetting($pdo, 'login_background', '');
+$loginBgSrc  = $loginBgFile ? sunseaAssetUrl('uploads/backgrounds/' . $loginBgFile) : '';
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -89,6 +91,12 @@ $logoSrc  = $logoPath ? sunseaAssetUrl($logoPath) : '';
             justify-content: center;
             padding: 20px;
             background: linear-gradient(160deg, #0369A1 0%, #0EA5E9 45%, #7DD3FC 100%);
+            <?php if ($loginBgSrc): ?>
+            background-image: linear-gradient(160deg, rgba(3, 105, 161, .55) 0%, rgba(3, 105, 161, .35) 100%), url('<?php echo htmlspecialchars($loginBgSrc, ENT_QUOTES); ?>');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            <?php endif; ?>
         }
 
         .ol-card {
