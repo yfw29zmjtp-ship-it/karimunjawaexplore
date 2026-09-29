@@ -212,7 +212,11 @@ class PushNotificationHelper
                     'contentEncoding' => 'aesgcm',
                 ]);
 
-                $this->webPush->queueNotification($subscription, $payload);
+                // 'urgency' => 'high' asks the push service (FCM/etc.) to
+                // deliver right away instead of batching/delaying under the
+                // device's battery-saver / Doze mode — this is what was
+                // causing the "notif & badge lambat" delay vs. instant email.
+                $this->webPush->queueNotification($subscription, $payload, ['urgency' => 'high', 'TTL' => 86400]);
             }
 
             foreach ($this->webPush->flush() as $report) {
