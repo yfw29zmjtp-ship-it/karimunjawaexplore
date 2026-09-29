@@ -3,7 +3,7 @@
  * Push Notifications + Face-API Model Caching for instant Face ID
  */
 
-const CACHE_NAME = 'adf-system-v5'
+const CACHE_NAME = 'adf-system-v6'
 const FACE_CACHE = 'face-models-v1'
 
 // URLs to cache for Face ID (models + library)
@@ -116,14 +116,34 @@ self.addEventListener('push', event => {
     ]
   }
 
-  event.waitUntil(self.registration.showNotification(data.title, options))
+  event.waitUntil(
+    self.registration.showNotification(data.title, options).then(() => refreshAppBadge())
+  )
 })
+
+// Angka merah di ikon app disamakan dengan jumlah notifikasi yang masih aktif/belum ditutup.
+async function refreshAppBadge () {
+  if (!(self.navigator && 'setAppBadge' in self.navigator)) return
+  try {
+    const active = await self.registration.getNotifications()
+    if (active.length > 0) {
+      await self.navigator.setAppBadge(active.length)
+    } else {
+      await self.navigator.clearAppBadge()
+    }
+  } catch (e) {
+    // Badging API tidak wajib, abaikan kalau gagal
+  }
+}
 
 // ═══ NOTIFICATION CLICK ═══
 self.addEventListener('notificationclick', event => {
   event.notification.close()
 
-  if (event.action === 'dismiss') return
+  if (event.action === 'dismiss') {
+    event.waitUntil(refreshAppBadge())
+    return
+  }
 
   const urlToOpen = event.notification.data?.url || '/index.php'
 
@@ -141,6 +161,7 @@ self.addEventListener('notificationclick', event => {
           return clients.openWindow(urlToOpen)
         }
       })
+      .then(() => refreshAppBadge())
   )
 })
 

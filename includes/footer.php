@@ -59,7 +59,9 @@
                                    const response = await fetch('<?php echo BASE_URL; ?>/api/get-notifications.php');
                                    const data = await response.json();
 
-                                   if (data.success && data.unread_count > lastNotificationCount) {
+                                   if (!data.success) return;
+
+                                   if (data.unread_count > lastNotificationCount) {
                                        // New notification arrived
                                        const newNotifs = data.notifications.slice(0, data.unread_count - lastNotificationCount);
 
@@ -72,10 +74,13 @@
                                                });
                                            }
                                        }
-
-                                       // Update badge
-                                       updateNotificationBadge(data.unread_count);
                                    }
+
+                                   // Selalu sinkronkan badge (in-page & angka merah di ikon app) dengan
+                                   // unread_count terkini, bukan cuma saat nambah, supaya ikut turun/hilang
+                                   // ketika notifikasi sudah dibaca di tempat lain.
+                                   updateNotificationBadge(data.unread_count);
+                                   updateAppIconBadge(data.unread_count);
 
                                    lastNotificationCount = data.unread_count;
                                } catch (e) {
@@ -88,6 +93,17 @@
                                if (badge) {
                                    badge.textContent = count;
                                    badge.style.display = count > 0 ? 'inline-block' : 'none';
+                               }
+                           }
+
+                           // Angka merah di ikon aplikasi (App Badging API) - didukung di Android/Chrome
+                           // dan iOS Safari 16.4+ setelah PWA di-"Add to Home Screen".
+                           function updateAppIconBadge(count) {
+                               if (!('setAppBadge' in navigator)) return;
+                               if (count > 0) {
+                                   navigator.setAppBadge(count).catch(() => {});
+                               } else {
+                                   navigator.clearAppBadge().catch(() => {});
                                }
                            }
 
