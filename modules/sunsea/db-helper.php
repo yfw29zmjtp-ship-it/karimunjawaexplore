@@ -877,6 +877,15 @@ function sunseaEnsureSubscriptionBillingSchema(PDO $pdo): void
             $pdo->exec("ALTER TABLE subscription_invoices MODIFY COLUMN period VARCHAR(40) NOT NULL");
         } catch (Exception $e) {
         }
+
+        // Dedup flag so the overdue push notification only fires once/day per invoice.
+        try {
+            $hasNotified = $pdo->query("SHOW COLUMNS FROM subscription_invoices LIKE 'overdue_notified_at'")->fetch();
+            if (!$hasNotified) {
+                $pdo->exec("ALTER TABLE subscription_invoices ADD COLUMN overdue_notified_at DATE NULL AFTER due_date");
+            }
+        } catch (Exception $e) {
+        }
     } catch (Exception $e) {
         error_log('sunseaEnsureSubscriptionBillingSchema error: ' . $e->getMessage());
     }
@@ -1023,6 +1032,12 @@ function sunseaSyncManualInvoices(PDO $pdo): void
                 "INSERT INTO subscription_invoices (period, type, description, base_fee, guest_count, per_guest_fee, guest_total, total_amount, status, due_date)
                  VALUES (?, 'manual', ?, ?, 0, 0, 0, ?, 'unpaid', ?)"
             )->execute([$period, $item['description'], (float) $item['amount'], (float) $item['amount'], $item['due_date']]);
+
+            sunseaNotifyOwnersPush(
+                'Tagihan Baru dari ADF System',
+                ($item['description'] ?: 'Tagihan tambahan') . ' - ' . sunseaRupiah((float) $item['amount']) . ' (jatuh tempo ' . date('d M Y', strtotime($item['due_date'])) . ')',
+                ['url' => 'subscription-billing.php']
+            );
         }
 
         // Remove local manual invoices that were deleted on ADF System's side.
@@ -1096,6 +1111,11 @@ function sunseaGetOrRefreshSubscriptionInvoice(PDO $pdo, string $period): ?array
         $newInvoice = $stmt->fetch() ?: null;
         if ($newInvoice) {
             sunseaNotifyAdfSystemInvoiceCreated($pdo, $newInvoice);
+            sunseaNotifyOwnersPush(
+                'Tagihan Baru dari ADF System',
+                'Tagihan langganan periode ' . $period . ' sebesar ' . sunseaRupiah((float) $newInvoice['total_amount']) . ' jatuh tempo ' . date('d M Y', strtotime($newInvoice['due_date'])) . '.',
+                ['url' => 'subscription-billing.php']
+            );
         }
         return $newInvoice;
     } elseif ($invoice['status'] === 'unpaid') {
@@ -1198,6 +1218,17 @@ function sunseaGetSubscriptionReminder(PDO $pdo): ?array
     $daysLeft = (int) ceil((strtotime($invoice['due_date']) - strtotime(date('Y-m-d'))) / 86400);
     if ($daysLeft > 7) {
         return null;
+    }
+
+    // Push once/day (not on every page load) once the invoice is actually overdue.
+    if ($daysLeft < 0 && $invoice['overdue_notified_at'] !== date('Y-m-d')) {
+        sunseaNotifyOwnersPush(
+            'Tagihan Langganan Terlambat',
+            'Tagihan ADF System periode ' . $invoice['period'] . ' (' . sunseaRupiah((float) $invoice['total_amount']) . ') sudah melewati jatuh tempo. Segera bayar ya.',
+            ['url' => 'subscription-billing.php']
+        );
+        $pdo->prepare("UPDATE subscription_invoices SET overdue_notified_at = ? WHERE id = ?")
+            ->execute([date('Y-m-d'), $invoice['id']]);
     }
 
     return ['invoice' => $invoice, 'days_left' => $daysLeft, 'overdue' => $daysLeft < 0];
