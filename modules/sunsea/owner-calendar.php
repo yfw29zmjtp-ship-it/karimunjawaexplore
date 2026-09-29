@@ -247,15 +247,17 @@ include 'owner-mobile-header.php';
 
     .cal-day-row {
         display: grid;
-        grid-template-columns: 150px repeat(var(--cal-days), minmax(24px, 1fr));
+        grid-template-columns: 150px repeat(var(--cal-days), minmax(40px, 1fr));
     }
 
     .cal-name-col {
         position: sticky;
         left: 0;
-        z-index: 2;
+        z-index: 5;
         background: var(--sky);
+        opacity: 1;
         border-right: 1px solid var(--border);
+        box-shadow: 2px 0 5px rgba(15, 23, 42, .07);
         padding: 9px 10px;
         font-size: 12px;
         font-weight: 800;
@@ -268,8 +270,8 @@ include 'owner-mobile-header.php';
 
     .cal-day-col {
         text-align: center;
-        padding: 8px 1px;
-        font-size: 11px;
+        padding: 9px 2px;
+        font-size: 12px;
         font-weight: 700;
         color: var(--muted);
         background: var(--sky);
@@ -312,7 +314,7 @@ include 'owner-mobile-header.php';
 
     .cal-row {
         display: grid;
-        grid-template-columns: 150px repeat(var(--cal-days), minmax(24px, 1fr));
+        grid-template-columns: 150px repeat(var(--cal-days), minmax(40px, 1fr));
         align-items: center;
         cursor: pointer;
         transition: background .15s ease;
@@ -325,10 +327,12 @@ include 'owner-mobile-header.php';
     .cal-guest {
         position: sticky;
         left: 0;
-        z-index: 1;
+        z-index: 5;
         background: #fff;
+        opacity: 1;
         border-right: 1px solid var(--border);
-        padding: 9px 7px;
+        box-shadow: 2px 0 5px rgba(15, 23, 42, .07);
+        padding: 10px 7px;
         overflow: hidden;
     }
 
@@ -365,7 +369,7 @@ include 'owner-mobile-header.php';
     }
 
     .cal-cell {
-        height: 30px;
+        height: 38px;
         border-left: 1px solid rgba(15, 23, 42, .03);
         border-bottom: 1px solid rgba(15, 23, 42, .03);
     }
@@ -380,7 +384,7 @@ include 'owner-mobile-header.php';
     }
 
     .cal-bar {
-        height: 22px;
+        height: 28px;
         margin: 0 1px;
         border-radius: 999px;
         box-shadow: 0 2px 6px rgba(3, 105, 161, .28);
