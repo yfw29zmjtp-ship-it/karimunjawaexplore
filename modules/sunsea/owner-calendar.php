@@ -227,9 +227,9 @@ include 'owner-mobile-header.php';
 
     /* Timeline balok reservasi, disamakan persis dengan tampilan Kalender Booking di system (calendar.php) */
     .cal-timeline-scroll {
+        flex: 1;
+        min-width: 0;
         overflow-x: auto;
-        border-radius: 10px;
-        border: 1px solid var(--border);
         -webkit-overflow-scrolling: touch;
         scroll-behavior: smooth;
         cursor: grab;
@@ -241,6 +241,62 @@ include 'owner-mobile-header.php';
         scroll-behavior: auto;
     }
 
+    .cal-split {
+        display: flex;
+        align-items: stretch;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        overflow: hidden;
+        background: #fff;
+    }
+
+    /* Kolom nama tamu FISIK terpisah dari area scroll tanggal (bukan position:sticky) -
+       jadi dijamin selalu diam di tempat, tidak mungkin ikut ter-drag walau di HP manapun. */
+    .cal-frozen {
+        width: 150px;
+        flex-shrink: 0;
+        background: #fff;
+        border-right: 1px solid var(--border);
+    }
+
+    .cal-frozen-corner {
+        height: 26px;
+        background: var(--sky);
+        border-bottom: 1px solid var(--border);
+        box-sizing: border-box;
+    }
+
+    .cal-frozen-header {
+        height: 36px;
+        box-sizing: border-box;
+        display: flex;
+        align-items: center;
+        padding: 0 10px;
+        font-size: 12px;
+        font-weight: 800;
+        color: var(--text);
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        background: var(--sky);
+        border-bottom: 1px solid var(--border);
+    }
+
+    .cal-frozen-row {
+        height: 44px;
+        box-sizing: border-box;
+        display: flex;
+        align-items: center;
+        padding: 0 7px;
+        overflow: hidden;
+        cursor: pointer;
+        border-bottom: 1px solid rgba(15, 23, 42, .06);
+        transition: background .15s ease;
+    }
+
+    .cal-frozen-row:active {
+        background: var(--sky);
+    }
+
     .cal-timeline {
         width: 100%;
         background: #fff;
@@ -248,32 +304,17 @@ include 'owner-mobile-header.php';
 
     .cal-day-row {
         display: grid;
-        grid-template-columns: 150px repeat(var(--cal-days), minmax(40px, 1fr));
-    }
-
-    .cal-name-col {
-        position: sticky;
-        left: 0;
-        z-index: 5;
-        background: var(--sky);
-        opacity: 1;
-        border-right: 1px solid var(--border);
-        box-shadow: 2px 0 5px rgba(15, 23, 42, .07);
-        transform: translateZ(0);
-        will-change: transform;
-        padding: 9px 10px;
-        font-size: 12px;
-        font-weight: 800;
-        color: var(--text);
-        text-transform: uppercase;
-        letter-spacing: .04em;
-        display: flex;
-        align-items: center;
+        grid-template-columns: repeat(var(--cal-days), minmax(40px, 1fr));
     }
 
     .cal-day-col {
+        height: 36px;
+        box-sizing: border-box;
         text-align: center;
-        padding: 9px 2px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 2px;
         font-size: 12px;
         font-weight: 700;
         color: var(--muted);
@@ -298,11 +339,17 @@ include 'owner-mobile-header.php';
 
     .cal-month-label-row {
         background: var(--sky);
+        height: 26px;
+        box-sizing: border-box;
     }
 
     .cal-month-label {
+        height: 26px;
+        box-sizing: border-box;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         text-align: center;
-        padding: 4px;
         font-size: 9.5px;
         font-weight: 800;
         color: var(--text);
@@ -317,7 +364,7 @@ include 'owner-mobile-header.php';
 
     .cal-row {
         display: grid;
-        grid-template-columns: 150px repeat(var(--cal-days), minmax(40px, 1fr));
+        grid-template-columns: repeat(var(--cal-days), minmax(40px, 1fr));
         align-items: center;
         cursor: pointer;
         transition: background .15s ease;
@@ -325,20 +372,6 @@ include 'owner-mobile-header.php';
 
     .cal-row:active {
         background: var(--sky);
-    }
-
-    .cal-guest {
-        position: sticky;
-        left: 0;
-        z-index: 5;
-        background: #fff;
-        opacity: 1;
-        border-right: 1px solid var(--border);
-        box-shadow: 2px 0 5px rgba(15, 23, 42, .07);
-        transform: translateZ(0);
-        will-change: transform;
-        padding: 10px 7px;
-        overflow: hidden;
     }
 
     .ob-cal-today-btn {
@@ -393,9 +426,10 @@ include 'owner-mobile-header.php';
     }
 
     .cal-cell {
-        height: 38px;
+        height: 44px;
+        box-sizing: border-box;
         border-left: 1px solid rgba(15, 23, 42, .03);
-        border-bottom: 1px solid rgba(15, 23, 42, .03);
+        border-bottom: 1px solid rgba(15, 23, 42, .06);
     }
 
     .cal-cell.is-weekend {
@@ -483,15 +517,45 @@ include 'owner-mobile-header.php';
     <?php if (empty($bookings)): ?>
         <div class="ob-empty" style="margin-bottom:6px;">Tidak ada reservasi confirmed pada bulan ini.</div>
     <?php endif; ?>
-    <div class="cal-timeline-scroll" id="calTimelineScroll" data-prev-month="<?php echo $prevMonth; ?>" data-next-month="<?php echo $nextMonth; ?>">
+    <div class="cal-split">
+        <div class="cal-frozen">
+            <div class="cal-frozen-corner"></div>
+            <div class="cal-frozen-header">Tamu</div>
+            <?php if (empty($bookings)): ?>
+                <div class="cal-frozen-row">
+                    <span class="cal-guest-avatar" style="background:#E2E8F0;color:#94A3B8;">-</span>
+                    <div style="min-width:0;">
+                        <div class="cal-guest-name" style="color:#94A3B8;">Belum ada tamu</div>
+                        <div class="cal-guest-meta">&nbsp;</div>
+                    </div>
+                </div>
+            <?php else: ?>
+                <?php foreach ($bookings as $b):
+                    $barColor = obCalBarColor((max(0, (int)round((strtotime($b['end_date']) - strtotime($b['start_date'])) / 86400)) + 1) . 'H' . max(0, (int)round((strtotime($b['end_date']) - strtotime($b['start_date'])) / 86400)) . 'M', $b['package_name'], $calDurationColors, $calHoneymoonColor, $calDefaultColor, strtotime($b['end_date']) < strtotime(date('Y-m-d')), $calCompletedColor);
+                    $initial = mb_strtoupper(mb_substr($b['customer_name'], 0, 1));
+                ?>
+                    <div class="cal-frozen-row" onclick="openBookingDetail(<?php echo (int)$b['id']; ?>)">
+                        <span class="cal-guest-avatar" style="background:linear-gradient(135deg,<?php echo $barColor; ?>,#0EA5E9);"><?php echo htmlspecialchars($initial); ?></span>
+                        <div style="min-width:0;">
+                            <div class="cal-guest-name">
+                                <?php if ((int)$b['pending_count'] > 0): ?>
+                                    <span title="Ada layanan belum selesai" style="display:inline-block;width:5px;height:5px;border-radius:50%;background:#dc2626;margin-right:3px;"></span>
+                                <?php endif; ?>
+                                <?php echo htmlspecialchars($b['customer_name']); ?>
+                            </div>
+                            <div class="cal-guest-meta"><?php echo htmlspecialchars($b['booking_no']); ?> · <?php echo (int)$b['pax_count']; ?> pax</div>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            <?php endif; ?>
+        </div>
+        <div class="cal-timeline-scroll" id="calTimelineScroll" data-prev-month="<?php echo $prevMonth; ?>" data-next-month="<?php echo $nextMonth; ?>">
         <div class="cal-timeline" id="calTimeline" style="--cal-days:<?php echo $calTotalDays; ?>;">
             <div class="cal-day-row cal-month-label-row">
-                <div class="cal-name-col" style="background:transparent;border-right:1px solid var(--border);"></div>
-                <div class="cal-month-label" style="grid-column: 2 / span <?php echo $daysInMonth; ?>;"><?php echo date('F Y', strtotime($startMonth)); ?></div>
-                <div class="cal-month-label cal-month-boundary" style="grid-column: <?php echo 2 + $daysInMonth; ?> / span <?php echo $daysInNextMonth; ?>;"><?php echo date('F Y', strtotime($nextMonth . '-01')); ?></div>
+                <div class="cal-month-label" style="grid-column: 1 / span <?php echo $daysInMonth; ?>;"><?php echo date('F Y', strtotime($startMonth)); ?></div>
+                <div class="cal-month-label cal-month-boundary" style="grid-column: <?php echo 1 + $daysInMonth; ?> / span <?php echo $daysInNextMonth; ?>;"><?php echo date('F Y', strtotime($nextMonth . '-01')); ?></div>
             </div>
             <div class="cal-day-row">
-                <div class="cal-name-col">Tamu</div>
                 <?php foreach ($calDates as $cd):
                     $isWeekend = $cd['dow'] >= 6;
                     $isToday = $cd['date'] === date('Y-m-d');
@@ -507,26 +571,11 @@ include 'owner-mobile-header.php';
                 $durationLabel = ($nights + 1) . 'H' . $nights . 'M';
                 $isCompletedTrip = strtotime($b['end_date']) < strtotime(date('Y-m-d'));
                 $barColor = obCalBarColor($durationLabel, $b['package_name'], $calDurationColors, $calHoneymoonColor, $calDefaultColor, $isCompletedTrip, $calCompletedColor);
-                $initial = mb_strtoupper(mb_substr($b['customer_name'], 0, 1));
                 $clippedLeft = strtotime($b['start_date']) < strtotime($startMonth);
                 $clippedRight = strtotime($b['end_date']) > strtotime($nextMonthEnd);
                 $barTitle = htmlspecialchars(date('d M Y', strtotime($b['start_date'])) . ' - ' . date('d M Y', strtotime($b['end_date'])) . ' (' . $durationLabel . ')');
             ?>
                 <div class="cal-row" onclick="openBookingDetail(<?php echo (int)$b['id']; ?>)">
-                    <div class="cal-guest">
-                        <div style="display:flex;align-items:center;">
-                            <span class="cal-guest-avatar" style="background:linear-gradient(135deg,<?php echo $barColor; ?>,#0EA5E9);"><?php echo htmlspecialchars($initial); ?></span>
-                            <div style="min-width:0;">
-                                <div class="cal-guest-name">
-                                    <?php if ((int)$b['pending_count'] > 0): ?>
-                                        <span title="Ada layanan belum selesai" style="display:inline-block;width:5px;height:5px;border-radius:50%;background:#dc2626;margin-right:3px;"></span>
-                                    <?php endif; ?>
-                                    <?php echo htmlspecialchars($b['customer_name']); ?>
-                                </div>
-                                <div class="cal-guest-meta"><?php echo htmlspecialchars($b['booking_no']); ?> · <?php echo (int)$b['pax_count']; ?> pax</div>
-                            </div>
-                        </div>
-                    </div>
                     <?php foreach ($calDates as $ci => $cd):
                         $d = $ci + 1;
                         $isWeekend = $cd['dow'] >= 6;
@@ -560,20 +609,12 @@ include 'owner-mobile-header.php';
             if (empty($bookings)):
             ?>
                 <div class="cal-row cal-row-placeholder">
-                    <div class="cal-guest">
-                        <div style="display:flex;align-items:center;">
-                            <span class="cal-guest-avatar" style="background:#E2E8F0;color:#94A3B8;">-</span>
-                            <div style="min-width:0;">
-                                <div class="cal-guest-name" style="color:#94A3B8;">Belum ada tamu</div>
-                                <div class="cal-guest-meta">&nbsp;</div>
-                            </div>
-                        </div>
-                    </div>
                     <?php foreach ($calDates as $cd): ?>
                         <div class="cal-cell<?php echo $cd['dow'] >= 6 ? ' is-weekend' : ''; ?><?php echo $cd['date'] === date('Y-m-d') ? ' is-today' : ''; ?><?php echo $cd['isMonthStart'] ? ' cal-month-boundary' : ''; ?>"></div>
                     <?php endforeach; ?>
                 </div>
             <?php endif; ?>
+        </div>
         </div>
     </div>
     <div class="ob-cal-legend">
