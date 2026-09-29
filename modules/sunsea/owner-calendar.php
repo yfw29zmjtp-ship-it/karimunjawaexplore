@@ -264,6 +264,19 @@ include 'owner-mobile-header.php';
         background: var(--sky);
         border-bottom: 1px solid var(--border);
         box-sizing: border-box;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+    }
+
+    .cal-frozen-corner span {
+        font-size: 9.5px;
+        font-weight: 800;
+        color: var(--text);
+        text-transform: uppercase;
+        letter-spacing: .03em;
+        white-space: nowrap;
     }
 
     .cal-frozen-header {
@@ -519,7 +532,7 @@ include 'owner-mobile-header.php';
     <?php endif; ?>
     <div class="cal-split">
         <div class="cal-frozen">
-            <div class="cal-frozen-corner"></div>
+            <div class="cal-frozen-corner"><span id="calFrozenMonth"><?php echo date('F Y', strtotime($startMonth)); ?></span></div>
             <div class="cal-frozen-header">Tamu</div>
             <?php if (empty($bookings)): ?>
                 <div class="cal-frozen-row">
@@ -560,7 +573,7 @@ include 'owner-mobile-header.php';
                     $isWeekend = $cd['dow'] >= 6;
                     $isToday = $cd['date'] === date('Y-m-d');
                 ?>
-                    <div<?php echo $isToday ? ' id="calTodayCol"' : ''; ?> class="cal-day-col<?php echo $isWeekend ? ' is-weekend' : ''; ?><?php echo $isToday ? ' is-today' : ''; ?><?php echo $cd['isMonthStart'] ? ' cal-month-boundary' : ''; ?>"><?php echo $cd['day']; ?></div>
+                    <div<?php echo $isToday ? ' id="calTodayCol"' : ''; ?> class="cal-day-col<?php echo $isWeekend ? ' is-weekend' : ''; ?><?php echo $isToday ? ' is-today' : ''; ?><?php echo $cd['isMonthStart'] ? ' cal-month-boundary' : ''; ?>" data-month-label="<?php echo htmlspecialchars(date('F Y', strtotime($cd['date']))); ?>"><?php echo $cd['day']; ?></div>
                 <?php endforeach; ?>
             </div>
 
@@ -1031,6 +1044,41 @@ include 'owner-mobile-header.php';
     document.addEventListener('DOMContentLoaded', function() {
         calScrollToToday(true);
     });
+
+    // Update label bulan di pojok sidebar (frozen) sesuai tanggal yang lagi terlihat
+    // di sisi kiri area scroll, biar user tahu lagi lihat bulan apa tanpa reload halaman.
+    (function() {
+        var scroller = document.getElementById('calTimelineScroll');
+        var monthLabel = document.getElementById('calFrozenMonth');
+        if (!scroller || !monthLabel) return;
+        var dayCols = Array.prototype.slice.call(scroller.querySelectorAll('.cal-day-col[data-month-label]'));
+        if (!dayCols.length) return;
+        var ticking = false;
+
+        function syncMonthLabel() {
+            ticking = false;
+            var scRect = scroller.getBoundingClientRect();
+            var current = dayCols[0];
+            for (var i = 0; i < dayCols.length; i++) {
+                if (dayCols[i].getBoundingClientRect().left >= scRect.left - 1) {
+                    current = dayCols[i];
+                    break;
+                }
+                current = dayCols[i];
+            }
+            var label = current.getAttribute('data-month-label');
+            if (label && monthLabel.textContent !== label) monthLabel.textContent = label;
+        }
+
+        scroller.addEventListener('scroll', function() {
+            if (!ticking) {
+                ticking = true;
+                window.requestAnimationFrame(syncMonthLabel);
+            }
+        }, { passive: true });
+
+        syncMonthLabel();
+    })();
 </script>
 
 <?php include 'owner-mobile-footer.php'; ?>
