@@ -265,39 +265,48 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
 
         .ob-card {
             background: #fff;
-            border-radius: 11px;
-            padding: 10px 11px;
+            border-radius: 12px;
+            padding: 11px 12px;
             text-decoration: none;
             color: inherit;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, .06);
+            box-shadow: 0 1px 4px rgba(15, 23, 42, .05);
             border: 1px solid var(--border);
+            border-left: 3px solid var(--card-accent, var(--ocean));
             display: block;
+            transition: box-shadow .15s ease, transform .15s ease;
+        }
+
+        .ob-card:active {
+            transform: scale(.98);
         }
 
         .ob-card-label {
             font-size: 9px;
             color: var(--muted);
             text-transform: uppercase;
-            font-weight: 600;
+            font-weight: 700;
+            letter-spacing: .3px;
         }
 
         .ob-card-value {
-            font-size: 16px;
-            font-weight: 700;
-            margin: 3px 0 1px;
+            font-size: 17px;
+            font-weight: 800;
+            margin: 4px 0 1px;
+            letter-spacing: -.2px;
         }
 
         .ob-card-sub {
             font-size: 9.5px;
             color: var(--muted);
+            line-height: 1.4;
         }
 
         .ob-section {
             background: #fff;
-            border-radius: 12px;
+            border-radius: 14px;
             padding: 14px;
             margin-bottom: 14px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, .06);
+            box-shadow: 0 1px 4px rgba(15, 23, 42, .05);
             border: 1px solid var(--border);
         }
 
@@ -305,28 +314,38 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 10px;
+            margin-bottom: 11px;
         }
 
         .ob-section-title {
             font-size: 13px;
-            font-weight: 700;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .ob-section-title svg {
+            width: 14px;
+            height: 14px;
+            color: var(--ocean);
         }
 
         .ob-section-link {
             font-size: 11px;
             color: var(--ocean);
             text-decoration: none;
-            font-weight: 600;
+            font-weight: 700;
         }
 
         .ob-row {
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            padding: 9px 10px;
-            background: var(--sky);
-            border-radius: 8px;
+            gap: 10px;
+            padding: 10px;
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 11px;
             text-decoration: none;
             color: inherit;
             margin-bottom: 8px;
@@ -336,29 +355,51 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
             margin-bottom: 0;
         }
 
+        .ob-row-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            background: linear-gradient(135deg, #0369A1, #0EA5E9);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 13px;
+        }
+
+        .ob-row-body {
+            flex: 1;
+            min-width: 0;
+        }
+
         .ob-row-title {
-            font-size: 12.5px;
-            font-weight: 700;
+            font-size: 13px;
+            font-weight: 800;
             color: var(--text);
+            line-height: 1.25;
         }
 
         .ob-row-sub {
-            font-size: 11px;
+            font-size: 10.5px;
             color: var(--muted);
             margin-top: 1px;
         }
 
         .ob-row-meta {
             text-align: right;
-            font-size: 11px;
+            font-size: 10.5px;
             color: var(--muted);
+            font-weight: 600;
+            flex-shrink: 0;
         }
 
         .ob-empty {
             font-size: 12px;
             color: var(--muted);
             text-align: center;
-            padding: 12px 0;
+            padding: 16px 0;
         }
 
         .ob-bottom-nav {
@@ -747,22 +788,22 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
         </div>
 
         <div class="ob-cards">
-            <a href="owner-bookings.php?status=draft" class="ob-card">
+            <a href="owner-bookings.php?status=draft" class="ob-card" style="--card-accent:var(--ocean);">
                 <div class="ob-card-label">Pending</div>
                 <div class="ob-card-value" style="color:var(--ocean);"><?php echo $pendingCount; ?></div>
                 <div class="ob-card-sub">Booking belum confirm</div>
             </a>
-            <a href="owner-bookings.php?status=confirmed" class="ob-card">
+            <a href="owner-bookings.php?status=confirmed" class="ob-card" style="--card-accent:var(--success);">
                 <div class="ob-card-label">Confirmed</div>
                 <div class="ob-card-value" style="color:var(--success);"><?php echo $confirmedCount; ?></div>
                 <div class="ob-card-sub">Masuk kalender</div>
             </a>
-            <a href="owner-invoices.php?status=issued" class="ob-card">
+            <a href="owner-invoices.php?status=issued" class="ob-card" style="--card-accent:var(--danger);">
                 <div class="ob-card-label">Invoice Belum Lunas</div>
                 <div class="ob-card-value" style="color:var(--danger);"><?php echo (int)$invoiceStats['cnt']; ?></div>
                 <div class="ob-card-sub"><?php echo sunseaRupiah((float)$invoiceStats['total_outstanding']); ?></div>
             </a>
-            <a href="owner-finance.php" class="ob-card">
+            <a href="owner-finance.php" class="ob-card" style="--card-accent:<?php echo $monthBalance >= 0 ? 'var(--success)' : 'var(--danger)'; ?>;">
                 <div class="ob-card-label">Saldo Bulan Ini</div>
                 <div class="ob-card-value" style="color:<?php echo $monthBalance >= 0 ? 'var(--success)' : 'var(--danger)'; ?>;"><?php echo sunseaRupiah($monthBalance); ?></div>
                 <div class="ob-card-sub">Masuk <?php echo sunseaRupiah($monthIncome, true); ?> · Keluar <?php echo sunseaRupiah($monthExpense, true); ?></div>
@@ -771,7 +812,7 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
 
         <div class="ob-section">
             <div class="ob-section-head">
-                <div class="ob-section-title">Reservasi Tamu Mendatang</div>
+                <div class="ob-section-title"><i data-feather="users"></i> Reservasi Tamu Mendatang</div>
                 <a href="owner-calendar.php" class="ob-section-link">Lihat Kalender →</a>
             </div>
             <?php if (empty($upcomingBookings)): ?>
@@ -779,9 +820,10 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
             <?php else: ?>
                 <?php foreach ($upcomingBookings as $b): ?>
                     <a href="owner-bookings.php?status=confirmed" class="ob-row">
-                        <div>
-                            <div class="ob-row-title"><?php echo htmlspecialchars($b['booking_no']); ?></div>
-                            <div class="ob-row-sub"><?php echo htmlspecialchars($b['customer_name']); ?> · <?php echo (int)$b['pax_count']; ?> pax</div>
+                        <div class="ob-row-avatar"><?php echo htmlspecialchars(mb_strtoupper(mb_substr($b['customer_name'], 0, 1))); ?></div>
+                        <div class="ob-row-body">
+                            <div class="ob-row-title"><?php echo htmlspecialchars($b['customer_name']); ?></div>
+                            <div class="ob-row-sub"><?php echo htmlspecialchars($b['booking_no']); ?> · <?php echo (int)$b['pax_count']; ?> pax</div>
                         </div>
                         <div class="ob-row-meta">
                             <?php echo date('d M', strtotime($b['start_date'])); ?> - <?php echo date('d M Y', strtotime($b['end_date'])); ?>
@@ -793,29 +835,32 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
 
         <div class="ob-section">
             <div class="ob-section-head">
-                <div class="ob-section-title">Invoice Perlu Ditagih</div>
+                <div class="ob-section-title"><i data-feather="credit-card"></i> Invoice Perlu Ditagih</div>
                 <a href="owner-invoices.php" class="ob-section-link">Lihat Semua →</a>
             </div>
             <?php if (empty($recentInvoices)): ?>
                 <div class="ob-empty">Semua invoice sudah lunas. 🎉</div>
             <?php else: ?>
                 <?php foreach ($recentInvoices as $inv): ?>
-                    <div class="ob-row" style="flex-direction:column;align-items:stretch;gap:6px;">
-                        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
-                            <div>
-                                <div class="ob-row-title"><?php echo htmlspecialchars($inv['invoice_no']); ?></div>
-                                <div class="ob-row-sub"><?php echo htmlspecialchars($inv['customer_name']); ?> · JT <?php echo $inv['due_date'] ? date('d M Y', strtotime($inv['due_date'])) : '-'; ?></div>
+                    <div class="ob-row" style="align-items:flex-start;">
+                        <div class="ob-row-avatar"><?php echo htmlspecialchars(mb_strtoupper(mb_substr($inv['customer_name'], 0, 1))); ?></div>
+                        <div class="ob-row-body">
+                            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+                                <div>
+                                    <div class="ob-row-title"><?php echo htmlspecialchars($inv['customer_name']); ?></div>
+                                    <div class="ob-row-sub"><?php echo htmlspecialchars($inv['invoice_no']); ?> · JT <?php echo $inv['due_date'] ? date('d M Y', strtotime($inv['due_date'])) : '-'; ?></div>
+                                </div>
+                                <div style="font-size:11.5px;font-weight:800;color:var(--danger);text-align:right;flex-shrink:0;">
+                                    Sisa Tagihan<br><?php echo sunseaRupiah((float)$inv['remaining_amount']); ?>
+                                </div>
                             </div>
-                            <div style="font-size:12px;font-weight:700;color:var(--danger);text-align:right;">
-                                Sisa Tagihan<br><?php echo sunseaRupiah((float)$inv['remaining_amount']); ?>
-                            </div>
+                            <?php if ((float)$inv['paid_amount'] > 0): ?>
+                                <div style="display:flex;gap:12px;font-size:10.5px;color:var(--muted);border-top:1px dashed var(--border);margin-top:8px;padding-top:6px;">
+                                    <span>Total Paket: <strong style="color:var(--text);"><?php echo sunseaRupiah((float)$inv['total_amount']); ?></strong></span>
+                                    <span>DP Terbayar: <strong style="color:var(--success);"><?php echo sunseaRupiah((float)$inv['paid_amount']); ?></strong></span>
+                                </div>
+                            <?php endif; ?>
                         </div>
-                        <?php if ((float)$inv['paid_amount'] > 0): ?>
-                            <div style="display:flex;gap:12px;font-size:10.5px;color:var(--muted);border-top:1px dashed var(--border);padding-top:6px;">
-                                <span>Total Paket: <strong style="color:var(--text);"><?php echo sunseaRupiah((float)$inv['total_amount']); ?></strong></span>
-                                <span>DP Terbayar: <strong style="color:var(--success);"><?php echo sunseaRupiah((float)$inv['paid_amount']); ?></strong></span>
-                            </div>
-                        <?php endif; ?>
                     </div>
                 <?php endforeach; ?>
             <?php endif; ?>
