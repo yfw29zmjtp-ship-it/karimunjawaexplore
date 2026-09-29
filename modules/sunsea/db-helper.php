@@ -1497,20 +1497,6 @@ function sunseaNotifAdminEmails(PDO $pdo): array
 function sunseaNotifyAdminNewQuotation(PDO $pdo, int $quotationId): void
 {
     try {
-        $emails = sunseaNotifAdminEmails($pdo);
-        if (!$emails) {
-            return;
-        }
-
-        require_once __DIR__ . '/../../includes/EmailHelper.php';
-        require_once __DIR__ . '/../../includes/SmtpMailer.php';
-
-        $db = Database::getInstance();
-        $emailConfig = EmailHelper::resolveConfig($db);
-        if ($emailConfig === null) {
-            return;
-        }
-
         $stmt = $pdo->prepare(
             "SELECT q.quotation_no, q.trip_date, q.trip_end_date, q.pax_count, q.total_amount, q.notes,
                     c.name AS customer_name, c.phone AS customer_phone,
@@ -1531,6 +1517,28 @@ function sunseaNotifyAdminNewQuotation(PDO $pdo, int $quotationId): void
         $followUpUrl = BASE_URL . '/modules/sunsea/quotations.php?action=view&id=' . $quotationId;
         $tripDate = $q['trip_date'] ? date('d M Y', strtotime($q['trip_date'])) : '-';
         $tripEndDate = $q['trip_end_date'] ? date('d M Y', strtotime($q['trip_end_date'])) : '';
+
+        // Push dikirim terlepas dari setting email admin, supaya owner tetap dapat notif HP
+        // walau daftar email notifikasi kosong/belum diisi di pengaturan.
+        sunseaNotifyOwnersPush(
+            'Booking Baru dari Website',
+            ($q['customer_name'] ?: 'Tamu') . ' - ' . ($q['package_name'] ?: 'Paket') . ' (' . $tripDate . ($tripEndDate && $tripEndDate !== $tripDate ? ' - ' . $tripEndDate : '') . ')',
+            ['url' => 'modules/sunsea/quotations.php?action=view&id=' . $quotationId]
+        );
+
+        $emails = sunseaNotifAdminEmails($pdo);
+        if (!$emails) {
+            return;
+        }
+
+        require_once __DIR__ . '/../../includes/EmailHelper.php';
+        require_once __DIR__ . '/../../includes/SmtpMailer.php';
+
+        $db = Database::getInstance();
+        $emailConfig = EmailHelper::resolveConfig($db);
+        if ($emailConfig === null) {
+            return;
+        }
 
         $waMessage = "Halo {$q['customer_name']}, terima kasih sudah menghubungi {$companyName} untuk penawaran No. {$q['quotation_no']}. Kami bantu follow up ya kak.";
         $waUrl = $q['customer_phone'] ? sunseaWaLink($q['customer_phone'], $waMessage) : '';
