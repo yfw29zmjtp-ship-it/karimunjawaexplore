@@ -195,9 +195,9 @@ $backUrl = $backUrl ?? 'owner-dashboard.php';
 
         .ob-badge {
             display: inline-block;
-            padding: 2px 8px;
+            padding: 2px 7px;
             border-radius: 999px;
-            font-size: 10px;
+            font-size: 9px;
             font-weight: 700;
         }
 
@@ -344,22 +344,22 @@ $backUrl = $backUrl ?? 'owner-dashboard.php';
         .ob-bcard {
             background: #fff;
             border: 1px solid var(--border);
-            border-radius: 14px;
-            padding: 14px;
-            margin-bottom: 12px;
+            border-radius: 12px;
+            padding: 11px;
+            margin-bottom: 10px;
             box-shadow: 0 1px 3px rgba(0, 0, 0, .05);
         }
 
         .ob-bcard-top {
             display: flex;
             align-items: flex-start;
-            gap: 10px;
-            margin-bottom: 10px;
+            gap: 8px;
+            margin-bottom: 8px;
         }
 
         .ob-bcard-avatar {
-            width: 38px;
-            height: 38px;
+            width: 30px;
+            height: 30px;
             border-radius: 50%;
             flex-shrink: 0;
             background: linear-gradient(135deg, #0369A1, #0EA5E9);
@@ -368,7 +368,7 @@ $backUrl = $backUrl ?? 'owner-dashboard.php';
             align-items: center;
             justify-content: center;
             font-weight: 800;
-            font-size: 15px;
+            font-size: 12px;
         }
 
         .ob-bcard-info {
@@ -377,14 +377,14 @@ $backUrl = $backUrl ?? 'owner-dashboard.php';
         }
 
         .ob-bcard-name {
-            font-size: 14.5px;
+            font-size: 12.5px;
             font-weight: 800;
             color: var(--text);
             line-height: 1.25;
         }
 
         .ob-bcard-no {
-            font-size: 11px;
+            font-size: 10px;
             color: var(--muted);
             margin-top: 1px;
         }
@@ -393,24 +393,24 @@ $backUrl = $backUrl ?? 'owner-dashboard.php';
             display: flex;
             align-items: center;
             gap: 5px;
-            font-size: 11.5px;
+            font-size: 10.5px;
             color: var(--muted);
             background: var(--sky);
-            border-radius: 8px;
-            padding: 7px 10px;
-            margin-bottom: 10px;
+            border-radius: 7px;
+            padding: 6px 9px;
+            margin-bottom: 8px;
         }
 
         .ob-bcard-meta svg {
-            width: 12px;
-            height: 12px;
+            width: 11px;
+            height: 11px;
             flex-shrink: 0;
             color: var(--ocean);
         }
 
         .ob-bcard-actions {
             display: flex;
-            gap: 8px;
+            gap: 6px;
         }
 
         .ob-bcard-actions a {
@@ -418,17 +418,17 @@ $backUrl = $backUrl ?? 'owner-dashboard.php';
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 5px;
-            padding: 9px;
-            border-radius: 9px;
-            font-size: 12px;
+            gap: 4px;
+            padding: 7px;
+            border-radius: 8px;
+            font-size: 11px;
             font-weight: 700;
             text-decoration: none;
         }
 
         .ob-bcard-actions svg {
-            width: 13px;
-            height: 13px;
+            width: 12px;
+            height: 12px;
         }
 
         .ob-btn-detail {
