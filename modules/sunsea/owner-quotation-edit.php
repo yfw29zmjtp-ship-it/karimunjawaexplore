@@ -26,10 +26,17 @@ if (!in_array($currentUser['role'] ?? '', ['developer', 'owner'], true)) {
 }
 
 $pdo = getSunseaConnection();
+sunseaEnsureQuotationItinerarySchema($pdo);
 
 $id = (int)($_GET['id'] ?? $_POST['id'] ?? 0);
 
-$stmt = $pdo->prepare("SELECT q.*, c.name AS customer_name FROM quotations q JOIN customers c ON c.id = q.customer_id WHERE q.id = ?");
+$stmt = $pdo->prepare("
+    SELECT q.*, c.name AS customer_name, p.includes AS package_includes
+    FROM quotations q
+    JOIN customers c ON c.id = q.customer_id
+    LEFT JOIN trip_packages p ON p.id = q.package_id
+    WHERE q.id = ?
+");
 $stmt->execute([$id]);
 $quotation = $stmt->fetch();
 
@@ -48,6 +55,7 @@ $errorMsg = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $itinerary           = trim($_POST['itinerary'] ?? '');
     $accommodationManual = trim($_POST['accommodation_manual'] ?? '');
+    $facilityTexts       = $_POST['facility_item'] ?? [];
     $descriptions = $_POST['item_description'] ?? [];
     $qtys         = $_POST['item_qty']         ?? [];
     $units        = $_POST['item_unit']        ?? [];
@@ -83,10 +91,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $taxAmount = round($subtotal * $taxPct / 100, 2);
         $total     = $subtotal + $taxAmount - $discount;
 
+        $facilityLines = [];
+        foreach ($facilityTexts as $f) {
+            $f = trim($f);
+            if ($f !== '') $facilityLines[] = $f;
+        }
+        $facilitiesOverride = implode("\n", $facilityLines);
+
         $pdo->prepare("
-            UPDATE quotations SET itinerary=?, accommodation_manual=?, subtotal=?, tax_amount=?, total_amount=?, updated_at=NOW()
+            UPDATE quotations SET itinerary=?, accommodation_manual=?, facilities_override=?, subtotal=?, tax_amount=?, total_amount=?, updated_at=NOW()
             WHERE id=?
-        ")->execute([$itinerary, $accommodationManual, $subtotal, $taxAmount, $total, $id]);
+        ")->execute([$itinerary, $accommodationManual, $facilitiesOverride, $subtotal, $taxAmount, $total, $id]);
 
         // Sinkron ke booking yang sudah terbentuk (kalau Penawaran ini sudah pernah di-approve).
         $pdo->prepare("UPDATE booking_orders SET accommodation_manual=? WHERE quotation_id=?")
@@ -121,6 +136,8 @@ $qItems = $qItems->fetchAll();
 if (empty($qItems)) {
     $qItems = [['item_type' => 'other', 'description' => '', 'qty' => 1, 'unit' => 'pax', 'unit_price' => 0]];
 }
+
+$facilityLines = sunseaQuotationFacilityLines($pdo, $quotation);
 
 function obSafeAll(PDO $pdo, string $sql): array
 {
@@ -273,6 +290,28 @@ include 'owner-mobile-header.php';
         cursor: pointer;
     }
 
+    .ob-facility-row {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        margin-bottom: 6px;
+    }
+
+    .ob-facility-row input {
+        flex: 1;
+    }
+
+    .ob-facility-remove {
+        flex-shrink: 0;
+        background: none;
+        border: none;
+        color: var(--danger);
+        font-size: 11px;
+        font-weight: 700;
+        cursor: pointer;
+        padding: 6px 4px;
+    }
+
     .ob-total-bar {
         display: flex;
         justify-content: space-between;
@@ -307,6 +346,38 @@ include 'owner-mobile-header.php';
             <?php echo htmlspecialchars($errorMsg); ?>
         </div>
     <?php endif; ?>
+
+    <div class="ob-section">
+        <div class="ob-section-head">
+            <div class="ob-section-title"><i data-feather="check-circle"></i> Fasilitas yang Didapat</div>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Daftar ini yang tampil di PDF penawaran (contoh: Kapal Berangkat). Hapus/tambah sesuai kebutuhan.</div>
+
+        <?php if (!empty($mdFacilities)): ?>
+            <div class="ob-quickadd-box">
+                <div class="ob-quickadd-title">Tambah dari Database Fasilitas</div>
+                <div class="ob-quickadd-row">
+                    <select class="ob-form-input" id="obFacilitySelect">
+                        <option value="">-- Pilih fasilitas --</option>
+                        <?php foreach ($mdFacilities as $f): ?>
+                            <option value="<?php echo htmlspecialchars($f['name']); ?>"><?php echo htmlspecialchars($f['name']); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <button type="button" class="ob-quickadd-btn" onclick="obQuickAddFacility()">+ Tambah</button>
+                </div>
+            </div>
+        <?php endif; ?>
+
+        <div id="obFacilitiesWrap">
+            <?php foreach ($facilityLines as $fl): ?>
+                <div class="ob-facility-row">
+                    <input type="text" class="ob-form-input" name="facility_item[]" value="<?php echo htmlspecialchars($fl); ?>">
+                    <button type="button" class="ob-facility-remove" onclick="obRemoveFacility(this)">Hapus</button>
+                </div>
+            <?php endforeach; ?>
+        </div>
+        <button type="button" class="ob-add-item-btn" style="margin-bottom:0;" onclick="obAddFacility()">+ Tambah Manual</button>
+    </div>
 
     <div class="ob-section">
         <div class="ob-section-head">
@@ -426,6 +497,35 @@ include 'owner-mobile-header.php';
         if (wrap.children.length <= 1) return;
         btn.closest('.ob-item-card').remove();
         obRecalcTotal();
+    }
+
+    function obAddFacilityRow(text) {
+        var wrap = document.getElementById('obFacilitiesWrap');
+        var row = document.createElement('div');
+        row.className = 'ob-facility-row';
+        row.innerHTML = '<input type="text" class="ob-form-input" name="facility_item[]" value="' + (text || '').replace(/"/g, '&quot;') + '">' +
+            '<button type="button" class="ob-facility-remove" onclick="obRemoveFacility(this)">Hapus</button>';
+        wrap.appendChild(row);
+        return row;
+    }
+
+    function obAddFacility() {
+        var row = obAddFacilityRow('');
+        row.querySelector('input').focus();
+    }
+
+    function obQuickAddFacility() {
+        var sel = document.getElementById('obFacilitySelect');
+        if (!sel.value) {
+            alert('Pilih fasilitas dari database terlebih dahulu.');
+            return;
+        }
+        obAddFacilityRow(sel.value);
+        sel.value = '';
+    }
+
+    function obRemoveFacility(btn) {
+        btn.closest('.ob-facility-row').remove();
     }
 
     function obMakeItemCard(desc, qty, unit, price, type) {

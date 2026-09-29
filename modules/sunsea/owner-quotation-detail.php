@@ -24,12 +24,13 @@ if (!in_array($currentUser['role'] ?? '', ['developer', 'owner'], true)) {
 }
 
 $pdo = getSunseaConnection();
+sunseaEnsureQuotationItinerarySchema($pdo);
 
 $id = (int)($_GET['id'] ?? 0);
 
 $stmt = $pdo->prepare("
     SELECT q.*, c.name AS customer_name, c.phone AS customer_phone, c.whatsapp AS customer_whatsapp,
-           p.name AS package_name
+           p.name AS package_name, p.includes AS package_includes
     FROM quotations q
     JOIN customers c ON c.id = q.customer_id
     LEFT JOIN trip_packages p ON p.id = q.package_id
@@ -46,6 +47,8 @@ if (!$quotation) {
 $qItems = $pdo->prepare("SELECT * FROM quotation_items WHERE quotation_id=? ORDER BY id");
 $qItems->execute([$id]);
 $qItems = $qItems->fetchAll();
+
+$facilityLines = sunseaQuotationFacilityLines($pdo, $quotation);
 
 $statusBadge = [
     'draft'     => ['ob-badge-draft', 'Draft'],
@@ -127,6 +130,17 @@ include 'owner-mobile-header.php';
         <?php endforeach; ?>
     <?php endif; ?>
 </div>
+
+<?php if (!empty($facilityLines)): ?>
+    <div class="ob-section">
+        <div class="ob-section-head">
+            <div class="ob-section-title">Fasilitas yang Didapat</div>
+        </div>
+        <?php foreach ($facilityLines as $fl): ?>
+            <div style="font-size:12px;color:var(--text);padding:5px 0;border-bottom:1px dashed var(--border);">• <?php echo htmlspecialchars($fl); ?></div>
+        <?php endforeach; ?>
+    </div>
+<?php endif; ?>
 
 <?php if (!empty($quotation['notes'])): ?>
     <div class="ob-section">

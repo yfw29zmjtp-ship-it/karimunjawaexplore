@@ -458,9 +458,47 @@ function sunseaEnsureQuotationItinerarySchema(PDO $pdo): void
         if ((int)$check->fetchColumn() === 0) {
             $pdo->exec("ALTER TABLE quotations ADD COLUMN viewed_at DATETIME NULL DEFAULT NULL AFTER status");
         }
+        // Daftar "Fasilitas yang Didapat" hasil edit manual (1 baris = 1 fasilitas).
+        // Kalau NULL, tampilan tetap pakai fallback lama (trip_package_items / package_includes).
+        $check->execute(['facilities_override']);
+        if ((int)$check->fetchColumn() === 0) {
+            $pdo->exec("ALTER TABLE quotations ADD COLUMN facilities_override TEXT NULL AFTER internal_notes");
+        }
     } catch (Exception $e) {
         error_log('sunseaEnsureQuotationItinerarySchema error: ' . $e->getMessage());
     }
+}
+
+/**
+ * Baris "Fasilitas yang didapat" untuk sebuah quotation: pakai override manual bila ada,
+ * kalau tidak fallback ke detail layanan paket (trip_package_items) atau teks bebas paket.includes.
+ */
+function sunseaQuotationFacilityLines(PDO $pdo, array $quotation): array
+{
+    if (!empty($quotation['facilities_override'])) {
+        $lines = [];
+        foreach (preg_split('/\r\n|\r|\n/', $quotation['facilities_override']) as $line) {
+            $line = trim($line);
+            if ($line !== '') $lines[] = $line;
+        }
+        return $lines;
+    }
+
+    $lines = [];
+    if (!empty($quotation['package_id'])) {
+        $pi = $pdo->prepare("SELECT item_name, notes FROM trip_package_items WHERE package_id=? ORDER BY sort_order");
+        $pi->execute([(int)$quotation['package_id']]);
+        foreach ($pi->fetchAll() as $row) {
+            $lines[] = trim($row['item_name']) . (!empty($row['notes']) ? ' (' . trim($row['notes']) . ')' : '');
+        }
+    }
+    if (empty($lines) && !empty($quotation['package_includes'])) {
+        foreach (preg_split('/\r\n|\r|\n/', $quotation['package_includes']) as $line) {
+            $line = trim($line, " \t-•");
+            if ($line !== '') $lines[] = $line;
+        }
+    }
+    return $lines;
 }
 
 /**

@@ -450,18 +450,9 @@ if ($action === 'print' && $quotation):
     $bankHolder     = sunseaSetting($pdo, 'bank_holder', '');
     $footer         = sunseaSetting($pdo, 'invoice_footer', '');
 
-    // Fasilitas yang didapat: pakai detail layanan paket terstruktur bila ada,
-    // fallback ke teks bebas "includes" pada paket.
-    $facilityLines = [];
-    foreach ($qPackageItems as $pi) {
-        $facilityLines[] = trim($pi['item_name']) . (!empty($pi['notes']) ? ' (' . trim($pi['notes']) . ')' : '');
-    }
-    if (empty($facilityLines) && !empty($quotation['package_includes'])) {
-        foreach (preg_split('/\r\n|\r|\n/', $quotation['package_includes']) as $line) {
-            $line = trim($line, " \t-•");
-            if ($line !== '') $facilityLines[] = $line;
-        }
-    }
+    // Fasilitas yang didapat: pakai override manual bila ada (dari owner dashboard),
+    // fallback ke detail layanan paket terstruktur / teks bebas "includes" pada paket.
+    $facilityLines = sunseaQuotationFacilityLines($pdo, $quotation);
 ?>
     <!DOCTYPE html>
     <html lang="id">
