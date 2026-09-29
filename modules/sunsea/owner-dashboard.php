@@ -31,6 +31,15 @@ sunseaEnsureFinanceSchema($pdo);
 
 $today = date('Y-m-d');
 
+// Tamu yang tiba hari ini
+$todayArrivals = $pdo->query("
+    SELECT b.pax_count, c.name AS customer_name
+    FROM booking_orders b
+    JOIN customers c ON c.id = b.customer_id
+    WHERE b.status <> 'cancelled' AND b.start_date = CURDATE()
+    ORDER BY c.name ASC
+")->fetchAll();
+
 // Reservasi tamu mendatang (confirmed, belum lewat)
 $upcomingBookings = $pdo->prepare("
     SELECT b.id, b.booking_no, b.start_date, b.end_date, b.pax_count, b.status,
@@ -168,7 +177,7 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
             background: #F8FAFC;
             color: var(--text);
             font-size: 14px;
-            padding-bottom: 90px;
+            padding-bottom: 78px;
         }
 
         .ob-header {
@@ -352,38 +361,43 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
             padding: 12px 0;
         }
 
-        .ob-quicklinks {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 6px;
+        .ob-bottom-nav {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 800;
+            display: flex;
+            background: #fff;
+            border-top: 1px solid var(--border);
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, .06);
+            padding-bottom: env(safe-area-inset-bottom);
         }
 
-        .ob-qbtn {
+        .ob-navbtn {
+            flex: 1;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 4px;
-            background: #fff;
-            border: 1.5px solid var(--ocean);
-            color: var(--ocean);
-            border-radius: 12px;
-            padding: 9px 4px;
+            gap: 3px;
+            padding: 8px 2px 7px;
             text-decoration: none;
-            font-size: 9px;
+            color: var(--muted);
+            font-size: 9.5px;
             font-weight: 700;
             line-height: 1.2;
             text-align: center;
         }
 
-        .ob-qbtn i {
-            width: 16px;
-            height: 16px;
+        .ob-navbtn i,
+        .ob-navbtn svg {
+            width: 18px;
+            height: 18px;
         }
 
-        .ob-qbtn svg {
-            width: 16px;
-            height: 16px;
+        .ob-navbtn-active {
+            color: var(--ocean);
         }
 
         .ob-brand-logo {
@@ -507,7 +521,7 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
             position: fixed;
             left: 12px;
             right: 12px;
-            bottom: 12px;
+            bottom: 70px;
             z-index: 900;
             background: linear-gradient(135deg, #0369A1 0%, #0EA5E9 100%);
             color: #fff;
@@ -618,44 +632,52 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
         <div class="ob-title">Owner Dashboard</div>
     </div>
 
+    <?php if (!empty($todayArrivals)): ?>
+        <div style="display:flex;align-items:center;gap:10px;padding:12px 18px;background:#DCFCE7;color:#166534;font-size:12.5px;font-weight:600;flex-wrap:wrap;">
+            <span style="flex:1;min-width:200px;">
+                🛬 <?php echo count($todayArrivals); ?> tamu tiba hari ini: <?php echo htmlspecialchars(implode(', ', array_column($todayArrivals, 'customer_name'))); ?>
+            </span>
+        </div>
+    <?php endif; ?>
+
     <?php if ($subscriptionStatusInvoice && !($subscriptionReminder['overdue'] ?? false)): ?>
-    <div id="obSubStatusModal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.85);z-index:9999;align-items:center;justify-content:center;padding:16px;">
-        <div style="background:#fff;border-radius:14px;width:100%;max-width:420px;padding:22px;box-shadow:0 20px 50px rgba(0,0,0,.35);">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-                <strong style="font-size:15px;color:#111827;">Status Langganan</strong>
-                <button type="button" onclick="document.getElementById('obSubStatusModal').style.display='none'" style="background:none;border:none;font-size:18px;color:#6b7280;cursor:pointer;">&times;</button>
-            </div>
-            <table style="width:100%;font-size:13px;">
-                <tr>
-                    <td style="padding:5px 0;color:#6b7280;">Status</td>
-                    <td style="padding:5px 0;text-align:right;font-weight:700;color:#166534;">🟢 Aktif</td>
-                </tr>
-                <tr>
-                    <td style="padding:5px 0;color:#6b7280;">Berlaku Hingga</td>
-                    <td style="padding:5px 0;text-align:right;"><?php echo htmlspecialchars(date('d M Y', strtotime($subscriptionStatusInvoice['due_date']))); ?></td>
-                </tr>
-                <?php if ($subscriptionLastPaid): ?>
-                    <tr style="border-top:1px solid #e5e7eb;">
-                        <td style="padding:8px 0 2px;color:#6b7280;">Pembayaran Terakhir</td>
-                        <td style="padding:8px 0 2px;text-align:right;"><?php echo htmlspecialchars(date('d M Y', strtotime($subscriptionLastPaid['paid_at']))); ?></td>
+        <div id="obSubStatusModal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.85);z-index:9999;align-items:center;justify-content:center;padding:16px;">
+            <div style="background:#fff;border-radius:14px;width:100%;max-width:420px;padding:22px;box-shadow:0 20px 50px rgba(0,0,0,.35);">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+                    <strong style="font-size:15px;color:#111827;">Status Langganan</strong>
+                    <button type="button" onclick="document.getElementById('obSubStatusModal').style.display='none'" style="background:none;border:none;font-size:18px;color:#6b7280;cursor:pointer;">&times;</button>
+                </div>
+                <table style="width:100%;font-size:13px;">
+                    <tr>
+                        <td style="padding:5px 0;color:#6b7280;">Status</td>
+                        <td style="padding:5px 0;text-align:right;font-weight:700;color:#166534;">🟢 Aktif</td>
                     </tr>
                     <tr>
-                        <td style="padding:2px 0;color:#6b7280;"><?php echo ($subscriptionLastPaid['type'] ?? 'recurring') === 'manual' ? htmlspecialchars($subscriptionLastPaid['description'] ?: 'Tagihan Manual') : ('Periode ' . htmlspecialchars($subscriptionLastPaid['period'])); ?></td>
-                        <td style="padding:2px 0;text-align:right;font-weight:700;"><?php echo sunseaRupiah((float) $subscriptionLastPaid['total_amount']); ?></td>
+                        <td style="padding:5px 0;color:#6b7280;">Berlaku Hingga</td>
+                        <td style="padding:5px 0;text-align:right;"><?php echo htmlspecialchars(date('d M Y', strtotime($subscriptionStatusInvoice['due_date']))); ?></td>
                     </tr>
+                    <?php if ($subscriptionLastPaid): ?>
+                        <tr style="border-top:1px solid #e5e7eb;">
+                            <td style="padding:8px 0 2px;color:#6b7280;">Pembayaran Terakhir</td>
+                            <td style="padding:8px 0 2px;text-align:right;"><?php echo htmlspecialchars(date('d M Y', strtotime($subscriptionLastPaid['paid_at']))); ?></td>
+                        </tr>
+                        <tr>
+                            <td style="padding:2px 0;color:#6b7280;"><?php echo ($subscriptionLastPaid['type'] ?? 'recurring') === 'manual' ? htmlspecialchars($subscriptionLastPaid['description'] ?: 'Tagihan Manual') : ('Periode ' . htmlspecialchars($subscriptionLastPaid['period'])); ?></td>
+                            <td style="padding:2px 0;text-align:right;font-weight:700;"><?php echo sunseaRupiah((float) $subscriptionLastPaid['total_amount']); ?></td>
+                        </tr>
+                    <?php endif; ?>
+                </table>
+                <?php if ($subscriptionLastPaid): ?>
+                    <p style="margin-top:10px;">
+                        <a href="<?php echo BASE_URL; ?>/modules/sunsea/subscription-invoice-print.php?period=<?php echo urlencode($subscriptionLastPaid['period']); ?>" target="_blank"
+                            style="background:#166534;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12.5px;font-weight:700;text-decoration:none;">🖨️ Cetak Invoice Terakhir</a>
+                    </p>
                 <?php endif; ?>
-            </table>
-            <?php if ($subscriptionLastPaid): ?>
-                <p style="margin-top:10px;">
-                    <a href="<?php echo BASE_URL; ?>/modules/sunsea/subscription-invoice-print.php?period=<?php echo urlencode($subscriptionLastPaid['period']); ?>" target="_blank"
-                        style="background:#166534;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12.5px;font-weight:700;text-decoration:none;">🖨️ Cetak Invoice Terakhir</a>
+                <p style="font-size:12px;color:#6b7280;margin-top:10px;">
+                    <a href="<?php echo BASE_URL; ?>/modules/sunsea/subscription-billing.php">Lihat riwayat tagihan lengkap</a>
                 </p>
-            <?php endif; ?>
-            <p style="font-size:12px;color:#6b7280;margin-top:10px;">
-                <a href="<?php echo BASE_URL; ?>/modules/sunsea/subscription-billing.php">Lihat riwayat tagihan lengkap</a>
-            </p>
+            </div>
         </div>
-    </div>
     <?php endif; ?>
 
     <?php if ($subscriptionReminder):
@@ -722,13 +744,6 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
                     </div>
                 </div>
             </div>
-        </div>
-
-        <div class="ob-quicklinks" style="margin-bottom:14px;">
-            <a href="owner-bookings.php" class="ob-qbtn"><i data-feather="briefcase"></i> Reservasi</a>
-            <a href="owner-calendar.php" class="ob-qbtn"><i data-feather="calendar"></i> Kalender</a>
-            <a href="owner-invoices.php" class="ob-qbtn"><i data-feather="credit-card"></i> Invoice</a>
-            <a href="owner-finance.php" class="ob-qbtn"><i data-feather="dollar-sign"></i> Finance</a>
         </div>
 
         <div class="ob-cards">
@@ -806,6 +821,14 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
             <?php endif; ?>
         </div>
 
+    </div>
+
+    <div class="ob-bottom-nav">
+        <a href="owner-dashboard.php" class="ob-navbtn ob-navbtn-active"><i data-feather="home"></i> Dashboard</a>
+        <a href="owner-bookings.php" class="ob-navbtn"><i data-feather="briefcase"></i> Reservasi</a>
+        <a href="owner-calendar.php" class="ob-navbtn"><i data-feather="calendar"></i> Kalender</a>
+        <a href="owner-invoices.php" class="ob-navbtn"><i data-feather="credit-card"></i> Invoice</a>
+        <a href="owner-finance.php" class="ob-navbtn"><i data-feather="dollar-sign"></i> Finance</a>
     </div>
 
     <div class="ob-install-banner" id="obInstallBanner">
