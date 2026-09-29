@@ -12,7 +12,22 @@ require_once '../../includes/functions.php';
 require_once 'db-helper.php';
 
 $auth = new Auth();
-$auth->requireLogin();
+
+// Link "Kirim PDF via WA" membawa token supaya tamu bisa buka invoice tanpa login.
+define('SUNSEA_INVOICE_SHARE_SECRET', 'sunsea-invoice-share-2026');
+function sunseaInvoiceShareToken(int $invoiceId): string
+{
+    return hash_hmac('sha256', (string)$invoiceId, SUNSEA_INVOICE_SHARE_SECRET);
+}
+$sharedPrintToken = $_GET['token'] ?? '';
+$isSharedPrintView = ($_GET['action'] ?? '') === 'print'
+    && (int)($_GET['id'] ?? 0) > 0
+    && $sharedPrintToken !== ''
+    && hash_equals(sunseaInvoiceShareToken((int)$_GET['id']), $sharedPrintToken);
+
+if (!$isSharedPrintView) {
+    $auth->requireLogin();
+}
 
 $pdo    = getSunseaConnection();
 sunseaEnsureFinanceSchema($pdo);
@@ -603,7 +618,7 @@ if ($action === 'print' && $invoice):
     $invoiceNotes   = sunseaSetting($pdo, 'invoice_notes', '');
     $footer         = sunseaSetting($pdo, 'invoice_footer', '');
 
-    $printPageUrl  = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https://' : 'http://') . ($_SERVER['HTTP_HOST'] ?? '') . ($_SERVER['REQUEST_URI'] ?? '');
+    $printPageUrl  = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https://' : 'http://') . ($_SERVER['HTTP_HOST'] ?? '') . '/' . ltrim(strtok($_SERVER['REQUEST_URI'] ?? '', '?'), '/') . '?action=print&id=' . (int)$invoice['id'] . '&token=' . sunseaInvoiceShareToken((int)$invoice['id']);
     $waShareMessage = 'Halo ' . $invoice['customer_name'] . ', berikut invoice ' . $invoice['invoice_no'] . '. Silakan buka link berikut untuk melihat/menyimpan sebagai PDF: ' . $printPageUrl;
     $waShareLink   = sunseaWaLink((string)($invoice['customer_phone'] ?? ''), $waShareMessage);
 
