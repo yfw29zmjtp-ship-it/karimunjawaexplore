@@ -265,8 +265,8 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
 
         .ob-card {
             background: #fff;
-            border-radius: 12px;
-            padding: 11px 12px;
+            border-radius: 11px;
+            padding: 9px 10px;
             text-decoration: none;
             color: inherit;
             box-shadow: 0 1px 4px rgba(15, 23, 42, .05);
@@ -281,7 +281,7 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
         }
 
         .ob-card-label {
-            font-size: 9px;
+            font-size: 8.5px;
             color: var(--muted);
             text-transform: uppercase;
             font-weight: 700;
@@ -289,14 +289,14 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
         }
 
         .ob-card-value {
-            font-size: 17px;
+            font-size: 14px;
             font-weight: 800;
-            margin: 4px 0 1px;
+            margin: 3px 0 1px;
             letter-spacing: -.2px;
         }
 
         .ob-card-sub {
-            font-size: 9.5px;
+            font-size: 9px;
             color: var(--muted);
             line-height: 1.4;
         }
@@ -382,14 +382,14 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
         }
 
         .ob-row-sub {
-            font-size: 10.5px;
+            font-size: 10px;
             color: var(--muted);
             margin-top: 1px;
         }
 
         .ob-row-meta {
             text-align: right;
-            font-size: 10.5px;
+            font-size: 10px;
             color: var(--muted);
             font-weight: 600;
             flex-shrink: 0;
@@ -850,12 +850,12 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
                                     <div class="ob-row-title"><?php echo htmlspecialchars($inv['customer_name']); ?></div>
                                     <div class="ob-row-sub"><?php echo htmlspecialchars($inv['invoice_no']); ?> · JT <?php echo $inv['due_date'] ? date('d M Y', strtotime($inv['due_date'])) : '-'; ?></div>
                                 </div>
-                                <div style="font-size:11.5px;font-weight:800;color:var(--danger);text-align:right;flex-shrink:0;">
+                                <div style="font-size:10px;font-weight:800;color:var(--danger);text-align:right;flex-shrink:0;">
                                     Sisa Tagihan<br><?php echo sunseaRupiah((float)$inv['remaining_amount']); ?>
                                 </div>
                             </div>
                             <?php if ((float)$inv['paid_amount'] > 0): ?>
-                                <div style="display:flex;gap:12px;font-size:10.5px;color:var(--muted);border-top:1px dashed var(--border);margin-top:8px;padding-top:6px;">
+                                <div style="display:flex;gap:12px;font-size:9.5px;color:var(--muted);border-top:1px dashed var(--border);margin-top:8px;padding-top:6px;">
                                     <span>Total Paket: <strong style="color:var(--text);"><?php echo sunseaRupiah((float)$inv['total_amount']); ?></strong></span>
                                     <span>DP Terbayar: <strong style="color:var(--success);"><?php echo sunseaRupiah((float)$inv['paid_amount']); ?></strong></span>
                                 </div>
