@@ -66,8 +66,43 @@
         };
     }
 
+    // Di iPhone/iPad, Safari HANYA mengirim push notification di background kalau
+    // situs sudah di-"Add to Home Screen" dan dibuka sebagai app (standalone) -
+    // dibuka sebagai tab Safari biasa TIDAK akan pernah dapat notif walau sudah izinkan.
+    function showInstallFirstPrompt() {
+        if (localStorage.getItem('owner_push_install_prompted')) return;
+        var el = document.createElement('div');
+        el.id = 'ownerPushInstallPrompt';
+        el.innerHTML =
+            '<div style="position:fixed;bottom:86px;left:50%;transform:translateX(-50%);z-index:10000;background:#B45309;color:#fff;padding:14px 18px;border-radius:14px;box-shadow:0 8px 32px rgba(180,83,9,.4);max-width:320px;width:90%;font-size:13px;">' +
+            '<div style="display:flex;align-items:flex-start;gap:10px;">' +
+            '<span style="font-size:20px;">\uD83D\uDCF2</span>' +
+            '<div style="flex:1;">' +
+            '<div style="font-weight:700;margin-bottom:3px;">Install Dulu untuk Notifikasi</div>' +
+            '<div style="font-size:12px;opacity:.95;">Di iPhone, notifikasi hanya jalan kalau app ini di-install: tap ikon Share (kotak+panah) di Safari &rarr; "Add to Home Screen", lalu buka lagi dari icon di layar utama.</div>' +
+            '</div>' +
+            '<span id="ownerPushInstallClose" style="cursor:pointer;opacity:.7;font-size:16px;">&times;</span>' +
+            '</div></div>';
+        document.body.appendChild(el);
+        document.getElementById('ownerPushInstallClose').onclick = function () {
+            el.remove();
+            localStorage.setItem('owner_push_install_prompted', '1');
+        };
+    }
+
     async function initOwnerPush() {
         if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+
+        var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        var isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+
+        // iOS wajib "Add to Home Screen" dulu - kalau belum, subscribe akan gagal/tidak
+        // pernah kirim notif di background, jadi tuntun user install dulu, jangan minta izin.
+        if (isIOS && !isStandalone) {
+            setTimeout(showInstallFirstPrompt, 4000);
+            return;
+        }
+
         try {
             var reg = await navigator.serviceWorker.ready;
             var resp = await fetch(PUSH_API + '?action=vapid-public-key');
