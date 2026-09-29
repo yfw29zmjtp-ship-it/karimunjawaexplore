@@ -180,26 +180,16 @@ try {
     $paxYearLabels = json_encode($paxYearLabels);
     $paxYearlyTotals = json_encode($paxYearlyTotals);
 
-    // Pax per paket wisata aktif, dengan periode harian (hari ini) / bulanan (bulan ini) / tahunan (tahun ini)
-    $activePackages = $pdo->query("SELECT id, name FROM trip_packages WHERE is_active = 1 ORDER BY display_order, name")->fetchAll();
-    $packageLabels = json_encode(array_column($activePackages, 'name'));
-
-    $paxPkgPeriodSql = function (string $dateCondition) use ($pdo, $activePackages) {
-        $stmt = $pdo->prepare("
-            SELECT COALESCE(SUM(b.pax_count),0) AS total_pax
-            FROM booking_orders b
-            WHERE b.package_id = ? AND b.status <> 'cancelled' AND $dateCondition
-        ");
-        $values = [];
-        foreach ($activePackages as $pkg) {
-            $stmt->execute([$pkg['id']]);
-            $values[] = (int)$stmt->fetchColumn();
-        }
-        return $values;
-    };
-    $packagePaxDaily = json_encode($paxPkgPeriodSql('b.start_date = CURDATE()'));
-    $packagePaxMonthly = json_encode($paxPkgPeriodSql("DATE_FORMAT(b.start_date,'%Y-%m') = DATE_FORMAT(CURDATE(),'%Y-%m')"));
-    $packagePaxYearly = json_encode($paxPkgPeriodSql('YEAR(b.start_date) = YEAR(CURDATE())'));
+    // Tamu yang datang hari ini dan yang akan datang sesudahnya
+    $upcomingArrivals = $pdo->query("
+        SELECT b.start_date, b.pax_count, c.name AS customer_name, tp.name AS package_name
+        FROM booking_orders b
+        JOIN customers c ON c.id = b.customer_id
+        LEFT JOIN trip_packages tp ON tp.id = b.package_id
+        WHERE b.status <> 'cancelled' AND b.start_date >= CURDATE()
+        ORDER BY b.start_date ASC
+        LIMIT 10
+    ")->fetchAll();
 } catch (Exception $e) {
     $dbError = $e->getMessage();
     $qStats = ['total' => 0, 'draft' => 0, 'sent' => 0, 'approved' => 0];
@@ -224,6 +214,7 @@ try {
     $packagePaxDaily = json_encode([]);
     $packagePaxMonthly = json_encode([]);
     $packagePaxYearly = json_encode([]);
+    $upcomingArrivals = [];
 }
 
 include 'layout-header.php';
@@ -415,22 +406,44 @@ if (isset($dbError)): ?>
         </div>
     </div>
 
-    <!-- Pax per Paket -->
+    <!-- Tamu yang Akan Datang -->
     <div class="ss-card">
         <div class="ss-card-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">
             <div>
-                <div class="ss-card-title">Pax per Paket Wisata</div>
-                <div class="ss-card-sub" id="paxPkgChartSub">Jumlah tamu yang booking di tiap paket, bulan ini</div>
-            </div>
-            <div style="display:flex;gap:6px;">
-                <button type="button" id="paxPkgChartBtnDaily" class="ss-btn ss-btn-sm ss-btn-outline" onclick="switchPaxPkgChart('daily')">Harian</button>
-                <button type="button" id="paxPkgChartBtnMonthly" class="ss-btn ss-btn-sm ss-btn-outline" onclick="switchPaxPkgChart('monthly')">Bulanan</button>
-                <button type="button" id="paxPkgChartBtnYearly" class="ss-btn ss-btn-sm ss-btn-outline" onclick="switchPaxPkgChart('yearly')">Tahunan</button>
+                <div class="ss-card-title">Tamu yang Akan Datang</div>
+                <div class="ss-card-sub">Kedatangan hari ini dan sesudahnya</div>
             </div>
         </div>
-        <div style="position:relative;height:300px;padding:10px;">
-            <canvas id="paxByPackageChart"></canvas>
-        </div>
+        <?php if (empty($upcomingArrivals)): ?>
+            <div class="ss-empty">
+                <div class="ss-empty-icon">🧳</div>
+                <h3>Belum ada tamu terjadwal</h3>
+                <p>Belum ada booking dengan tanggal kedatangan hari ini atau sesudahnya</p>
+            </div>
+        <?php else: ?>
+            <div class="ss-table-wrap">
+                <table class="ss-table">
+                    <thead>
+                        <tr>
+                            <th>Tanggal</th>
+                            <th>Tamu</th>
+                            <th>Paket</th>
+                            <th>Pax</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($upcomingArrivals as $arrival): ?>
+                            <tr>
+                                <td><?php echo htmlspecialchars(date('d M Y', strtotime($arrival['start_date']))); ?></td>
+                                <td><?php echo htmlspecialchars($arrival['customer_name']); ?></td>
+                                <td><?php echo htmlspecialchars($arrival['package_name'] ?? '-'); ?></td>
+                                <td><?php echo (int) $arrival['pax_count']; ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif; ?>
     </div>
 
 </div>
@@ -756,95 +769,6 @@ if (isset($dbError)): ?>
         });
     }
     switchPaxChart('monthly');
-
-    // Pax per Paket Wisata: toggle Harian / Bulanan / Tahunan
-    const paxPkgPalette = ['#0891b2', '#F59E0B', '#10b981', '#8b5cf6', '#ef4444', '#0369a1', '#db2777', '#65a30d'];
-    const paxPkgLabels = <?php echo $packageLabels; ?>;
-    const paxPkgData = {
-        daily: {
-            values: <?php echo $packagePaxDaily; ?>,
-            sub: 'Jumlah tamu yang booking di tiap paket, hari ini'
-        },
-        monthly: {
-            values: <?php echo $packagePaxMonthly; ?>,
-            sub: 'Jumlah tamu yang booking di tiap paket, bulan ini'
-        },
-        yearly: {
-            values: <?php echo $packagePaxYearly; ?>,
-            sub: 'Jumlah tamu yang booking di tiap paket, tahun ini'
-        }
-    };
-    let paxPkgChartInstance = null;
-
-    function switchPaxPkgChart(mode) {
-        const ctx = document.getElementById('paxByPackageChart');
-        if (!ctx) return;
-        const src = paxPkgData[mode];
-
-        if (paxPkgLabels.length === 0) {
-            ctx.parentElement.insertAdjacentHTML('beforeend', '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:13px;">Belum ada paket wisata aktif.</div>');
-            return;
-        }
-
-        if (paxPkgChartInstance) paxPkgChartInstance.destroy();
-        paxPkgChartInstance = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: paxPkgLabels,
-                datasets: [{
-                    label: 'Total Pax',
-                    data: src.values,
-                    backgroundColor: paxPkgLabels.map((_, i) => paxPkgPalette[i % paxPkgPalette.length]),
-                    borderRadius: 8,
-                    maxBarThickness: 28
-                }]
-            },
-            options: {
-                indexAxis: 'y',
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false
-                    }
-                },
-                scales: {
-                    x: {
-                        beginAtZero: true,
-                        ticks: {
-                            precision: 0,
-                            font: {
-                                size: 12
-                            }
-                        },
-                        grid: {
-                            color: 'rgba(0,0,0,0.05)'
-                        }
-                    },
-                    y: {
-                        grid: {
-                            display: false
-                        },
-                        ticks: {
-                            font: {
-                                size: 12
-                            }
-                        }
-                    }
-                }
-            }
-        });
-
-        document.getElementById('paxPkgChartSub').textContent = src.sub;
-        ['daily', 'monthly', 'yearly'].forEach(m => {
-            const btn = document.getElementById('paxPkgChartBtn' + m.charAt(0).toUpperCase() + m.slice(1));
-            const active = m === mode;
-            btn.style.background = active ? paxAccent : '';
-            btn.style.color = active ? '#fff' : '';
-            btn.style.borderColor = active ? paxAccent : '';
-        });
-    }
-    switchPaxPkgChart('monthly');
 
     // Quick Action Settings
     function openQuickActionSettings() {
