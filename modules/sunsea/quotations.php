@@ -459,7 +459,6 @@ if ($action === 'print' && $quotation):
 
     <head>
         <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
         <title>Penawaran <?php echo htmlspecialchars($quotation['quotation_no']); ?></title>
         <style>
             @page {
@@ -474,14 +473,10 @@ if ($action === 'print' && $quotation):
                 color-adjust: exact;
             }
 
-            html, body {
-                margin: 0;
-            }
-
             body {
                 font-family: 'Segoe UI', Arial, sans-serif;
                 font-size: 12px;
-                padding: 14px 16px;
+                padding: 12px 18px;
                 color: #1e293b;
                 background: #fff;
             }
@@ -657,9 +652,8 @@ if ($action === 'print' && $quotation):
             }
 
             .facility-list {
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-                gap: 2px 24px;
+                columns: 2;
+                column-gap: 24px;
                 margin: 0;
                 padding-left: 18px;
                 font-size: 10.5px;
@@ -669,14 +663,13 @@ if ($action === 'print' && $quotation):
 
             .bottom-flex {
                 display: flex;
-                flex-wrap: wrap;
                 justify-content: space-between;
-                gap: 16px 24px;
+                gap: 24px;
                 margin-top: 12px;
             }
 
             .bank-box {
-                flex: 1 1 220px;
+                flex: 1;
                 font-size: 11px;
                 color: #475569;
             }
@@ -690,8 +683,7 @@ if ($action === 'print' && $quotation):
             }
 
             .total {
-                flex: 1 1 220px;
-                max-width: 280px;
+                width: 280px;
             }
 
             .row {
@@ -714,14 +706,13 @@ if ($action === 'print' && $quotation):
                 font-size: 10px;
                 color: #334155;
                 line-height: 1.45;
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-                gap: 8px 22px;
-                align-content: start;
+                columns: 2;
+                column-gap: 22px;
             }
 
             .itinerary-day-group {
-                margin-bottom: 0;
+                break-inside: avoid-column;
+                margin-bottom: 8px;
                 padding: 6px 10px 7px;
                 background: #FBFBFA;
                 border: 1px solid #E2E8F0;
@@ -805,74 +796,15 @@ if ($action === 'print' && $quotation):
                 text-align: center;
             }
 
-            /* Jangan potong blok ini di tengah saat dipecah jadi halaman PDF */
-            .head,
-            .cust-row,
-            .section-title-row,
-            table,
-            tr,
-            .bottom-flex,
-            .facility-box,
-            .itinerary-day-group,
-            .thanks-note,
-            .footer-note {
-                break-inside: avoid;
-                page-break-inside: avoid;
-            }
-
-            @media (max-width: 480px) {
-                .facility-list {
-                    grid-template-columns: 1fr;
-                }
-
-                .itinerary-box {
-                    grid-template-columns: 1fr;
-                }
-            }
-
-            .pdf-action-bar {
-                display: flex;
-                gap: 12px;
-                margin: 14px 0 24px;
-            }
-
             @media print {
-                .pdf-action-bar {
-                    display: none;
+                body {
+                    padding: 0;
                 }
-            }
-
-            .pdf-action-btn {
-                flex: 1;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                gap: 8px;
-                padding: 16px 14px;
-                border-radius: 12px;
-                font-size: 16px;
-                font-weight: 700;
-                border: 1px solid #CBD5E1;
-                background: #fff;
-                color: #334155;
-                cursor: pointer;
-            }
-
-            .pdf-action-btn.primary {
-                background: #0369A1;
-                border-color: #0369A1;
-                color: #fff;
-            }
-
-            .pdf-action-btn:disabled {
-                opacity: .6;
-                cursor: default;
             }
         </style>
     </head>
 
-    <body>
-        <div id="pdfContent">
+    <body onload="window.print()">
         <div class="accent-bar"></div>
         <div class="head">
             <div style="display:flex;align-items:center;">
@@ -1015,49 +947,6 @@ if ($action === 'print' && $quotation):
             <?php if ($footer): ?><div style="margin-top:6px;"><?php echo nl2br(htmlspecialchars($footer)); ?></div><?php endif; ?>
             <div class="footer-adf-system">Powered by &copy; AdFsystem.online 2026</div>
         </div>
-        </div><!-- /#pdfContent -->
-
-        <div class="pdf-action-bar">
-            <button type="button" class="pdf-action-btn" onclick="pdfGoBack()">&#8592; Kembali</button>
-            <button type="button" id="pdfDownloadBtn" class="pdf-action-btn primary" onclick="pdfDownloadFile(this)">&#8681; Download PDF</button>
-        </div>
-
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-        <script>
-            function pdfGoBack() {
-                if (window.history.length > 1) {
-                    window.history.back();
-                } else {
-                    window.close();
-                }
-            }
-
-            function pdfDownloadFile(btn) {
-                var originalHTML = btn.innerHTML;
-                btn.disabled = true;
-                btn.innerHTML = 'Menyiapkan PDF...';
-
-                var fileName = <?php echo json_encode('Penawaran-' . $quotation['quotation_no']); ?>.replace(/[^a-zA-Z0-9._\-]/g, '_') + '.pdf';
-
-                var opt = {
-                    margin: [8, 8, 8, 8],
-                    filename: fileName,
-                    image: { type: 'jpeg', quality: 0.95 },
-                    html2canvas: { scale: 2, useCORS: true, logging: false, windowWidth: 850 },
-                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                    pagebreak: { mode: ['css', 'avoid-all'] }
-                };
-
-                html2pdf().set(opt).from(document.getElementById('pdfContent')).save().then(function() {
-                    btn.disabled = false;
-                    btn.innerHTML = originalHTML;
-                }).catch(function() {
-                    btn.disabled = false;
-                    btn.innerHTML = originalHTML;
-                    alert('Gagal membuat PDF, coba lagi.');
-                });
-            }
-        </script>
     </body>
 
     </html>
