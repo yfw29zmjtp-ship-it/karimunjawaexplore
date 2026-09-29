@@ -871,7 +871,7 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
                             </div>
                         </div>
                         <div style="display:flex;gap:8px;align-items:center;margin-top:7px;">
-                            <a href="quotations.php?action=view&id=<?php echo $wq['id']; ?>" class="ob-mini-btn">Lihat &amp; Proses</a>
+                            <a href="owner-quotation-detail.php?id=<?php echo $wq['id']; ?>" class="ob-mini-btn">Lihat &amp; Proses</a>
                             <?php if ($wq['wa_link']): ?>
                                 <a href="<?php echo htmlspecialchars($wq['wa_link']); ?>" target="_blank" class="ob-mini-btn" style="background:#25D366;color:#fff;border-color:#25D366;">Kirim WA</a>
                             <?php endif; ?>
