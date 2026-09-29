@@ -162,15 +162,46 @@ $loginBgSrc  = $loginBgFile ? sunseaAssetUrl('uploads/backgrounds/' . $loginBgFi
             width: 100%;
             padding: 12px 14px;
             border-radius: 12px;
-            border: 1.5px solid var(--border);
+            border: 1.5px solid rgba(255, 255, 255, .5);
             font-size: 14px;
             color: var(--text);
-            background: #fff;
+            background: rgba(255, 255, 255, .35);
+            backdrop-filter: blur(6px);
         }
 
         .ol-input:focus {
             outline: none;
             border-color: var(--ocean);
+            background: rgba(255, 255, 255, .55);
+        }
+
+        .ol-password-wrap {
+            position: relative;
+        }
+
+        .ol-password-wrap .ol-input {
+            padding-right: 42px;
+        }
+
+        .ol-eye-toggle {
+            position: absolute;
+            top: 50%;
+            right: 6px;
+            transform: translateY(-50%);
+            width: 32px;
+            height: 32px;
+            border: none;
+            background: none;
+            color: var(--muted);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .ol-eye-toggle svg {
+            width: 19px;
+            height: 19px;
         }
 
         .ol-error {
@@ -227,13 +258,33 @@ $loginBgSrc  = $loginBgFile ? sunseaAssetUrl('uploads/backgrounds/' . $loginBgFi
             </div>
             <div class="ol-field">
                 <label class="ol-label">Password</label>
-                <input type="password" name="password" class="ol-input" required>
+                <div class="ol-password-wrap">
+                    <input type="password" name="password" id="olPassword" class="ol-input" required>
+                    <button type="button" class="ol-eye-toggle" onclick="olTogglePassword()" aria-label="Lihat/sembunyikan password">
+                        <svg id="olEyeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                    </button>
+                </div>
             </div>
             <button type="submit" class="ol-submit">Masuk ke Monitor Owner</button>
         </form>
 
         <div class="ol-foot">Khusus Owner / Admin / Developer</div>
     </div>
+
+    <script>
+        function olTogglePassword() {
+            var input = document.getElementById('olPassword');
+            var icon = document.getElementById('olEyeIcon');
+            var showing = input.type === 'text';
+            input.type = showing ? 'password' : 'text';
+            icon.innerHTML = showing
+                ? '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>'
+                : '<path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.6 18.6 0 0 1 5.06-5.94M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a18.6 18.6 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line>';
+        }
+    </script>
 </body>
 
 </html>
