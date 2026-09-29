@@ -34,7 +34,46 @@ $backUrl = $backUrl ?? 'owner-dashboard.php';
             background: #F8FAFC;
             color: var(--text);
             font-size: 14px;
-            padding-bottom: 24px;
+            padding-bottom: 78px;
+        }
+
+        .ob-bottom-nav {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 800;
+            display: flex;
+            background: #fff;
+            border-top: 1px solid var(--border);
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, .06);
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        .ob-navbtn {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
+            padding: 8px 2px 7px;
+            text-decoration: none;
+            color: var(--muted);
+            font-size: 9.5px;
+            font-weight: 700;
+            line-height: 1.2;
+            text-align: center;
+        }
+
+        .ob-navbtn i,
+        .ob-navbtn svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .ob-navbtn-active {
+            color: var(--ocean);
         }
 
         .ob-topbar {
