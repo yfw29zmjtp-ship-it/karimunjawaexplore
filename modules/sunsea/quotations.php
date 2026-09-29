@@ -800,11 +800,61 @@ if ($action === 'print' && $quotation):
                 body {
                     padding: 0;
                 }
+
+                .pdf-action-bar {
+                    display: none;
+                }
+            }
+
+            body {
+                padding-bottom: 74px;
+            }
+
+            .pdf-action-bar {
+                position: fixed;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                z-index: 50;
+                display: flex;
+                gap: 10px;
+                padding: 12px 14px;
+                background: #fff;
+                border-top: 1px solid #E2E8F0;
+                box-shadow: 0 -4px 14px rgba(15, 23, 42, .08);
+            }
+
+            .pdf-action-btn {
+                flex: 1;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 6px;
+                padding: 11px 12px;
+                border-radius: 10px;
+                font-size: 13px;
+                font-weight: 700;
+                border: 1px solid #CBD5E1;
+                background: #fff;
+                color: #334155;
+                cursor: pointer;
+            }
+
+            .pdf-action-btn.primary {
+                background: #0369A1;
+                border-color: #0369A1;
+                color: #fff;
+            }
+
+            .pdf-action-btn:disabled {
+                opacity: .6;
+                cursor: default;
             }
         </style>
     </head>
 
-    <body onload="window.print()">
+    <body>
+        <div id="pdfContent">
         <div class="accent-bar"></div>
         <div class="head">
             <div style="display:flex;align-items:center;">
@@ -947,6 +997,48 @@ if ($action === 'print' && $quotation):
             <?php if ($footer): ?><div style="margin-top:6px;"><?php echo nl2br(htmlspecialchars($footer)); ?></div><?php endif; ?>
             <div class="footer-adf-system">Powered by &copy; AdFsystem.online 2026</div>
         </div>
+        </div><!-- /#pdfContent -->
+
+        <div class="pdf-action-bar">
+            <button type="button" class="pdf-action-btn" onclick="pdfGoBack()">&#8592; Kembali</button>
+            <button type="button" id="pdfDownloadBtn" class="pdf-action-btn primary" onclick="pdfDownloadFile(this)">&#8681; Download PDF</button>
+        </div>
+
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+        <script>
+            function pdfGoBack() {
+                if (window.history.length > 1) {
+                    window.history.back();
+                } else {
+                    window.close();
+                }
+            }
+
+            function pdfDownloadFile(btn) {
+                var originalHTML = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = 'Menyiapkan PDF...';
+
+                var fileName = <?php echo json_encode('Penawaran-' . $quotation['quotation_no']); ?>.replace(/[^a-zA-Z0-9._\-]/g, '_') + '.pdf';
+
+                var opt = {
+                    margin: [8, 8, 8, 8],
+                    filename: fileName,
+                    image: { type: 'jpeg', quality: 0.95 },
+                    html2canvas: { scale: 2, useCORS: true, logging: false, windowWidth: 850 },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                };
+
+                html2pdf().set(opt).from(document.getElementById('pdfContent')).save().then(function() {
+                    btn.disabled = false;
+                    btn.innerHTML = originalHTML;
+                }).catch(function() {
+                    btn.disabled = false;
+                    btn.innerHTML = originalHTML;
+                    alert('Gagal membuat PDF, coba lagi.');
+                });
+            }
+        </script>
     </body>
 
     </html>
