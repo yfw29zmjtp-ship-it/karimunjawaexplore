@@ -24,6 +24,39 @@ if ($method === 'GET' && $action === 'vapid-public-key') {
     exit;
 }
 
+// ═══ GET: Diagnostic - kirim 1 push test ke diri sendiri (owner/admin/developer) ═══
+// Dipakai untuk cek kenapa notifikasi tidak masuk, tanpa perlu akses DB langsung.
+if ($method === 'GET' && $action === 'test-send') {
+    session_status() === PHP_SESSION_NONE && session_start();
+    if (empty($_SESSION['user_id']) || !in_array($_SESSION['role'] ?? '', ['owner', 'admin', 'developer'], true)) {
+        echo json_encode(['success' => false, 'message' => 'Harus login sebagai owner/admin/developer']);
+        exit;
+    }
+
+    $autoloadPath = dirname(dirname(__FILE__)) . '/vendor/autoload.php';
+    if (!file_exists($autoloadPath)) {
+        echo json_encode(['success' => false, 'message' => 'Server push library belum ter-install (vendor/autoload.php tidak ada)']);
+        exit;
+    }
+    require_once $autoloadPath;
+    require_once dirname(dirname(__FILE__)) . '/includes/PushNotificationHelper.php';
+
+    $db = Database::getInstance();
+    $push = new PushNotificationHelper($db);
+    $myCount = $push->getSubscriptionCount((int)$_SESSION['user_id']);
+    $result = $push->sendToAdmins('Test Notifikasi', 'Ini contoh notifikasi push manual dari Owner Portal.', ['url' => 'owner-dashboard.php']);
+
+    echo json_encode([
+        'success' => true,
+        'your_subscription_count' => $myCount,
+        'send_result' => $result,
+        'note' => $myCount === 0
+            ? 'Belum ada subscription tersimpan untuk akun Anda - aktifkan dulu tombol "Aktifkan Notifikasi" di Owner Portal.'
+            : null,
+    ]);
+    exit;
+}
+
 // All other actions require POST and the PushNotificationHelper
 if ($method !== 'POST') {
     echo json_encode(['success' => false, 'message' => 'Method not allowed']);

@@ -63,7 +63,13 @@ self.addEventListener('push', event => {
     data: data.data || {}
   }
 
-  event.waitUntil(self.registration.showNotification(data.title, options))
+  event.waitUntil(
+    self.registration.showNotification(data.title, options)
+      .then(() => self.registration.getNotifications())
+      .then(list => {
+        if ('setAppBadge' in navigator) return navigator.setAppBadge(list.length)
+      })
+  )
 })
 
 self.addEventListener('notificationclick', event => {
@@ -73,14 +79,32 @@ self.addEventListener('notificationclick', event => {
     : './owner-dashboard.php'
 
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
-      for (const client of clientList) {
-        if ('focus' in client) {
-          client.navigate(urlToOpen)
-          return client.focus()
+    self.registration.getNotifications()
+      .then(list => {
+        if (!('setAppBadge' in navigator)) return
+        return list.length > 0 ? navigator.setAppBadge(list.length) : navigator.clearAppBadge()
+      })
+      .then(() => clients.matchAll({ type: 'window', includeUncontrolled: true }))
+      .then(clientList => {
+        for (const client of clientList) {
+          if ('focus' in client) {
+            client.navigate(urlToOpen)
+            return client.focus()
+          }
         }
-      }
-      if (clients.openWindow) return clients.openWindow(urlToOpen)
+        if (clients.openWindow) return clients.openWindow(urlToOpen)
+      })
+  )
+})
+
+// Dipanggil dari halaman (owner-push.js) saat app dibuka, supaya badge angka
+// di icon ter-reset karena notifikasi dianggap sudah dilihat.
+self.addEventListener('message', event => {
+  if (!event.data || event.data.type !== 'CLEAR_BADGE') return
+  event.waitUntil(
+    self.registration.getNotifications().then(list => {
+      list.forEach(n => n.close())
+      if ('setAppBadge' in navigator) return navigator.clearAppBadge()
     })
   )
 })

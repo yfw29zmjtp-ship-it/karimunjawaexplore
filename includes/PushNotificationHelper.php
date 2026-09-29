@@ -73,9 +73,7 @@ class PushNotificationHelper
             ],
         ];
 
-        $this->webPush = new WebPush($auth, [], 30, [
-            'verify' => false // disable SSL verify for local dev
-        ]);
+        $this->webPush = new WebPush($auth, [], 30);
         $this->webPush->setReuseVAPIDHeaders(true);
         $this->webPush->setAutomaticPadding(false);
     }
@@ -198,8 +196,8 @@ class PushNotificationHelper
         $payload = json_encode([
             'title'   => $title,
             'body'    => $body,
-            'icon'    => '/assets/img/logo.png',
-            'badge'   => '/assets/img/badge.png',
+            'icon'    => $data['icon'] ?? '/uploads/icons/favicon.png',
+            'badge'   => $data['badge'] ?? '/uploads/icons/favicon.png',
             'tag'     => $data['tag'] ?? 'adf-push-' . time(),
             'data'    => $data,
             'vibrate' => [200, 100, 200],

@@ -120,5 +120,20 @@
         }
     }
 
+    // Reset angka badge di icon app setiap kali owner membuka/kembali ke app -
+    // dianggap notifikasi sudah dilihat.
+    function clearBadgeOnOpen() {
+        if (!('serviceWorker' in navigator)) return;
+        navigator.serviceWorker.ready.then(function (reg) {
+            if (reg.active) reg.active.postMessage({ type: 'CLEAR_BADGE' });
+        }).catch(function () {});
+    }
+
+    document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'visible') clearBadgeOnOpen();
+    });
+
     setTimeout(initOwnerPush, 1500);
+    setTimeout(clearBadgeOnOpen, 1500);
 })();
+
