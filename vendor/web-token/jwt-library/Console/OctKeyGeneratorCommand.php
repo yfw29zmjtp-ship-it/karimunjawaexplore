@@ -6,7 +6,6 @@ namespace Jose\Component\Console;
 
 use InvalidArgumentException;
 use Jose\Component\KeyManagement\JWKFactory;
-use Override;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -15,14 +14,16 @@ use Symfony\Component\Console\Output\OutputInterface;
 #[AsCommand(name: 'key:generate:oct', description: 'Generate an octet key (JWK format)',)]
 final class OctKeyGeneratorCommand extends GeneratorCommand
 {
-    #[Override]
+    protected static $defaultName = 'key:generate:oct';
+
+    protected static $defaultDescription = 'Generate an octet key (JWK format)';
+
     protected function configure(): void
     {
         parent::configure();
         $this->addArgument('size', InputArgument::REQUIRED, 'Key size.');
     }
 
-    #[Override]
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $size = (int) $input->getArgument('size');

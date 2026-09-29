@@ -17,12 +17,13 @@ use Jose\Component\Encryption\Algorithm\KeyEncryption\KeyAgreementWithKeyWrappin
 use Jose\Component\Encryption\Algorithm\KeyEncryption\KeyEncryption;
 use Jose\Component\Encryption\Algorithm\KeyEncryption\KeyWrapping;
 use Jose\Component\Encryption\Algorithm\KeyEncryptionAlgorithm;
+use Jose\Component\Encryption\Compression\CompressionMethod;
+use Jose\Component\Encryption\Compression\CompressionMethodManager;
 use LogicException;
 use RuntimeException;
 use function array_key_exists;
 use function count;
 use function is_string;
-use function sprintf;
 
 class JWEBuilder
 {
@@ -38,6 +39,8 @@ class JWEBuilder
 
     protected array $sharedHeader = [];
 
+    private ?CompressionMethod $compressionMethod = null;
+
     private ?string $keyManagementMode = null;
 
     private ?ContentEncryptionAlgorithm $contentEncryptionAlgorithm = null;
@@ -46,20 +49,40 @@ class JWEBuilder
 
     private readonly AlgorithmManager $contentEncryptionAlgorithmManager;
 
-    public function __construct(AlgorithmManager $algorithmManager)
-    {
-        $keyEncryptionAlgorithms = [];
-        $contentEncryptionAlgorithms = [];
-        foreach ($algorithmManager->all() as $algorithm) {
-            if ($algorithm instanceof KeyEncryptionAlgorithm) {
-                $keyEncryptionAlgorithms[] = $algorithm;
-            }
-            if ($algorithm instanceof ContentEncryptionAlgorithm) {
-                $contentEncryptionAlgorithms[] = $algorithm;
-            }
+    public function __construct(
+        AlgorithmManager $algorithmManager,
+        null|AlgorithmManager $contentEncryptionAlgorithmManager = null,
+        private readonly null|CompressionMethodManager $compressionManager = null
+    ) {
+        if ($compressionManager !== null) {
+            trigger_deprecation(
+                'web-token/jwt-library',
+                '3.3.0',
+                'The parameter "$compressionManager" is deprecated and will be removed in 4.0.0. Compression is not recommended for JWE. Please set "null" instead.'
+            );
         }
-        $this->keyEncryptionAlgorithmManager = new AlgorithmManager($keyEncryptionAlgorithms);
-        $this->contentEncryptionAlgorithmManager = new AlgorithmManager($contentEncryptionAlgorithms);
+        if ($contentEncryptionAlgorithmManager !== null) {
+            trigger_deprecation(
+                'web-token/jwt-library',
+                '3.3.0',
+                'The parameter "$contentEncryptionAlgorithmManager" is deprecated and will be removed in 4.0.0. Please set all algorithms in the first argument and set "null" instead.'
+            );
+            $this->keyEncryptionAlgorithmManager = $algorithmManager;
+            $this->contentEncryptionAlgorithmManager = $contentEncryptionAlgorithmManager;
+        } else {
+            $keyEncryptionAlgorithms = [];
+            $contentEncryptionAlgorithms = [];
+            foreach ($algorithmManager->all() as $algorithm) {
+                if ($algorithm instanceof KeyEncryptionAlgorithm) {
+                    $keyEncryptionAlgorithms[] = $algorithm;
+                }
+                if ($algorithm instanceof ContentEncryptionAlgorithm) {
+                    $contentEncryptionAlgorithms[] = $algorithm;
+                }
+            }
+            $this->keyEncryptionAlgorithmManager = new AlgorithmManager($keyEncryptionAlgorithms);
+            $this->contentEncryptionAlgorithmManager = new AlgorithmManager($contentEncryptionAlgorithms);
+        }
     }
 
     /**
@@ -73,6 +96,7 @@ class JWEBuilder
         $this->recipients = [];
         $this->sharedProtectedHeader = [];
         $this->sharedHeader = [];
+        $this->compressionMethod = null;
         $this->keyManagementMode = null;
 
         return $this;
@@ -92,6 +116,15 @@ class JWEBuilder
     public function getContentEncryptionAlgorithmManager(): AlgorithmManager
     {
         return $this->contentEncryptionAlgorithmManager;
+    }
+
+    /**
+     * Returns the compression method manager.
+     * @deprecated This method is deprecated and will be removed in v4.0. Compression is not recommended for JWE.
+     */
+    public function getCompressionMethodManager(): null|CompressionMethodManager
+    {
+        return $this->compressionManager;
     }
 
     /**
@@ -168,6 +201,17 @@ class JWEBuilder
             }
         }
 
+        $compressionMethod = $clone->getCompressionMethod($completeHeader);
+        if ($compressionMethod !== null) {
+            if ($clone->compressionMethod === null) {
+                $clone->compressionMethod = $compressionMethod;
+            } elseif ($clone->compressionMethod->name() !== $compressionMethod->name()) {
+                throw new InvalidArgumentException('Incompatible compression method.');
+            }
+        }
+        if ($compressionMethod === null && $clone->compressionMethod !== null) {
+            throw new InvalidArgumentException('Inconsistent compression method.');
+        }
         $clone->checkKey($keyEncryptionAlgorithm, $recipientKey);
         $clone->recipients[] = [
             'key' => $recipientKey,
@@ -288,7 +332,7 @@ class JWEBuilder
         }
         $iv_size = $this->contentEncryptionAlgorithm->getIVSize();
         $iv = $this->createIV($iv_size);
-        $payload = $this->payload;
+        $payload = $this->preparePayload();
         $tag = null;
         $ciphertext = $this->contentEncryptionAlgorithm->encryptContent(
             $payload ?? '',
@@ -300,6 +344,16 @@ class JWEBuilder
         );
 
         return [$ciphertext, $iv, $tag];
+    }
+
+    private function preparePayload(): ?string
+    {
+        $prepared = $this->payload;
+        if ($this->compressionMethod === null) {
+            return $prepared;
+        }
+
+        return $this->compressionMethod->compress($prepared ?? '');
     }
 
     private function getEncryptedKey(
@@ -466,6 +520,15 @@ class JWEBuilder
                     $this->keyManagementMode
                 ));
         }
+    }
+
+    private function getCompressionMethod(array $completeHeader): ?CompressionMethod
+    {
+        if ($this->compressionManager === null || ! array_key_exists('zip', $completeHeader)) {
+            return null;
+        }
+
+        return $this->compressionManager->get($completeHeader['zip']);
     }
 
     private function areKeyManagementModesCompatible(string $current, string $new): bool

@@ -7,7 +7,6 @@ namespace Jose\Component\Console;
 use InvalidArgumentException;
 use Jose\Component\Core\JWK;
 use Jose\Component\Core\Util\JsonConverter;
-use Override;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -21,16 +20,17 @@ use function is_string;
 )]
 final class PublicKeyCommand extends ObjectOutputCommand
 {
-    #[Override]
+    protected static $defaultName = 'key:convert:public';
+
+    protected static $defaultDescription = 'Convert a private key into public key. Symmetric keys (shared keys) are not changed.';
+
     protected function configure(): void
     {
         parent::configure();
-        $this
-            ->setHelp('This command converts a private key into a public key.')
+        $this->setHelp('This command converts a private key into a public key.')
             ->addArgument('jwk', InputArgument::REQUIRED, 'The JWK object');
     }
 
-    #[Override]
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $jwk = $this->getKey($input);

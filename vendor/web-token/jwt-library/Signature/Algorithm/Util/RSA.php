@@ -12,13 +12,12 @@ use RuntimeException;
 use function chr;
 use function extension_loaded;
 use function ord;
-use function strlen;
 use const STR_PAD_LEFT;
 
 /**
  * @internal
  */
-final readonly class RSA
+final class RSA
 {
     /**
      * Probabilistic Signature Scheme.
@@ -62,7 +61,7 @@ final readonly class RSA
      */
     public static function signWithPSS(RSAKey $key, string $message, string $hash): string
     {
-        $em = self::encodeEMSAPSS($message, 8 * $key->getModulusLength() - 1, Hash::get($hash));
+        $em = self::encodeEMSAPSS($message, 8 * $key->getModulusLength() - 1, Hash::$hash());
         $message = BigInteger::createFromBinaryString($em);
         $signature = RSAKey::exponentiate($key, $message);
         $result = self::convertIntegerToOctetString($signature, $key->getModulusLength());
@@ -93,7 +92,7 @@ final readonly class RSA
      */
     public static function verifyWithPSS(RSAKey $key, string $message, string $signature, string $hash): bool
     {
-        if (strlen($signature) !== $key->getModulusLength()) {
+        if (mb_strlen($signature, '8bit') !== $key->getModulusLength()) {
             throw new RuntimeException();
         }
         $s2 = BigInteger::createFromBinaryString($signature);
@@ -101,13 +100,13 @@ final readonly class RSA
         $em = self::convertIntegerToOctetString($m2, $key->getModulusLength());
         $modBits = 8 * $key->getModulusLength();
 
-        return self::verifyEMSAPSS($message, $em, $modBits - 1, Hash::get($hash));
+        return self::verifyEMSAPSS($message, $em, $modBits - 1, Hash::$hash());
     }
 
     private static function convertIntegerToOctetString(BigInteger $x, int $xLen): string
     {
         $x = $x->toBytes();
-        if (strlen($x) > $xLen) {
+        if (mb_strlen($x, '8bit') > $xLen) {
             throw new RuntimeException();
         }
 
@@ -126,7 +125,7 @@ final readonly class RSA
             $t .= $mgfHash->hash($mgfSeed . $c);
         }
 
-        return substr($t, 0, $maskLen);
+        return mb_substr($t, 0, $maskLen, '8bit');
     }
 
     /**
@@ -147,9 +146,7 @@ final readonly class RSA
         $db = $ps . chr(1) . $salt;
         $dbMask = self::getMGF1($h, $emLen - $hash->getLength() - 1, $hash);
         $maskedDB = $db ^ $dbMask;
-        // PHP 8.5 Compatibility: Constrain value to 0-255 before passing to chr()
-        $shiftBits = $modulusLength & 7;
-        $maskedDB[0] = ~chr((0xFF << $shiftBits) & 0xFF) & $maskedDB[0];
+        $maskedDB[0] = ~chr(0xFF << ($modulusLength & 7)) & $maskedDB[0];
 
         return $maskedDB . $h . chr(0xBC);
     }
@@ -165,28 +162,26 @@ final readonly class RSA
         if ($emLen < $hash->getLength() + $sLen + 2) {
             throw new InvalidArgumentException();
         }
-        if ($em[strlen($em) - 1] !== chr(0xBC)) {
+        if ($em[mb_strlen($em, '8bit') - 1] !== chr(0xBC)) {
             throw new InvalidArgumentException();
         }
-        $maskedDB = substr($em, 0, -$hash->getLength() - 1);
-        $h = substr($em, -$hash->getLength() - 1, $hash->getLength());
-        // PHP 8.5 Compatibility: Constrain value to 0-255 before passing to chr()
-        $shiftBits = $emBits & 7;
-        $temp = chr((0xFF << $shiftBits) & 0xFF);
+        $maskedDB = mb_substr($em, 0, -$hash->getLength() - 1, '8bit');
+        $h = mb_substr($em, -$hash->getLength() - 1, $hash->getLength(), '8bit');
+        $temp = chr(0xFF << ($emBits & 7));
         if ((~$maskedDB[0] & $temp) !== $temp) {
             throw new InvalidArgumentException();
         }
         $dbMask = self::getMGF1($h, $emLen - $hash->getLength() - 1, $hash/*MGF*/);
         $db = $maskedDB ^ $dbMask;
-        $db[0] = ~chr((0xFF << $shiftBits) & 0xFF) & $db[0];
+        $db[0] = ~chr(0xFF << ($emBits & 7)) & $db[0];
         $temp = $emLen - $hash->getLength() - $sLen - 2;
-        if (substr($db, 0, $temp) !== str_repeat(chr(0), $temp)) {
+        if (mb_substr($db, 0, $temp, '8bit') !== str_repeat(chr(0), $temp)) {
             throw new InvalidArgumentException();
         }
         if (ord($db[$temp]) !== 1) {
             throw new InvalidArgumentException();
         }
-        $salt = substr($db, $temp + 1); // should be $sLen long
+        $salt = mb_substr($db, $temp + 1, null, '8bit'); // should be $sLen long
         $m2 = "\0\0\0\0\0\0\0\0" . $mHash . $salt;
         $h2 = $hash->hash($m2);
 

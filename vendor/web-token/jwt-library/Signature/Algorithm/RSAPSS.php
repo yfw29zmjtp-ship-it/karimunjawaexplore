@@ -8,19 +8,15 @@ use InvalidArgumentException;
 use Jose\Component\Core\JWK;
 use Jose\Component\Core\Util\RSAKey;
 use Jose\Component\Signature\Algorithm\Util\RSA as JoseRSA;
-use Override;
 use function in_array;
-use function sprintf;
 
-abstract readonly class RSAPSS implements SignatureAlgorithm
+abstract class RSAPSS implements SignatureAlgorithm
 {
-    #[Override]
     public function allowedKeyTypes(): array
     {
         return ['RSA'];
     }
 
-    #[Override]
     public function verify(JWK $key, string $input, string $signature): bool
     {
         $this->checkKey($key);
@@ -32,7 +28,6 @@ abstract readonly class RSAPSS implements SignatureAlgorithm
     /**
      * @return non-empty-string
      */
-    #[Override]
     public function sign(JWK $key, string $input): string
     {
         $this->checkKey($key);

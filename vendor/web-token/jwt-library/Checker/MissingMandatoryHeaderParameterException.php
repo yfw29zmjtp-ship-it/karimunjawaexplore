@@ -9,6 +9,8 @@ use Exception;
 class MissingMandatoryHeaderParameterException extends Exception
 {
     /**
+     * MissingMandatoryHeaderParameterException constructor.
+     *
      * @param string[] $parameters
      */
     public function __construct(

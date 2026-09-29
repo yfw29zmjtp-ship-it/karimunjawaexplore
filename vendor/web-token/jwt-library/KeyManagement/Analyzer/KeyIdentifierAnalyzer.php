@@ -5,11 +5,9 @@ declare(strict_types=1);
 namespace Jose\Component\KeyManagement\Analyzer;
 
 use Jose\Component\Core\JWK;
-use Override;
 
-final readonly class KeyIdentifierAnalyzer implements KeyAnalyzer
+final class KeyIdentifierAnalyzer implements KeyAnalyzer
 {
-    #[Override]
     public function analyze(JWK $jwk, MessageBag $bag): void
     {
         if (! $jwk->has('kid')) {

@@ -6,9 +6,8 @@ namespace Jose\Component\Signature\Serializer;
 
 use InvalidArgumentException;
 use Jose\Component\Signature\JWS;
-use function sprintf;
 
-final class JWSSerializerManager
+class JWSSerializerManager
 {
     /**
      * @var JWSSerializer[]

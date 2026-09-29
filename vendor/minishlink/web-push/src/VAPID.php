@@ -1,4 +1,7 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
+
 /*
  * This file is part of the WebPush library.
  *
@@ -18,30 +21,12 @@ use Jose\Component\Signature\Algorithm\ES256;
 use Jose\Component\Signature\JWSBuilder;
 use Jose\Component\Signature\Serializer\CompactSerializer;
 
-/**
- * @phpstan-type VapidConfig array{
- *   subject: string,
- *   publicKey: string,    // ~88 chars Base64URL
- *   privateKey: string    // ~44 chars Base64URL
- * }
- * @phpstan-type VapidPemFileConfig array{
- *   subject: string,
- *   pemFile: string       // path/to/pem
- * }
- * @phpstan-type VapidPemConfig array{
- *   subject: string,
- *   pem: string           // PEM file content
- * }
- * @phpstan-type  InputVapidConfig VapidConfig|VapidPemFileConfig|VapidPemConfig
- */
 class VAPID
 {
     private const PUBLIC_KEY_LENGTH = 65;
     private const PRIVATE_KEY_LENGTH = 32;
 
     /**
-     * @param InputVapidConfig $vapid
-     * @return VapidConfig
      * @throws \ErrorException
      */
     public static function validate(array $vapid): array
@@ -54,19 +39,19 @@ class VAPID
             $vapid['pem'] = file_get_contents($vapid['pemFile']);
 
             if (!$vapid['pem']) {
-                throw new \ErrorException('[VAPID] Error loading PEM file.');
+                throw new \ErrorException('Error loading PEM file.');
             }
         }
 
         if (isset($vapid['pem'])) {
             $jwk = JWKFactory::createFromKey($vapid['pem']);
             if ($jwk->get('kty') !== 'EC' || !$jwk->has('d') || !$jwk->has('x') || !$jwk->has('y')) {
-                throw new \ErrorException('[VAPID] Invalid PEM data.');
+                throw new \ErrorException('Invalid PEM data.');
             }
 
             $binaryPublicKey = hex2bin(Utils::serializePublicKeyFromJWK($jwk));
             if (!$binaryPublicKey) {
-                throw new \ErrorException('[VAPID] Failed to convert VAPID public key from hexadecimal to binary.');
+                throw new \ErrorException('Failed to convert VAPID public key from hexadecimal to binary');
             }
             $vapid['publicKey'] = base64_encode($binaryPublicKey);
             $vapid['privateKey'] = base64_encode(str_pad(Base64Url::decode($jwk->get('d')), self::PRIVATE_KEY_LENGTH, '0', STR_PAD_LEFT));
@@ -118,7 +103,7 @@ class VAPID
         string $publicKey,
         #[\SensitiveParameter]
         string $privateKey,
-        ContentEncoding $contentEncoding,
+        string $contentEncoding,
         ?int $expiration = null,
     ): array {
         $expirationLimit = time() + 43200; // equal margin of error between 0 and 24h
@@ -131,17 +116,13 @@ class VAPID
             'alg' => 'ES256',
         ];
 
-        try {
-            $jwtPayload = json_encode(
-                [
-                    'aud' => $audience,
-                    'exp' => $expiration,
-                    'sub' => $subject,
-                ],
-                JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES
-            );
-        } catch (\JsonException $e) {
-            throw new \ErrorException('Failed to encode JWT payload in JSON: '.$e->getMessage());
+        $jwtPayload = json_encode([
+            'aud' => $audience,
+            'exp' => $expiration,
+            'sub' => $subject,
+        ], JSON_UNESCAPED_SLASHES | JSON_NUMERIC_CHECK);
+        if (!$jwtPayload) {
+            throw new \ErrorException('Failed to encode JWT payload in JSON');
         }
 
         [$x, $y] = Utils::unserializePublicKey($publicKey);
@@ -164,21 +145,20 @@ class VAPID
         $jwt = $jwsCompactSerializer->serialize($jws, 0);
         $encodedPublicKey = Base64Url::encode($publicKey);
 
-        if ($contentEncoding === ContentEncoding::aesgcm) {
+        if ($contentEncoding === "aesgcm") {
             return [
                 'Authorization' => 'WebPush '.$jwt,
                 'Crypto-Key' => 'p256ecdsa='.$encodedPublicKey,
             ];
         }
 
-        if ($contentEncoding === ContentEncoding::aes128gcm) {
+        if ($contentEncoding === 'aes128gcm') {
             return [
                 'Authorization' => 'vapid t='.$jwt.', k='.$encodedPublicKey,
             ];
         }
 
-        // @phpstan-ignore deadCode.unreachable
-        throw new \ErrorException('This content encoding is not supported.');
+        throw new \ErrorException('This content encoding is not supported');
     }
 
     /**
@@ -193,12 +173,12 @@ class VAPID
 
         $binaryPublicKey = hex2bin(Utils::serializePublicKeyFromJWK($jwk));
         if (!$binaryPublicKey) {
-            throw new \ErrorException('Failed to convert VAPID public key from hexadecimal to binary.');
+            throw new \ErrorException('Failed to convert VAPID public key from hexadecimal to binary');
         }
 
         $binaryPrivateKey = hex2bin(str_pad(bin2hex(Base64Url::decode($jwk->get('d'))), 2 * self::PRIVATE_KEY_LENGTH, '0', STR_PAD_LEFT));
         if (!$binaryPrivateKey) {
-            throw new \ErrorException('Failed to convert VAPID private key from hexadecimal to binary.');
+            throw new \ErrorException('Failed to convert VAPID private key from hexadecimal to binary');
         }
 
         return [

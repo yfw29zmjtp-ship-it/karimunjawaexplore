@@ -1,4 +1,7 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
+
 /*
  * This file is part of the WebPush library.
  *
@@ -96,7 +99,7 @@ class WebPush
                 throw new \ErrorException('Subscription should have a content encoding');
             }
 
-            $payload = Encryption::padPayload($payload, $this->automaticPadding, ContentEncoding::from($contentEncoding));
+            $payload = Encryption::padPayload($payload, $this->automaticPadding, $contentEncoding);
         }
 
         if (array_key_exists('VAPID', $auth)) {
@@ -125,7 +128,6 @@ class WebPush
      *
      * @return \Generator
      * @throws \ErrorException
-     * @throws \Random\RandomException
      */
     public function flush(?int $batchSize = null): \Generator
     {
@@ -155,7 +157,9 @@ class WebPush
                         /** @var ResponseInterface $response **/
                         return new MessageSentReport($request, $response);
                     })
-                    ->otherwise(fn($reason) => $this->createRejectedReport($reason));
+                    ->otherwise(function ($reason) {
+                        return $this->createRejectedReport($reason);
+                    });
             }
 
             foreach ($promises as $promise) {
@@ -175,7 +179,7 @@ class WebPush
      * @param null|int $batchSize Defaults the value defined in defaultOptions during instantiation (which defaults to 1000).
      * @param null|int $requestConcurrency Defaults the value defined in defaultOptions during instantiation (which defaults to 100).
      */
-    public function flushPooled(callable $callback, ?int $batchSize = null, ?int $requestConcurrency = null): void
+    public function flushPooled($callback, ?int $batchSize = null, ?int $requestConcurrency = null): void
     {
         if (empty($this->notifications)) {
             return;
@@ -196,12 +200,12 @@ class WebPush
             $batch = $this->prepare($batch);
             $pool = new Pool($this->client, $batch, [
                 'concurrency' => $requestConcurrency,
-                'fulfilled' => function (ResponseInterface $response, int $index) use ($callback, $batch): void {
+                'fulfilled' => function (ResponseInterface $response, int $index) use ($callback, $batch) {
                     /** @var RequestInterface $request **/
                     $request = $batch[$index];
                     $callback(new MessageSentReport($request, $response));
                 },
-                'rejected' => function ($reason) use ($callback): void {
+                'rejected' => function ($reason) use ($callback) {
                     $callback($this->createRejectedReport($reason));
                 },
             ]);
@@ -215,7 +219,11 @@ class WebPush
         }
     }
 
-    protected function createRejectedReport(RequestException|ConnectException $reason): MessageSentReport
+    /**
+     * @param RequestException|ConnectException $reason
+     * @return MessageSentReport
+     */
+    protected function createRejectedReport($reason): MessageSentReport
     {
         if ($reason instanceof RequestException) {
             $response = $reason->getResponse();
@@ -249,7 +257,7 @@ class WebPush
                     throw new \ErrorException('Subscription should have a content encoding');
                 }
 
-                $encrypted = Encryption::encrypt($payload, $userPublicKey, $userAuthToken, ContentEncoding::from($contentEncoding));
+                $encrypted = Encryption::encrypt($payload, $userPublicKey, $userAuthToken, $contentEncoding);
                 $cipherText = $encrypted['cipherText'];
                 $salt = $encrypted['salt'];
                 $localPublicKey = $encrypted['localPublicKey'];
@@ -259,12 +267,12 @@ class WebPush
                     'Content-Encoding' => $contentEncoding,
                 ];
 
-                if ($contentEncoding === ContentEncoding::aesgcm->value) {
+                if ($contentEncoding === "aesgcm") {
                     $headers['Encryption'] = 'salt='.Base64Url::encode($salt);
                     $headers['Crypto-Key'] = 'dh='.Base64Url::encode($localPublicKey);
                 }
 
-                $encryptionContentCodingHeader = Encryption::getContentCodingHeader($salt, $localPublicKey, ContentEncoding::from($contentEncoding));
+                $encryptionContentCodingHeader = Encryption::getContentCodingHeader($salt, $localPublicKey, $contentEncoding);
                 $content = $encryptionContentCodingHeader.$cipherText;
 
                 $headers['Content-Length'] = (string) Utils::safeStrlen($content);
@@ -292,11 +300,11 @@ class WebPush
                     throw new \ErrorException('Audience "'.$audience.'"" could not be generated.');
                 }
 
-                $vapidHeaders = $this->getVAPIDHeaders($audience, ContentEncoding::from($contentEncoding), $auth['VAPID']);
+                $vapidHeaders = $this->getVAPIDHeaders($audience, $contentEncoding, $auth['VAPID']);
 
                 $headers['Authorization'] = $vapidHeaders['Authorization'];
 
-                if ($contentEncoding === ContentEncoding::aesgcm->value) {
+                if ($contentEncoding === 'aesgcm') {
                     if (array_key_exists('Crypto-Key', $headers)) {
                         $headers['Crypto-Key'] .= ';'.$vapidHeaders['Crypto-Key'];
                     } else {
@@ -390,13 +398,13 @@ class WebPush
     /**
      * @throws \ErrorException
      */
-    protected function getVAPIDHeaders(string $audience, ContentEncoding $contentEncoding, array $vapid): ?array
+    protected function getVAPIDHeaders(string $audience, string $contentEncoding, array $vapid): ?array
     {
         $vapidHeaders = null;
 
         $cache_key = null;
         if ($this->reuseVAPIDHeaders) {
-            $cache_key = implode('#', [$audience, $contentEncoding->value, crc32(serialize($vapid))]);
+            $cache_key = implode('#', [$audience, $contentEncoding, crc32(serialize($vapid))]);
             if (array_key_exists($cache_key, $this->vapidHeaders)) {
                 $vapidHeaders = $this->vapidHeaders[$cache_key];
             }

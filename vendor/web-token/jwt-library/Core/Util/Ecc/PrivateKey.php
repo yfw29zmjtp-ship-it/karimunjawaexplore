@@ -26,10 +26,10 @@ use Brick\Math\BigInteger;
 /**
  * @internal
  */
-final readonly class PrivateKey
+final class PrivateKey
 {
     private function __construct(
-        private BigInteger $secret
+        private readonly BigInteger $secret
     ) {
     }
 

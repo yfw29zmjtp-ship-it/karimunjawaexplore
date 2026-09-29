@@ -8,7 +8,6 @@ use InvalidArgumentException;
 use Jose\Component\Core\JWK;
 use Jose\Component\Core\Util\JsonConverter;
 use Jose\Component\KeyManagement\KeyConverter\RSAKey;
-use Override;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -19,14 +18,16 @@ use function is_string;
 #[AsCommand(name: 'key:optimize', description: 'Optimize a RSA key by calculating additional primes (CRT).',)]
 final class OptimizeRsaKeyCommand extends ObjectOutputCommand
 {
-    #[Override]
+    protected static $defaultName = 'key:optimize';
+
+    protected static $defaultDescription = 'Optimize a RSA key by calculating additional primes (CRT).';
+
     protected function configure(): void
     {
         parent::configure();
         $this->addArgument('jwk', InputArgument::REQUIRED, 'The RSA key.');
     }
 
-    #[Override]
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $jwk = $input->getArgument('jwk');

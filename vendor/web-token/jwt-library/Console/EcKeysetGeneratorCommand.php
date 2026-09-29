@@ -7,7 +7,6 @@ namespace Jose\Component\Console;
 use InvalidArgumentException;
 use Jose\Component\Core\JWKSet;
 use Jose\Component\KeyManagement\JWKFactory;
-use Override;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -17,7 +16,10 @@ use function is_string;
 #[AsCommand(name: 'keyset:generate:ec', description: 'Generate an EC key set (JWKSet format)',)]
 final class EcKeysetGeneratorCommand extends GeneratorCommand
 {
-    #[Override]
+    protected static $defaultName = 'keyset:generate:ec';
+
+    protected static $defaultDescription = 'Generate an EC key set (JWKSet format)';
+
     protected function configure(): void
     {
         parent::configure();
@@ -25,7 +27,6 @@ final class EcKeysetGeneratorCommand extends GeneratorCommand
             ->addArgument('curve', InputArgument::REQUIRED, 'Curve of the keys.');
     }
 
-    #[Override]
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $quantity = (int) $input->getArgument('quantity');

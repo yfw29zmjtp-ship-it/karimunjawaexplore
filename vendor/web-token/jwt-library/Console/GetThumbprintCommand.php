@@ -7,7 +7,6 @@ namespace Jose\Component\Console;
 use InvalidArgumentException;
 use Jose\Component\Core\JWK;
 use Jose\Component\Core\Util\JsonConverter;
-use Override;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -19,7 +18,10 @@ use function is_string;
 #[AsCommand(name: 'key:thumbprint', description: 'Get the thumbprint of a JWK key.',)]
 final class GetThumbprintCommand extends ObjectOutputCommand
 {
-    #[Override]
+    protected static $defaultName = 'key:thumbprint';
+
+    protected static $defaultDescription = 'Get the thumbprint of a JWK key.';
+
     protected function configure(): void
     {
         parent::configure();
@@ -27,7 +29,6 @@ final class GetThumbprintCommand extends ObjectOutputCommand
             ->addOption('hash', null, InputOption::VALUE_OPTIONAL, 'The hashing algorithm.', 'sha256');
     }
 
-    #[Override]
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $jwk = $input->getArgument('jwk');

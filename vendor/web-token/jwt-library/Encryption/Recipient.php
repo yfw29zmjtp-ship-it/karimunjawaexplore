@@ -6,16 +6,15 @@ namespace Jose\Component\Encryption;
 
 use InvalidArgumentException;
 use function array_key_exists;
-use function sprintf;
 
 /**
  * @internal
  */
-final readonly class Recipient
+final class Recipient
 {
     public function __construct(
-        private array $header,
-        private ?string $encryptedKey
+        private readonly array $header,
+        private readonly ?string $encryptedKey
     ) {
     }
 

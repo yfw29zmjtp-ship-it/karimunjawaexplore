@@ -5,9 +5,8 @@ declare(strict_types=1);
 namespace Jose\Component\KeyManagement\Analyzer;
 
 use JsonSerializable;
-use Override;
 
-final readonly class Message implements JsonSerializable
+class Message implements JsonSerializable
 {
     final public const SEVERITY_LOW = 'low';
 
@@ -16,8 +15,8 @@ final readonly class Message implements JsonSerializable
     final public const SEVERITY_HIGH = 'high';
 
     private function __construct(
-        private string $message,
-        private string $severity
+        private readonly string $message,
+        private readonly string $severity
     ) {
     }
 
@@ -61,7 +60,6 @@ final readonly class Message implements JsonSerializable
         return $this->severity;
     }
 
-    #[Override]
     public function jsonSerialize(): array
     {
         return [

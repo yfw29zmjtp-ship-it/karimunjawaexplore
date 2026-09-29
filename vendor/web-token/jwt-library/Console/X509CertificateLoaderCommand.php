@@ -6,7 +6,6 @@ namespace Jose\Component\Console;
 
 use InvalidArgumentException;
 use Jose\Component\KeyManagement\JWKFactory;
-use Override;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -16,14 +15,16 @@ use function is_string;
 #[AsCommand(name: 'key:load:x509', description: 'Load a key from a X.509 certificate file.',)]
 final class X509CertificateLoaderCommand extends GeneratorCommand
 {
-    #[Override]
+    protected static $defaultName = 'key:load:x509';
+
+    protected static $defaultDescription = 'Load a key from a X.509 certificate file.';
+
     protected function configure(): void
     {
         parent::configure();
         $this->addArgument('file', InputArgument::REQUIRED, 'Filename of the X.509 certificate.');
     }
 
-    #[Override]
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $file = $input->getArgument('file');

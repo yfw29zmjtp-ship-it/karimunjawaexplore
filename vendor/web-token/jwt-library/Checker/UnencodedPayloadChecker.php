@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Jose\Component\Checker;
 
-use Override;
 use function is_bool;
 
 /**
@@ -16,7 +15,6 @@ final class UnencodedPayloadChecker implements HeaderChecker
 {
     private const HEADER_NAME = 'b64';
 
-    #[Override]
     public function checkHeader(mixed $value): void
     {
         if (! is_bool($value)) {
@@ -24,13 +22,11 @@ final class UnencodedPayloadChecker implements HeaderChecker
         }
     }
 
-    #[Override]
     public function supportedHeader(): string
     {
         return self::HEADER_NAME;
     }
 
-    #[Override]
     public function protectedHeaderOnly(): bool
     {
         return true;

@@ -7,11 +7,9 @@ namespace Jose\Component\Core;
 use InvalidArgumentException;
 use Jose\Component\Core\Util\Base64UrlSafe;
 use JsonSerializable;
-use Override;
 use function array_key_exists;
 use function in_array;
 use function is_array;
-use function sprintf;
 use const JSON_THROW_ON_ERROR;
 use const JSON_UNESCAPED_SLASHES;
 use const JSON_UNESCAPED_UNICODE;
@@ -50,7 +48,6 @@ class JWK implements JsonSerializable
     /**
      * Returns the values to be serialized.
      */
-    #[Override]
     public function jsonSerialize(): array
     {
         return $this->values;

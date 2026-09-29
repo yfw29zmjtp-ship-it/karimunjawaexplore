@@ -11,24 +11,26 @@ use AESKW\Wrapper as WrapperInterface;
 use InvalidArgumentException;
 use Jose\Component\Core\JWK;
 use Jose\Component\Core\Util\Base64UrlSafe;
-use Override;
 use RuntimeException;
 use function in_array;
 use function is_int;
 use function is_string;
+use function sprintf;
 
-abstract readonly class PBES2AESKW implements KeyWrapping
+abstract class PBES2AESKW implements KeyWrapping
 {
+    public const DEFAULT_MAX_COUNT = 1_000_000;
+
     public function __construct(
         private readonly int $salt_size = 64,
-        private readonly int $nb_count = 4096
+        private readonly int $nb_count = 4096,
+        private readonly int $max_count = self::DEFAULT_MAX_COUNT
     ) {
         if (! interface_exists(WrapperInterface::class)) {
             throw new RuntimeException('Please install "spomky-labs/aes-key-wrap" to use AES-KW algorithms');
         }
     }
 
-    #[Override]
     public function allowedKeyTypes(): array
     {
         return ['oct'];
@@ -38,7 +40,6 @@ abstract readonly class PBES2AESKW implements KeyWrapping
      * @param array<string, mixed> $completeHeader
      * @param array<string, mixed> $additionalHeader
      */
-    #[Override]
     public function wrapKey(JWK $key, string $cek, array $completeHeader, array &$additionalHeader): string
     {
         $password = $this->getKey($key);
@@ -67,7 +68,6 @@ abstract readonly class PBES2AESKW implements KeyWrapping
     /**
      * @param array<string, mixed> $completeHeader
      */
-    #[Override]
     public function unwrapKey(JWK $key, string $encrypted_cek, array $completeHeader): string
     {
         $password = $this->getKey($key);
@@ -87,7 +87,6 @@ abstract readonly class PBES2AESKW implements KeyWrapping
         return $wrapper::unwrap($derived_key, $encrypted_cek);
     }
 
-    #[Override]
     public function getKeyManagementMode(): string
     {
         return self::MODE_WRAP;
@@ -138,6 +137,12 @@ abstract readonly class PBES2AESKW implements KeyWrapping
         }
         if (! is_int($header['p2c']) || $header['p2c'] <= 0) {
             throw new InvalidArgumentException('The header parameter "p2c" is not valid.');
+        }
+        if ($header['p2c'] > $this->max_count) {
+            throw new InvalidArgumentException(sprintf(
+                'The header parameter "p2c" is too large. The maximum allowed value is %d.',
+                $this->max_count
+            ));
         }
     }
 

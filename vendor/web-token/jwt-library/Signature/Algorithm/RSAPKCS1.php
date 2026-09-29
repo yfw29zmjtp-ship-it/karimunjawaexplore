@@ -7,13 +7,11 @@ namespace Jose\Component\Signature\Algorithm;
 use InvalidArgumentException;
 use Jose\Component\Core\JWK;
 use Jose\Component\Core\Util\RSAKey;
-use Override;
 use RuntimeException;
 use function extension_loaded;
 use function in_array;
-use function sprintf;
 
-abstract readonly class RSAPKCS1 implements SignatureAlgorithm
+abstract class RSAPKCS1 implements SignatureAlgorithm
 {
     public function __construct()
     {
@@ -22,13 +20,11 @@ abstract readonly class RSAPKCS1 implements SignatureAlgorithm
         }
     }
 
-    #[Override]
     public function allowedKeyTypes(): array
     {
         return ['RSA'];
     }
 
-    #[Override]
     public function verify(JWK $key, string $input, string $signature): bool
     {
         $this->checkKey($key);
@@ -37,7 +33,6 @@ abstract readonly class RSAPKCS1 implements SignatureAlgorithm
         return openssl_verify($input, $signature, $pub->toPEM(), $this->getAlgorithm()) === 1;
     }
 
-    #[Override]
     public function sign(JWK $key, string $input): string
     {
         $this->checkKey($key);

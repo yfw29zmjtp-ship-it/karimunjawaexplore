@@ -18,8 +18,6 @@ use function array_key_exists;
 use function extension_loaded;
 use function is_array;
 use function is_string;
-use function sprintf;
-use function strlen;
 use const JSON_THROW_ON_ERROR;
 use const OPENSSL_KEYTYPE_RSA;
 
@@ -112,8 +110,8 @@ class JWKFactory
             case 'Ed25519':
                 $keyPair = sodium_crypto_sign_keypair();
                 $secret = sodium_crypto_sign_secretkey($keyPair);
-                $secretLength = strlen($secret);
-                $d = substr($secret, 0, -$secretLength / 2);
+                $secretLength = mb_strlen($secret, '8bit');
+                $d = mb_substr($secret, 0, -$secretLength / 2, '8bit');
                 $x = sodium_crypto_sign_publickey($keyPair);
 
                 break;
@@ -134,7 +132,7 @@ class JWKFactory
     }
 
     /**
-     * Creates a none key with the given additional values. Please note that this key type is not part of any
+     * Creates a none key with the given additional values. Please note that this key type is not pat of any
      * specification. It is used to prevent the use of the "none" algorithm with other key types.
      *
      * @param array<string, mixed> $values values to configure the key

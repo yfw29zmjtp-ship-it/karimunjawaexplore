@@ -6,7 +6,6 @@ namespace Jose\Component\Signature;
 
 use InvalidArgumentException;
 use function array_key_exists;
-use function sprintf;
 
 class Signature
 {

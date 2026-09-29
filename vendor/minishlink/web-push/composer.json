@@ -19,36 +19,33 @@
     }
   ],
   "scripts": {
-    "fix:syntax": "./vendor/bin/php-cs-fixer fix ./src",
-    "fix:syntax_tests": "./vendor/bin/php-cs-fixer fix ./tests",
+    "fix:syntax": "./vendor/bin/php-cs-fixer fix ./src --using-cache=no",
+    "fix:syntax_tests": "./vendor/bin/php-cs-fixer fix ./tests --using-cache=no",
     "test:unit": "./vendor/bin/phpunit",
     "test:unit_offline": "./vendor/bin/phpunit --exclude-group=online",
     "test:typing": "./vendor/bin/phpstan analyse",
-    "test:syntax": "./vendor/bin/php-cs-fixer fix ./src --dry-run --stop-on-violation",
-    "test:syntax_tests": "./vendor/bin/php-cs-fixer fix ./tests --dry-run --stop-on-violation"
+    "test:syntax": "./vendor/bin/php-cs-fixer fix ./src --dry-run --stop-on-violation --using-cache=no",
+    "test:syntax_tests": "./vendor/bin/php-cs-fixer fix ./tests --dry-run --stop-on-violation --using-cache=no"
   },
   "require": {
-    "php": ">=8.2",
+    "php": ">=8.1",
     "ext-curl": "*",
     "ext-json": "*",
     "ext-mbstring": "*",
     "ext-openssl": "*",
     "guzzlehttp/guzzle": "^7.9.2",
     "spomky-labs/base64url": "^2.0.4",
-    "symfony/polyfill-php83": "^1.33",
-    "web-token/jwt-library": "^3.4.9|^4.0.6"
+    "symfony/polyfill-php82": "^v1.31.0",
+    "web-token/jwt-library": "^3.3.0|^4.0.0"
   },
   "suggest": {
     "ext-bcmath": "Optional for performance.",
     "ext-gmp": "Optional for performance."
   },
   "require-dev": {
-    "friendsofphp/php-cs-fixer": "^v3.92.2",
-    "phpstan/phpstan": "^2.1.33",
-    "phpstan/phpstan-deprecation-rules": "^2.0",
-    "phpstan/phpstan-phpunit": "^2.0",
-    "phpstan/phpstan-strict-rules": "^2.0",
-    "phpunit/phpunit": "^11.5.46|^12.5.2",
+    "phpunit/phpunit": "^10.5.44|^11.5.6",
+    "phpstan/phpstan": "^2.1.2",
+    "friendsofphp/php-cs-fixer": "^v3.91.3",
     "symfony/polyfill-iconv": "^1.33"
   },
   "autoload": {

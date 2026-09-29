@@ -10,29 +10,24 @@ use Jose\Component\Core\Util\JsonConverter;
 use Jose\Component\Encryption\JWE;
 use Jose\Component\Encryption\Recipient;
 use LogicException;
-use Override;
 use Throwable;
 use function count;
 use function is_array;
-use function sprintf;
 
-final readonly class CompactSerializer implements JWESerializer
+final class CompactSerializer implements JWESerializer
 {
     public const NAME = 'jwe_compact';
 
-    #[Override]
     public function displayName(): string
     {
         return 'JWE Compact';
     }
 
-    #[Override]
     public function name(): string
     {
         return self::NAME;
     }
 
-    #[Override]
     public function serialize(JWE $jwe, ?int $recipientIndex = null): string
     {
         if ($recipientIndex === null) {
@@ -54,7 +49,6 @@ final readonly class CompactSerializer implements JWESerializer
         );
     }
 
-    #[Override]
     public function unserialize(string $input): JWE
     {
         $parts = explode('.', $input);

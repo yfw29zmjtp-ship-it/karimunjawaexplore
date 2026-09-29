@@ -14,7 +14,6 @@ use Jose\Component\Core\Util\Ecc\NistCurve;
 use Jose\Component\Core\Util\Ecc\PrivateKey;
 use Jose\Component\Core\Util\ECKey;
 use Jose\Component\Encryption\Algorithm\KeyEncryption\Util\ConcatKDF;
-use Override;
 use RuntimeException;
 use Throwable;
 use function array_key_exists;
@@ -23,12 +22,9 @@ use function function_exists;
 use function in_array;
 use function is_array;
 use function is_string;
-use function sprintf;
-use function strlen;
 
-abstract readonly class AbstractECDH implements KeyAgreement
+abstract class AbstractECDH implements KeyAgreement
 {
-    #[Override]
     public function allowedKeyTypes(): array
     {
         return ['EC', 'OKP'];
@@ -38,7 +34,6 @@ abstract readonly class AbstractECDH implements KeyAgreement
      * @param array<string, mixed> $complete_header
      * @param array<string, mixed> $additional_header_values
      */
-    #[Override]
     public function getAgreementKey(
         int $encryptionKeyLength,
         string $algorithm,
@@ -67,7 +62,6 @@ abstract readonly class AbstractECDH implements KeyAgreement
         return ConcatKDF::generate($agreed_key, $algorithm, $encryptionKeyLength, $apu, $apv);
     }
 
-    #[Override]
     public function getKeyManagementMode(): string
     {
         return self::MODE_AGREEMENT;
@@ -89,7 +83,7 @@ abstract readonly class AbstractECDH implements KeyAgreement
                         $publicPem = ECKey::convertPublicKeyToPEM($public_key);
                         $privatePem = ECKey::convertPrivateKeyToPEM($private_key);
 
-                        $res = openssl_pkey_derive($publicPem, $privatePem);
+                        $res = openssl_pkey_derive($publicPem, $privatePem, $curve->getSize());
                         if ($res === false) {
                             throw new RuntimeException('Unable to derive the key');
                         }
@@ -265,7 +259,7 @@ abstract readonly class AbstractECDH implements KeyAgreement
         }
         $hex = $dec->toBase(16);
 
-        if (strlen($hex) % 2 !== 0) {
+        if (mb_strlen($hex, '8bit') % 2 !== 0) {
             $hex = '0' . $hex;
         }
 
@@ -295,8 +289,8 @@ abstract readonly class AbstractECDH implements KeyAgreement
             case 'Ed25519':
                 $keyPair = sodium_crypto_sign_keypair();
                 $secret = sodium_crypto_sign_secretkey($keyPair);
-                $secretLength = strlen($secret);
-                $d = substr($secret, 0, -$secretLength / 2);
+                $secretLength = mb_strlen($secret, '8bit');
+                $d = mb_substr($secret, 0, -$secretLength / 2, '8bit');
                 $x = sodium_crypto_sign_publickey($keyPair);
 
                 break;

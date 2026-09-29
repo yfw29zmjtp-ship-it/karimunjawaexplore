@@ -5,10 +5,8 @@ declare(strict_types=1);
 namespace Jose\Component\Checker;
 
 use InvalidArgumentException;
-use function sprintf;
 
 /**
- * This class is responsible for creating and managing claim checkers.
  * @see \Jose\Tests\Component\Checker\ClaimCheckerManagerFactoryTest
  */
 class ClaimCheckerManagerFactory

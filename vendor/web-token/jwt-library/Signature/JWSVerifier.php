@@ -14,7 +14,6 @@ use Jose\Component\Core\Util\KeyChecker;
 use Jose\Component\Signature\Algorithm\MacAlgorithm;
 use Jose\Component\Signature\Algorithm\SignatureAlgorithm;
 use Throwable;
-use function sprintf;
 
 class JWSVerifier
 {
@@ -141,16 +140,17 @@ class JWSVerifier
      */
     private function getAlgorithm(Signature $signature): Algorithm
     {
-        $completeHeader = [...$signature->getProtectedHeader(), ...$signature->getHeader()];
-        if (! isset($completeHeader['alg'])) {
-            throw new InvalidArgumentException('No "alg" parameter set in the header.');
+        $protectedHeader = $signature->getProtectedHeader();
+        if (! isset($protectedHeader['alg'])) {
+            throw new InvalidArgumentException('No "alg" parameter set in the protected header.');
         }
+        $alg = $protectedHeader['alg'];
 
-        $algorithm = $this->signatureAlgorithmManager->get($completeHeader['alg']);
+        $algorithm = $this->signatureAlgorithmManager->get($alg);
         if (! $algorithm instanceof SignatureAlgorithm && ! $algorithm instanceof MacAlgorithm) {
             throw new InvalidArgumentException(sprintf(
                 'The algorithm "%s" is not supported or is not a signature or MAC algorithm.',
-                $completeHeader['alg']
+                $alg
             ));
         }
 

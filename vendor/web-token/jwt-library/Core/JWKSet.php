@@ -14,7 +14,6 @@ use function array_key_exists;
 use function count;
 use function in_array;
 use function is_array;
-use function sprintf;
 use const COUNT_NORMAL;
 use const JSON_THROW_ON_ERROR;
 

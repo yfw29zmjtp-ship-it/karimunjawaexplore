@@ -6,14 +6,10 @@ namespace Jose\Component\KeyManagement\Analyzer;
 
 use Jose\Component\Core\JWK;
 use Jose\Component\Core\Util\Base64UrlSafe;
-use Override;
 use function is_string;
-use function sprintf;
-use function strlen;
 
-abstract readonly class HSKeyAnalyzer implements KeyAnalyzer
+abstract class HSKeyAnalyzer implements KeyAnalyzer
 {
-    #[Override]
     public function analyze(JWK $jwk, MessageBag $bag): void
     {
         if ($jwk->get('kty') !== 'oct') {
@@ -29,7 +25,7 @@ abstract readonly class HSKeyAnalyzer implements KeyAnalyzer
             return;
         }
         $k = Base64UrlSafe::decodeNoPadding($k);
-        $kLength = 8 * strlen($k);
+        $kLength = 8 * mb_strlen($k, '8bit');
         if ($kLength < $this->getMinimumKeySize()) {
             $bag->add(
                 Message::high(sprintf(

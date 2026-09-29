@@ -6,12 +6,11 @@ namespace Jose\Component\Encryption\Algorithm\ContentEncryption;
 
 use Jose\Component\Core\Util\Base64UrlSafe;
 use Jose\Component\Encryption\Algorithm\ContentEncryptionAlgorithm;
-use Override;
 use RuntimeException;
 use function extension_loaded;
 use const OPENSSL_RAW_DATA;
 
-abstract readonly class AESGCM implements ContentEncryptionAlgorithm
+abstract class AESGCM implements ContentEncryptionAlgorithm
 {
     public function __construct()
     {
@@ -20,13 +19,11 @@ abstract readonly class AESGCM implements ContentEncryptionAlgorithm
         }
     }
 
-    #[Override]
     public function allowedKeyTypes(): array
     {
         return []; //Irrelevant
     }
 
-    #[Override]
     public function encryptContent(
         string $data,
         string $cek,
@@ -48,7 +45,6 @@ abstract readonly class AESGCM implements ContentEncryptionAlgorithm
         return $result;
     }
 
-    #[Override]
     public function decryptContent(
         string $data,
         string $cek,
@@ -70,7 +66,6 @@ abstract readonly class AESGCM implements ContentEncryptionAlgorithm
         return $result;
     }
 
-    #[Override]
     public function getIVSize(): int
     {
         return 96;
