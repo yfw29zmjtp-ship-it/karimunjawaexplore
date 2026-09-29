@@ -342,6 +342,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['flash_message'] = count($ids) . ' penawaran berhasil dihapus.';
             $_SESSION['flash_type']    = 'success';
         }
+        if (!empty($_POST['redirect_web_history'])) {
+            header('Location: quotations.php?web_history=1');
+            exit;
+        }
         $redirectStatus = trim($_POST['redirect_status'] ?? '');
         header('Location: quotations.php' . ($redirectStatus !== '' ? '?status=' . urlencode($redirectStatus) : ''));
         exit;
@@ -410,8 +414,16 @@ $mdFacilities = qSafeAll($pdo, "SELECT id, name, price_sell, unit FROM facilitie
 
 // List
 $filter = $_GET['status'] ?? '';
-$whereClause = $filter ? "WHERE q.status=?" : "";
-$listParams  = $filter ? [$filter] : [];
+$isWebHistory = isset($_GET['web_history']);
+if ($isWebHistory) {
+    $whereClause = "WHERE q.created_by = 'website' AND q.viewed_at IS NOT NULL";
+    $listParams  = [];
+    $orderClause = "ORDER BY q.viewed_at DESC";
+} else {
+    $whereClause = $filter ? "WHERE q.status=?" : "";
+    $listParams  = $filter ? [$filter] : [];
+    $orderClause = "ORDER BY q.created_at DESC";
+}
 
 $quotations = $pdo->prepare("
     SELECT q.id, q.quotation_no, q.status, q.total_amount, q.trip_date, q.valid_until, q.created_at,
@@ -420,18 +432,19 @@ $quotations = $pdo->prepare("
     JOIN customers c ON c.id = q.customer_id
     LEFT JOIN booking_orders b ON b.quotation_id = q.id
     $whereClause
-    ORDER BY q.created_at DESC
-    LIMIT 100
+    $orderClause
+    LIMIT 200
 ");
 $quotations->execute($listParams);
 $quotations = $quotations->fetchAll();
 
-$pageTitle  = match ($action) {
-    'add'   => 'Buat Penawaran Baru',
-    'edit'  => 'Edit Penawaran',
-    'view'  => 'Detail Penawaran',
-    'print' => 'Cetak Penawaran',
-    default => 'Daftar Penawaran'
+$pageTitle  = match (true) {
+    $action === 'add'   => 'Buat Penawaran Baru',
+    $action === 'edit'  => 'Edit Penawaran',
+    $action === 'view'  => 'Detail Penawaran',
+    $action === 'print' => 'Cetak Penawaran',
+    $isWebHistory       => 'Riwayat Penawaran Web',
+    default             => 'Daftar Penawaran'
 };
 $activePage = 'quotations';
 
@@ -1433,39 +1446,54 @@ include 'layout-header.php';
     <div class="ss-card">
         <div class="ss-card-header">
             <div>
-                <div class="ss-card-title">Daftar Penawaran</div>
-                <div class="ss-card-sub"><?php echo count($quotations); ?> penawaran</div>
+                <div class="ss-card-title"><?php echo $isWebHistory ? 'Riwayat Penawaran Web' : 'Daftar Penawaran'; ?></div>
+                <div class="ss-card-sub">
+                    <?php echo count($quotations); ?> penawaran
+                    <?php if ($isWebHistory): ?> · sudah dibuka, bisa dihapus kapan saja<?php endif; ?>
+                </div>
             </div>
             <div style="display:flex;gap:8px;">
                 <button type="button" id="bulkDeleteBtn" class="ss-btn ss-btn-outline" style="display:none;color:#dc2626;border-color:#dc2626;" onclick="submitBulkDelete()">
                     <i data-feather="trash-2"></i> Hapus Terpilih (<span id="bulkDeleteCount">0</span>)
                 </button>
-                <a href="quotations.php?action=add" class="ss-btn ss-btn-primary">
-                    <i data-feather="plus"></i> Buat Penawaran
-                </a>
+                <?php if ($isWebHistory): ?>
+                    <a href="quotations.php?status=draft" class="ss-btn ss-btn-outline">
+                        <i data-feather="arrow-left"></i> Kembali
+                    </a>
+                <?php else: ?>
+                    <a href="quotations.php?web_history=1" class="ss-btn ss-btn-outline">
+                        <i data-feather="clock"></i> Riwayat Penawaran Web
+                    </a>
+                    <a href="quotations.php?action=add" class="ss-btn ss-btn-primary">
+                        <i data-feather="plus"></i> Buat Penawaran
+                    </a>
+                <?php endif; ?>
             </div>
         </div>
 
         <!-- Filter status -->
-        <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
-            <?php foreach (['' => 'Semua', 'draft' => 'Draft', 'sent' => 'Terkirim', 'approved' => 'Approved', 'rejected' => 'Ditolak', 'converted' => 'Converted'] as $st => $lbl): ?>
-                <a href="quotations.php?status=<?php echo $st; ?>"
-                    class="ss-btn ss-btn-sm <?php echo $filter === $st ? 'ss-btn-primary' : 'ss-btn-outline'; ?>">
-                    <?php echo $lbl; ?>
-                </a>
-            <?php endforeach; ?>
-        </div>
+        <?php if (!$isWebHistory): ?>
+            <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+                <?php foreach (['' => 'Semua', 'draft' => 'Draft', 'sent' => 'Terkirim', 'approved' => 'Approved', 'rejected' => 'Ditolak', 'converted' => 'Converted'] as $st => $lbl): ?>
+                    <a href="quotations.php?status=<?php echo $st; ?>"
+                        class="ss-btn ss-btn-sm <?php echo $filter === $st ? 'ss-btn-primary' : 'ss-btn-outline'; ?>">
+                        <?php echo $lbl; ?>
+                    </a>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
 
         <?php if (empty($quotations)): ?>
             <div class="ss-empty">
                 <div class="ss-empty-icon">📋</div>
-                <h3>Belum ada penawaran</h3>
+                <h3><?php echo $isWebHistory ? 'Belum ada riwayat penawaran web' : 'Belum ada penawaran'; ?></h3>
                 <p>Buat penawaran untuk customer Anda</p>
             </div>
         <?php else: ?>
             <form method="POST" id="bulkDeleteForm" onsubmit="return confirm('Hapus ' + document.getElementById('bulkDeleteCount').textContent + ' penawaran terpilih? Tindakan ini tidak bisa dibatalkan.');">
                 <input type="hidden" name="action" value="bulk_delete">
-                <input type="hidden" name="redirect_status" value="<?php echo htmlspecialchars($filter); ?>">
+                <input type="hidden" name="redirect_status" value="<?php echo $isWebHistory ? '' : htmlspecialchars($filter); ?>">
+                <input type="hidden" name="redirect_web_history" value="<?php echo $isWebHistory ? '1' : ''; ?>">
                 <div class="ss-table-wrap">
                     <table class="ss-table">
                         <thead>

@@ -44,6 +44,12 @@ if (!$quotation) {
     exit;
 }
 
+// Tandai sudah dibuka supaya hilang dari widget "Booking dari Web" di dashboard.
+if (empty($quotation['viewed_at'])) {
+    $pdo->prepare("UPDATE quotations SET viewed_at = NOW() WHERE id = ?")->execute([$id]);
+    $quotation['viewed_at'] = date('Y-m-d H:i:s');
+}
+
 $qItems = $pdo->prepare("SELECT * FROM quotation_items WHERE quotation_id=? ORDER BY id");
 $qItems->execute([$id]);
 $qItems = $qItems->fetchAll();

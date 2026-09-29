@@ -89,8 +89,8 @@ $monthIncome  = (float)$financeRow['total_income'];
 $monthExpense = (float)$financeRow['total_expense'];
 $monthBalance = $monthIncome - $monthExpense;
 
-// Booking/penawaran masuk dari form kontak website (belum diproses owner)
-$webQuotationCount = (int)$pdo->query("SELECT COUNT(*) FROM quotations WHERE created_by = 'website' AND status = 'draft'")->fetchColumn();
+// Booking/penawaran masuk dari form kontak website (belum diproses owner / belum dibuka)
+$webQuotationCount = (int)$pdo->query("SELECT COUNT(*) FROM quotations WHERE created_by = 'website' AND status = 'draft' AND viewed_at IS NULL")->fetchColumn();
 $webQuotations = $pdo->query("
     SELECT q.id, q.quotation_no, q.trip_date, q.pax_count, q.total_amount, q.valid_until,
            c.name AS customer_name, c.phone AS customer_phone, c.whatsapp AS customer_whatsapp,
@@ -98,7 +98,7 @@ $webQuotations = $pdo->query("
     FROM quotations q
     JOIN customers c ON c.id = q.customer_id
     LEFT JOIN trip_packages p ON p.id = q.package_id
-    WHERE q.created_by = 'website' AND q.status = 'draft'
+    WHERE q.created_by = 'website' AND q.status = 'draft' AND q.viewed_at IS NULL
     ORDER BY q.created_at DESC
     LIMIT 5
 ")->fetchAll();
@@ -855,7 +855,10 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
             <div class="ob-section" style="border-left:3px solid var(--ocean);">
                 <div class="ob-section-head">
                     <div class="ob-section-title"><i data-feather="globe"></i> Booking dari Web <span class="ob-notif-badge"><?php echo $webQuotationCount; ?></span></div>
-                    <a href="quotations.php?status=draft" class="ob-section-link">Lihat Semua →</a>
+                    <div style="display:flex;gap:10px;align-items:center;">
+                        <a href="quotations.php?web_history=1" class="ob-section-link" title="Riwayat penawaran yang sudah dibuka"><i data-feather="clock"></i> Riwayat</a>
+                        <a href="quotations.php?status=draft" class="ob-section-link">Lihat Semua →</a>
+                    </div>
                 </div>
                 <?php foreach ($webQuotations as $wq): ?>
                     <div class="ob-row" style="align-items:flex-start;">
@@ -879,6 +882,10 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
                         </div>
                     </div>
                 <?php endforeach; ?>
+            </div>
+        <?php else: ?>
+            <div class="ob-section" style="border-left:3px solid var(--ocean);padding:10px 14px;">
+                <a href="quotations.php?web_history=1" class="ob-section-link" style="display:flex;align-items:center;gap:6px;"><i data-feather="clock"></i> Riwayat Penawaran Web</a>
             </div>
         <?php endif; ?>
 
