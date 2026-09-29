@@ -481,29 +481,9 @@ if ($action === 'print' && $quotation):
             body {
                 font-family: 'Segoe UI', Arial, sans-serif;
                 font-size: 12px;
+                padding: 14px 16px;
                 color: #1e293b;
-                background: #E2E8F0;
-            }
-
-            /* Bungkus konten jadi 1 lembar A4 yang rapi di layar HP maupun desktop */
-            .page-sheet {
-                max-width: 794px;
-                margin: 0 auto;
-                padding: 16px 20px;
                 background: #fff;
-                box-shadow: 0 2px 16px rgba(15, 23, 42, .12);
-            }
-
-            @media print {
-                body {
-                    background: #fff;
-                }
-
-                .page-sheet {
-                    max-width: none;
-                    padding: 0;
-                    box-shadow: none;
-                }
             }
 
             .accent-bar {
@@ -677,8 +657,9 @@ if ($action === 'print' && $quotation):
             }
 
             .facility-list {
-                columns: 2;
-                column-gap: 24px;
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 2px 24px;
                 margin: 0;
                 padding-left: 18px;
                 font-size: 10.5px;
@@ -688,13 +669,14 @@ if ($action === 'print' && $quotation):
 
             .bottom-flex {
                 display: flex;
+                flex-wrap: wrap;
                 justify-content: space-between;
-                gap: 24px;
+                gap: 16px 24px;
                 margin-top: 12px;
             }
 
             .bank-box {
-                flex: 1;
+                flex: 1 1 220px;
                 font-size: 11px;
                 color: #475569;
             }
@@ -708,7 +690,8 @@ if ($action === 'print' && $quotation):
             }
 
             .total {
-                width: 280px;
+                flex: 1 1 220px;
+                max-width: 280px;
             }
 
             .row {
@@ -731,13 +714,14 @@ if ($action === 'print' && $quotation):
                 font-size: 10px;
                 color: #334155;
                 line-height: 1.45;
-                columns: 2;
-                column-gap: 22px;
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 8px 22px;
+                align-content: start;
             }
 
             .itinerary-day-group {
-                break-inside: avoid-column;
-                margin-bottom: 8px;
+                margin-bottom: 0;
                 padding: 6px 10px 7px;
                 background: #FBFBFA;
                 border: 1px solid #E2E8F0;
@@ -821,12 +805,20 @@ if ($action === 'print' && $quotation):
                 text-align: center;
             }
 
+            @media (max-width: 480px) {
+                .facility-list {
+                    grid-template-columns: 1fr;
+                }
+
+                .itinerary-box {
+                    grid-template-columns: 1fr;
+                }
+            }
+
             .pdf-action-bar {
                 display: flex;
                 gap: 12px;
-                max-width: 794px;
-                margin: 14px auto 24px;
-                padding: 0 20px;
+                margin: 14px 0 24px;
             }
 
             @media print {
@@ -865,7 +857,7 @@ if ($action === 'print' && $quotation):
     </head>
 
     <body>
-        <div class="page-sheet" id="pdfContent">
+        <div id="pdfContent">
         <div class="accent-bar"></div>
         <div class="head">
             <div style="display:flex;align-items:center;">
