@@ -81,6 +81,9 @@ include 'owner-mobile-header.php';
                 <i data-feather="edit-2"></i> Edit
             </a>
         <?php endif; ?>
+        <a href="<?php echo htmlspecialchars($waShareUrl); ?>" target="_blank" rel="noopener" class="ob-qbtn" style="flex:1;">
+            <i data-feather="printer"></i> Simpan PDF
+        </a>
         <?php if ($waLink): ?>
             <a href="<?php echo htmlspecialchars($waLink); ?>" target="_blank" rel="noopener" class="ob-qbtn" style="flex:1;background:#25D366;border-color:#25D366;color:#fff;">
                 <i data-feather="message-circle"></i> Kirim Penawaran

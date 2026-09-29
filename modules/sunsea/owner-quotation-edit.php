@@ -52,6 +52,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $qtys         = $_POST['item_qty']         ?? [];
     $units        = $_POST['item_unit']        ?? [];
     $prices       = $_POST['item_price']       ?? [];
+    $types        = $_POST['item_type']        ?? [];
+    $allowedTypes = ['accommodation', 'transport', 'meal', 'activity', 'guide', 'equipment', 'other'];
 
     $subtotal = 0;
     $items    = [];
@@ -62,7 +64,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $price = (float)str_replace(['.', ','], ['', '.'], $prices[$i] ?? '0');
         $sub   = $qty * $price;
         $subtotal += $sub;
+        $type  = $types[$i] ?? 'other';
         $items[] = [
+            'item_type'   => in_array($type, $allowedTypes, true) ? $type : 'other',
             'description' => $desc,
             'qty'         => $qty,
             'unit'        => trim($units[$i] ?? 'pax') ?: 'pax',
@@ -96,7 +100,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         foreach ($items as $idx => $item) {
             $insItem->execute([
                 $id,
-                'other',
+                $item['item_type'],
                 $item['description'],
                 $item['qty'],
                 $item['unit'],
@@ -115,7 +119,38 @@ $qItems = $pdo->prepare("SELECT * FROM quotation_items WHERE quotation_id=? ORDE
 $qItems->execute([$id]);
 $qItems = $qItems->fetchAll();
 if (empty($qItems)) {
-    $qItems = [['description' => '', 'qty' => 1, 'unit' => 'pax', 'unit_price' => 0]];
+    $qItems = [['item_type' => 'other', 'description' => '', 'qty' => 1, 'unit' => 'pax', 'unit_price' => 0]];
+}
+
+function obSafeAll(PDO $pdo, string $sql): array
+{
+    try {
+        return $pdo->query($sql)->fetchAll();
+    } catch (Exception $e) {
+        return [];
+    }
+}
+
+sunseaEnsureMasterDataSchema($pdo);
+sunseaEnsureAccommodationSchema($pdo);
+$mdTickets    = obSafeAll($pdo, "SELECT id, ticket_name, ticket_type, price_sell, unit FROM tickets WHERE is_active=1 ORDER BY ticket_type, ticket_name");
+$mdTransport  = obSafeAll($pdo, "SELECT id, name, transport_type, price_sell, unit FROM transport_items WHERE is_active=1 ORDER BY transport_type, name");
+$mdRooms      = obSafeAll($pdo, "SELECT r.id, r.room_type, r.price_sell, p.name as partner_name FROM accommodation_rooms r JOIN accommodation_partners p ON p.id=r.partner_id WHERE r.is_active=1 AND p.is_active=1 ORDER BY p.name, r.room_type");
+$mdCaterings  = obSafeAll($pdo, "SELECT id, menu_name, vendor_name, price_sell, portion_unit FROM caterings WHERE is_active=1 ORDER BY vendor_name, menu_name");
+$mdFacilities = obSafeAll($pdo, "SELECT id, name, price_sell, unit FROM facilities WHERE is_active=1 ORDER BY name");
+$quickAddGroups = [
+    ['label' => 'Tiket & Retribusi (PP kapal/ferry/tiket masuk)', 'type' => 'other', 'options' => $mdTickets, 'nameField' => 'ticket_name', 'extra' => 'ticket_type', 'unitField' => 'unit'],
+    ['label' => 'Transportasi', 'type' => 'transport', 'options' => $mdTransport, 'nameField' => 'name', 'extra' => 'transport_type', 'unitField' => 'unit'],
+    ['label' => 'Penginapan', 'type' => 'accommodation', 'options' => $mdRooms, 'nameField' => 'room_type', 'extra' => 'partner_name', 'unitField' => null],
+    ['label' => 'Makanan / Catering', 'type' => 'meal', 'options' => $mdCaterings, 'nameField' => 'menu_name', 'extra' => 'vendor_name', 'unitField' => 'portion_unit'],
+    ['label' => 'Fasilitas Tambahan', 'type' => 'equipment', 'options' => $mdFacilities, 'nameField' => 'name', 'extra' => null, 'unitField' => 'unit'],
+];
+$hasAnyMasterData = false;
+foreach ($quickAddGroups as $g) {
+    if (!empty($g['options'])) {
+        $hasAnyMasterData = true;
+        break;
+    }
 }
 
 $pageTitle = 'Edit Penawaran';
@@ -191,6 +226,51 @@ include 'owner-mobile-header.php';
         font-size: 12.5px;
         font-weight: 700;
         cursor: pointer;
+        margin-bottom: 10px;
+    }
+
+    .ob-quickadd-box {
+        background: var(--sky);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 10px;
+        margin-bottom: 12px;
+    }
+
+    .ob-quickadd-title {
+        font-size: 10px;
+        font-weight: 700;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: .3px;
+        margin-bottom: 8px;
+    }
+
+    .ob-quickadd-row {
+        display: flex;
+        gap: 6px;
+    }
+
+    .ob-quickadd-row select {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .ob-quickadd-row input {
+        width: 56px;
+        flex-shrink: 0;
+    }
+
+    .ob-quickadd-btn {
+        flex-shrink: 0;
+        padding: 0 12px;
+        border: none;
+        border-radius: 9px;
+        background: var(--ocean);
+        color: #fff;
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
     }
 
     .ob-total-bar {
@@ -232,10 +312,48 @@ include 'owner-mobile-header.php';
         <div class="ob-section-head">
             <div class="ob-section-title"><i data-feather="tag"></i> Harga Jual &amp; Fasilitas</div>
         </div>
+
+        <?php if ($hasAnyMasterData): ?>
+            <div class="ob-quickadd-box">
+                <div class="ob-quickadd-title">Tambah Fasilitas dari Database</div>
+                <div class="ob-quickadd-row">
+                    <select class="ob-form-input" id="obQaSelect">
+                        <option value="">-- Pilih item (tiket, transport, penginapan, dll) --</option>
+                        <?php foreach ($quickAddGroups as $g):
+                            if (empty($g['options'])) continue;
+                        ?>
+                            <optgroup label="<?php echo htmlspecialchars($g['label']); ?>">
+                                <?php foreach ($g['options'] as $o):
+                                    $name  = $o[$g['nameField']];
+                                    $extra = $g['extra'] ? ' - ' . $o[$g['extra']] : '';
+                                    $unit  = $g['unitField'] ? ($o[$g['unitField']] ?: 'pax') : 'pax';
+                                ?>
+                                    <option value="<?php echo $o['id']; ?>"
+                                        data-type="<?php echo $g['type']; ?>"
+                                        data-name="<?php echo htmlspecialchars($name . $extra); ?>"
+                                        data-price="<?php echo (float)$o['price_sell']; ?>"
+                                        data-unit="<?php echo htmlspecialchars($unit); ?>">
+                                        <?php echo htmlspecialchars($name . $extra); ?> (<?php echo sunseaRupiah((float)$o['price_sell']); ?>)
+                                    </option>
+                                <?php endforeach; ?>
+                            </optgroup>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="ob-quickadd-row" style="margin-top:6px;">
+                    <input type="number" class="ob-form-input" id="obQaQty" value="1" min="0" step="1" placeholder="Qty">
+                    <button type="button" class="ob-quickadd-btn" style="flex:1;" onclick="obQuickAddItem()">+ Tambahkan ke Daftar</button>
+                </div>
+            </div>
+        <?php else: ?>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">Belum ada data master (Tiket/Transport/Penginapan/Catering/Fasilitas). Isi dulu di menu Database pada sistem utama.</div>
+        <?php endif; ?>
+
         <div id="obItemsWrap">
             <?php foreach ($qItems as $it): ?>
                 <div class="ob-item-card">
                     <button type="button" class="ob-item-remove" onclick="obRemoveItem(this)">Hapus</button>
+                    <input type="hidden" name="item_type[]" value="<?php echo htmlspecialchars($it['item_type'] ?? 'other'); ?>">
                     <input type="text" class="ob-form-input" name="item_description[]" placeholder="Nama fasilitas / item"
                         value="<?php echo htmlspecialchars($it['description']); ?>" required>
                     <div class="ob-item-card-grid">
@@ -251,7 +369,7 @@ include 'owner-mobile-header.php';
                 </div>
             <?php endforeach; ?>
         </div>
-        <button type="button" class="ob-add-item-btn" onclick="obAddItem()">+ Tambah Fasilitas / Item</button>
+        <button type="button" class="ob-add-item-btn" onclick="obAddItem()">+ Tambah Baris Manual</button>
         <div class="ob-total-bar">
             <span>Total Penawaran</span>
             <span id="obTotalPreview">-</span>
@@ -310,23 +428,52 @@ include 'owner-mobile-header.php';
         obRecalcTotal();
     }
 
-    function obAddItem() {
-        var wrap = document.getElementById('obItemsWrap');
+    function obMakeItemCard(desc, qty, unit, price, type) {
         var card = document.createElement('div');
         card.className = 'ob-item-card';
         card.innerHTML = '<button type="button" class="ob-item-remove" onclick="obRemoveItem(this)">Hapus</button>' +
-            '<input type="text" class="ob-form-input" name="item_description[]" placeholder="Nama fasilitas / item">' +
+            '<input type="hidden" name="item_type[]" value="' + type + '">' +
+            '<input type="text" class="ob-form-input" name="item_description[]" placeholder="Nama fasilitas / item" value="' + desc.replace(/"/g, '&quot;') + '">' +
             '<div class="ob-item-card-grid">' +
-            '<input type="number" step="0.01" min="0" class="ob-form-input obq-qty" name="item_qty[]" placeholder="Qty" value="1">' +
-            '<input type="text" class="ob-form-input" name="item_unit[]" placeholder="Satuan (pax/paket/hari)" value="pax">' +
+            '<input type="number" step="0.01" min="0" class="ob-form-input obq-qty" name="item_qty[]" placeholder="Qty" value="' + qty + '">' +
+            '<input type="text" class="ob-form-input" name="item_unit[]" placeholder="Satuan (pax/paket/hari)" value="' + unit + '">' +
             '</div>' +
             '<div class="ob-item-card-grid" style="grid-template-columns:1fr;margin-top:8px;">' +
-            '<input type="text" class="ob-form-input obq-price" name="item_price[]" placeholder="Harga Jual per satuan (Rp)" value="0">' +
+            '<input type="text" class="ob-form-input obq-price" name="item_price[]" placeholder="Harga Jual per satuan (Rp)" value="' + price + '">' +
             '</div>';
+        return card;
+    }
+
+    function obAddItem() {
+        var wrap = document.getElementById('obItemsWrap');
+        var card = obMakeItemCard('', 1, 'pax', 0, 'other');
         wrap.appendChild(card);
         card.querySelectorAll('.obq-qty, .obq-price').forEach(function(el) {
             el.addEventListener('input', obRecalcTotal);
         });
+        obRecalcTotal();
+    }
+
+    function obQuickAddItem() {
+        var sel = document.getElementById('obQaSelect');
+        var opt = sel.options[sel.selectedIndex];
+        if (!sel.value) {
+            alert('Pilih item dari database terlebih dahulu.');
+            return;
+        }
+        var qty = parseFloat(document.getElementById('obQaQty').value) || 1;
+        var name = opt.getAttribute('data-name') || '';
+        var price = parseFloat(opt.getAttribute('data-price')) || 0;
+        var unit = opt.getAttribute('data-unit') || 'pax';
+        var type = opt.getAttribute('data-type') || 'other';
+
+        var wrap = document.getElementById('obItemsWrap');
+        var card = obMakeItemCard(name, qty, unit, price, type);
+        wrap.appendChild(card);
+        card.querySelectorAll('.obq-qty, .obq-price').forEach(function(el) {
+            el.addEventListener('input', obRecalcTotal);
+        });
+        sel.value = '';
         obRecalcTotal();
     }
 
