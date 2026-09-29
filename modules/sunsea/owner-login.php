@@ -11,11 +11,13 @@ require_once '../../includes/functions.php';
 require_once 'db-helper.php';
 
 $auth = new Auth();
+$pdo = getSunseaConnection();
 
-// Already logged in with an owner-capable role — skip straight to the dashboard.
+// Already logged in with an owner-capable role (atau sudah diberi Hak Akses Khusus) — skip straight to the dashboard.
 if ($auth->isLoggedIn()) {
     $existingRole = $_SESSION['role'] ?? '';
-    if (in_array($existingRole, ['developer', 'owner', 'admin'], true)) {
+    $existingUser = ['id' => $_SESSION['user_id'] ?? 0, 'role' => $existingRole];
+    if (in_array($existingRole, ['developer', 'owner', 'admin'], true) || sunseaCanAccessMenu($pdo, $existingUser, 'owner_dashboard')) {
         header('Location: owner-dashboard.php');
         exit;
     }
@@ -32,7 +34,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'Username dan password wajib diisi.';
     } elseif ($auth->login($username, $password)) {
         $role = $_SESSION['role'] ?? '';
-        if (in_array($role, ['developer', 'owner', 'admin'], true)) {
+        $loggedInUser = ['id' => $_SESSION['user_id'] ?? 0, 'role' => $role];
+        if (in_array($role, ['developer', 'owner', 'admin'], true) || sunseaCanAccessMenu($pdo, $loggedInUser, 'owner_dashboard')) {
             require_once '../../includes/business_helper.php';
             require_once '../../includes/business_access.php';
             $bizList = getUserAvailableBusinesses();
@@ -49,7 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$pdo = getSunseaConnection();
+
 $companyName = sunseaSetting($pdo, 'company_name', 'Karimunjawa Explore');
 $logoPath = sunseaSetting($pdo, 'company_logo', '');
 $logoSrc  = $logoPath ? sunseaAssetUrl($logoPath) : '';
