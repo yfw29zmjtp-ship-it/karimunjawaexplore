@@ -4,11 +4,15 @@
  * cron-generate-subscription-invoice.php
  * ------------------------------------------------------------------
  * Ensures the current month's ADF System subscription invoice exists
- * (base fee + per-confirmed-guest fee). Safe to run daily — it only
- * creates a new row the first time it's called for a given period, and
- * refreshes the guest count on the still-unpaid current-month invoice.
+ * (base fee + per-confirmed-guest fee), and pulls in any new manual
+ * invoices ADF System created for this client. Safe to run often — it
+ * only creates a new row the first time it's called for a given period
+ * (or manual invoice), and refreshes the guest count on the still-unpaid
+ * current-month invoice.
  *
- * SETUP (cPanel Cron Job, once a month is enough, e.g. day 1, hour 6):
+ * SETUP (cPanel Cron Job, run every 10-15 minutes so the "tagihan baru"
+ * push notification arrives close to when ADF System sends its email,
+ * instead of waiting for someone to open the dashboard):
  *   /usr/bin/curl -s "https://karimunjawaexplore.com/cron-generate-subscription-invoice.php?token=YOUR_TOKEN"
  *
  * The token is read from the `subscription_cron_token` setting — set it once
@@ -35,6 +39,7 @@ if ($expectedToken === '' || !hash_equals($expectedToken, $providedToken)) {
 
 $period = date('Y-m');
 sunseaSyncSubscriptionConfig($pdo);
+sunseaSyncManualInvoices($pdo);
 $invoice = sunseaGetOrRefreshSubscriptionInvoice($pdo, $period);
 
 if ($invoice) {
