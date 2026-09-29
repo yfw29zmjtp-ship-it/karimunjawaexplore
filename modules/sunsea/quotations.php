@@ -805,6 +805,21 @@ if ($action === 'print' && $quotation):
                 text-align: center;
             }
 
+            /* Jangan potong blok ini di tengah saat dipecah jadi halaman PDF */
+            .head,
+            .cust-row,
+            .section-title-row,
+            table,
+            tr,
+            .bottom-flex,
+            .facility-box,
+            .itinerary-day-group,
+            .thanks-note,
+            .footer-note {
+                break-inside: avoid;
+                page-break-inside: avoid;
+            }
+
             @media (max-width: 480px) {
                 .facility-list {
                     grid-template-columns: 1fr;
@@ -1029,7 +1044,8 @@ if ($action === 'print' && $quotation):
                     filename: fileName,
                     image: { type: 'jpeg', quality: 0.95 },
                     html2canvas: { scale: 2, useCORS: true, logging: false, windowWidth: 850 },
-                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                    pagebreak: { mode: ['css', 'avoid-all'] }
                 };
 
                 html2pdf().set(opt).from(document.getElementById('pdfContent')).save().then(function() {
