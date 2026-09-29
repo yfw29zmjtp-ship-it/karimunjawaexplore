@@ -166,7 +166,7 @@ class PushNotificationHelper
             if (empty($adminIds)) return ['sent' => 0, 'failed' => 0];
 
             return $this->sendToUsers($adminIds, $title, $body, $data);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return ['sent' => 0, 'failed' => 0, 'error' => $e->getMessage()];
         }
     }
@@ -189,49 +189,54 @@ class PushNotificationHelper
             return ['sent' => 0, 'failed' => 0, 'error' => 'WebPush library not available'];
         }
 
-        $sent = 0;
-        $failed = 0;
-        $expired = [];
+        try {
+            $sent = 0;
+            $failed = 0;
+            $expired = [];
 
-        $payload = json_encode([
-            'title'   => $title,
-            'body'    => $body,
-            'icon'    => $data['icon'] ?? '/uploads/icons/favicon.png',
-            'badge'   => $data['badge'] ?? '/uploads/icons/favicon.png',
-            'tag'     => $data['tag'] ?? 'adf-push-' . time(),
-            'data'    => $data,
-            'vibrate' => [200, 100, 200],
-        ]);
-
-        foreach ($subs as $sub) {
-            $subscription = Subscription::create([
-                'endpoint'        => $sub['endpoint'],
-                'publicKey'       => $sub['public_key'],
-                'authToken'       => $sub['auth_token'],
-                'contentEncoding' => 'aesgcm',
+            $payload = json_encode([
+                'title'   => $title,
+                'body'    => $body,
+                'icon'    => $data['icon'] ?? '/uploads/icons/favicon.png',
+                'badge'   => $data['badge'] ?? '/uploads/icons/favicon.png',
+                'tag'     => $data['tag'] ?? 'adf-push-' . time(),
+                'data'    => $data,
+                'vibrate' => [200, 100, 200],
             ]);
 
-            $this->webPush->queueNotification($subscription, $payload);
-        }
+            foreach ($subs as $sub) {
+                $subscription = Subscription::create([
+                    'endpoint'        => $sub['endpoint'],
+                    'publicKey'       => $sub['public_key'],
+                    'authToken'       => $sub['auth_token'],
+                    'contentEncoding' => 'aesgcm',
+                ]);
 
-        foreach ($this->webPush->flush() as $report) {
-            if ($report->isSuccess()) {
-                $sent++;
-            } else {
-                $failed++;
-                // Remove expired/invalid subscriptions
-                if ($report->isSubscriptionExpired()) {
-                    $expired[] = $report->getEndpoint();
+                $this->webPush->queueNotification($subscription, $payload);
+            }
+
+            foreach ($this->webPush->flush() as $report) {
+                if ($report->isSuccess()) {
+                    $sent++;
+                } else {
+                    $failed++;
+                    // Remove expired/invalid subscriptions
+                    if ($report->isSubscriptionExpired()) {
+                        $expired[] = $report->getEndpoint();
+                    }
                 }
             }
-        }
 
-        // Clean up expired subscriptions
-        foreach ($expired as $endpoint) {
-            $this->removeSubscription($endpoint);
-        }
+            // Clean up expired subscriptions
+            foreach ($expired as $endpoint) {
+                $this->removeSubscription($endpoint);
+            }
 
-        return ['sent' => $sent, 'failed' => $failed, 'expired' => count($expired)];
+            return ['sent' => $sent, 'failed' => $failed, 'expired' => count($expired)];
+        } catch (\Throwable $e) {
+            error_log('PushNotificationHelper sendToSubscriptions error: ' . $e->getMessage());
+            return ['sent' => 0, 'failed' => count($subs), 'error' => $e->getMessage()];
+        }
     }
 
     /**

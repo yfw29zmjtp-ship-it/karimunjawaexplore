@@ -38,22 +38,27 @@ if ($method === 'GET' && $action === 'test-send') {
         echo json_encode(['success' => false, 'message' => 'Server push library belum ter-install (vendor/autoload.php tidak ada)']);
         exit;
     }
-    require_once $autoloadPath;
-    require_once dirname(dirname(__FILE__)) . '/includes/PushNotificationHelper.php';
+    try {
+        require_once $autoloadPath;
+        require_once dirname(dirname(__FILE__)) . '/includes/PushNotificationHelper.php';
 
-    $db = Database::getInstance();
-    $push = new PushNotificationHelper($db);
-    $myCount = $push->getSubscriptionCount((int)$_SESSION['user_id']);
-    $result = $push->sendToAdmins('Test Notifikasi', 'Ini contoh notifikasi push manual dari Owner Portal.', ['url' => 'owner-dashboard.php']);
+        $db = Database::getInstance();
+        $push = new PushNotificationHelper($db);
+        $myCount = $push->getSubscriptionCount((int)$_SESSION['user_id']);
+        $result = $push->sendToAdmins('Test Notifikasi', 'Ini contoh notifikasi push manual dari Owner Portal.', ['url' => 'owner-dashboard.php']);
 
-    echo json_encode([
-        'success' => true,
-        'your_subscription_count' => $myCount,
-        'send_result' => $result,
-        'note' => $myCount === 0
-            ? 'Belum ada subscription tersimpan untuk akun Anda - aktifkan dulu tombol "Aktifkan Notifikasi" di Owner Portal.'
-            : null,
-    ]);
+        echo json_encode([
+            'success' => true,
+            'your_subscription_count' => $myCount,
+            'send_result' => $result,
+            'note' => $myCount === 0
+                ? 'Belum ada subscription tersimpan untuk akun Anda - aktifkan dulu tombol "Aktifkan Notifikasi" di Owner Portal.'
+                : null,
+        ]);
+    } catch (\Throwable $e) {
+        error_log('push-subscription.php test-send error: ' . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
+    }
     exit;
 }
 
