@@ -1164,6 +1164,14 @@ function sunseaReconcilePendingSubscriptionPayment(PDO $pdo, array $invoice): vo
         $invoice['status'] = 'paid';
         $invoice['paid_at'] = $paidAt;
         sunseaNotifyAdfSystemPaymentSuccess($pdo, $invoice);
+        $label = ($invoice['type'] ?? 'recurring') === 'manual'
+            ? ($invoice['description'] ?: 'Tagihan Manual')
+            : ('Periode ' . $invoice['period']);
+        sunseaNotifyOwnersPush(
+            '✅ Pembayaran Berhasil',
+            'Tagihan ADF System (' . $label . ') sebesar ' . sunseaRupiah((float) $invoice['total_amount']) . ' sudah lunas.',
+            ['url' => 'subscription-billing.php']
+        );
     }
 }
 

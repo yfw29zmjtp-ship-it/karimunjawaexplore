@@ -58,6 +58,14 @@ try {
         $paidInvoice = $stmt->fetch();
         if ($paidInvoice) {
             sunseaNotifyAdfSystemPaymentSuccess($pdo, $paidInvoice);
+            $label = ($paidInvoice['type'] ?? 'recurring') === 'manual'
+                ? ($paidInvoice['description'] ?: 'Tagihan Manual')
+                : ('Periode ' . $paidInvoice['period']);
+            sunseaNotifyOwnersPush(
+                '✅ Pembayaran Berhasil',
+                'Tagihan ADF System (' . $label . ') sebesar ' . sunseaRupiah((float) $paidInvoice['total_amount']) . ' sudah lunas.',
+                ['url' => 'subscription-billing.php']
+            );
         }
     }
 
