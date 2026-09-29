@@ -1520,10 +1520,12 @@ function sunseaNotifyAdminNewQuotation(PDO $pdo, int $quotationId): void
 
         // Push dikirim terlepas dari setting email admin, supaya owner tetap dapat notif HP
         // walau daftar email notifikasi kosong/belum diisi di pengaturan.
+        // URL harus absolut (pakai BASE_URL) - service worker owner-sw.js ada di modules/sunsea/,
+        // jadi path relatif "modules/sunsea/..." akan double-resolve dan 404.
         sunseaNotifyOwnersPush(
             'Booking Baru dari Website',
             ($q['customer_name'] ?: 'Tamu') . ' - ' . ($q['package_name'] ?: 'Paket') . ' (' . $tripDate . ($tripEndDate && $tripEndDate !== $tripDate ? ' - ' . $tripEndDate : '') . ')',
-            ['url' => 'modules/sunsea/quotations.php?action=view&id=' . $quotationId]
+            ['url' => $followUpUrl]
         );
 
         $emails = sunseaNotifAdminEmails($pdo);
