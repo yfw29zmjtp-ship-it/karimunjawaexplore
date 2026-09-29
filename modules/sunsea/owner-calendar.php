@@ -219,6 +219,7 @@ include 'owner-mobile-header.php';
     }
 
     .ob-cal-month {
+        flex: 1;
         font-size: 14px;
         font-weight: 800;
         text-align: center;
@@ -258,6 +259,8 @@ include 'owner-mobile-header.php';
         opacity: 1;
         border-right: 1px solid var(--border);
         box-shadow: 2px 0 5px rgba(15, 23, 42, .07);
+        transform: translateZ(0);
+        will-change: transform;
         padding: 9px 10px;
         font-size: 12px;
         font-weight: 800;
@@ -332,8 +335,29 @@ include 'owner-mobile-header.php';
         opacity: 1;
         border-right: 1px solid var(--border);
         box-shadow: 2px 0 5px rgba(15, 23, 42, .07);
+        transform: translateZ(0);
+        will-change: transform;
         padding: 10px 7px;
         overflow: hidden;
+    }
+
+    .ob-cal-today-btn {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        background: #fff;
+        border: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--ocean);
+        flex-shrink: 0;
+        font-size: 8.5px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: .01em;
+        cursor: pointer;
+        line-height: 1.1;
     }
 
     .cal-guest-avatar {
@@ -439,6 +463,7 @@ include 'owner-mobile-header.php';
 <div class="ob-cal-nav">
     <a href="?month=<?php echo $prevMonth; ?>"><i data-feather="chevron-left"></i></a>
     <div class="ob-cal-month"><?php echo date('F Y', strtotime($startMonth)); ?></div>
+    <button type="button" class="ob-cal-today-btn" onclick="calGoToday()">Hari<br>Ini</button>
     <a href="?month=<?php echo $nextMonth; ?>"><i data-feather="chevron-right"></i></a>
 </div>
 
@@ -471,7 +496,7 @@ include 'owner-mobile-header.php';
                     $isWeekend = $cd['dow'] >= 6;
                     $isToday = $cd['date'] === date('Y-m-d');
                 ?>
-                    <div class="cal-day-col<?php echo $isWeekend ? ' is-weekend' : ''; ?><?php echo $isToday ? ' is-today' : ''; ?><?php echo $cd['isMonthStart'] ? ' cal-month-boundary' : ''; ?>"><?php echo $cd['day']; ?></div>
+                    <div<?php echo $isToday ? ' id="calTodayCol"' : ''; ?> class="cal-day-col<?php echo $isWeekend ? ' is-weekend' : ''; ?><?php echo $isToday ? ' is-today' : ''; ?><?php echo $cd['isMonthStart'] ? ' cal-month-boundary' : ''; ?>"><?php echo $cd['day']; ?></div>
                 <?php endforeach; ?>
             </div>
 
@@ -934,6 +959,37 @@ include 'owner-mobile-header.php';
             }
         }, true);
     })();
+
+    // Posisikan timeline supaya tanggal hari ini langsung terlihat saat pertama dibuka,
+    // dengan 2 hari sebelumnya tetap kelihatan sebagai konteks (bukan mepet di ujung kiri).
+    function calScrollToToday(instant) {
+        var scroller = document.getElementById('calTimelineScroll');
+        var col = document.getElementById('calTodayCol');
+        if (!scroller || !col) return;
+        if (instant) scroller.style.scrollBehavior = 'auto';
+        var scRect = scroller.getBoundingClientRect();
+        var colRect = col.getBoundingClientRect();
+        var colOffset = (colRect.left - scRect.left) + scroller.scrollLeft;
+        var leadDays = 2;
+        scroller.scrollLeft = Math.max(0, colOffset - (leadDays * col.offsetWidth));
+        if (instant) {
+            setTimeout(function() {
+                scroller.style.scrollBehavior = '';
+            }, 50);
+        }
+    }
+
+    function calGoToday() {
+        <?php if ($month === date('Y-m')): ?>
+            calScrollToToday(false);
+        <?php else: ?>
+            window.location.href = '?month=<?php echo date('Y-m'); ?>';
+        <?php endif; ?>
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        calScrollToToday(true);
+    });
 </script>
 
 <?php include 'owner-mobile-footer.php'; ?>
