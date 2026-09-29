@@ -49,6 +49,7 @@ if ($method === 'GET' && $action === 'test-send') {
 
         echo json_encode([
             'success' => true,
+            'php_version' => PHP_VERSION,
             'your_subscription_count' => $myCount,
             'send_result' => $result,
             'note' => $myCount === 0
