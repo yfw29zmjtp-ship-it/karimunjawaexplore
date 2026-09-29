@@ -603,6 +603,10 @@ if ($action === 'print' && $invoice):
     $invoiceNotes   = sunseaSetting($pdo, 'invoice_notes', '');
     $footer         = sunseaSetting($pdo, 'invoice_footer', '');
 
+    $printPageUrl  = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https://' : 'http://') . ($_SERVER['HTTP_HOST'] ?? '') . ($_SERVER['REQUEST_URI'] ?? '');
+    $waShareMessage = 'Halo ' . $invoice['customer_name'] . ', berikut invoice ' . $invoice['invoice_no'] . '. Silakan buka link berikut untuk melihat/menyimpan sebagai PDF: ' . $printPageUrl;
+    $waShareLink   = sunseaWaLink((string)($invoice['customer_phone'] ?? ''), $waShareMessage);
+
     // Sisa tagihan sudah dihitung ulang dari total-terbayar di LOAD DATA (lihat $invoice['remaining_amount']).
     $computedRemaining = (float)$invoice['remaining_amount'];
 
@@ -1034,6 +1038,7 @@ if ($action === 'print' && $invoice):
                 html,
                 body {
                     background: #fff;
+                    padding-top: 0 !important;
                 }
 
                 .page {
@@ -1043,11 +1048,63 @@ if ($action === 'print' && $invoice):
                     padding: 0;
                     box-shadow: none;
                 }
+
+                .print-toolbar {
+                    display: none;
+                }
+            }
+
+            .print-toolbar {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                z-index: 999;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 8px;
+                padding: 10px 14px;
+                background: #1E293B;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, .2);
+            }
+
+            .print-toolbar a,
+            .print-toolbar button {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                border: none;
+                border-radius: 8px;
+                padding: 8px 14px;
+                font-size: 12.5px;
+                font-weight: 700;
+                font-family: inherit;
+                text-decoration: none;
+                cursor: pointer;
+            }
+
+            .print-toolbar .btn-back {
+                background: rgba(255, 255, 255, .12);
+                color: #fff;
+            }
+
+            .print-toolbar .btn-wa {
+                background: #25D366;
+                color: #fff;
+            }
+
+            body {
+                padding-top: 46px;
             }
         </style>
     </head>
 
     <body onload="window.print()">
+        <div class="print-toolbar">
+            <button type="button" class="btn-back" onclick="if (history.length > 1) { history.back(); } else { window.close(); }">&#8592; Kembali</button>
+            <?php if ($waShareLink): ?><a class="btn-wa" href="<?php echo htmlspecialchars($waShareLink); ?>" target="_blank">Kirim PDF via WA</a><?php endif; ?>
+        </div>
         <div class="page">
             <div class="watermark" style="color:<?php echo $watermarkColor; ?>;<?php echo strlen($watermarkLabel) > 6 ? 'font-size:52px;letter-spacing:2px;' : ''; ?>"><?php echo htmlspecialchars($watermarkLabel); ?></div>
             <div class="accent-bar"></div>
