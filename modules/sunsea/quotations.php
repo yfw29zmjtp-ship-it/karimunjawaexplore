@@ -453,6 +453,10 @@ if ($action === 'print' && $quotation):
     // Fasilitas yang didapat: pakai override manual bila ada (dari owner dashboard),
     // fallback ke detail layanan paket terstruktur / teks bebas "includes" pada paket.
     $facilityLines = sunseaQuotationFacilityLines($pdo, $quotation);
+
+    $printPageUrl  = rtrim(BASE_URL, '/') . '/modules/sunsea/quotations.php?action=print&id=' . (int)$quotation['id'] . '&share=' . sunseaShareToken('quotation', (int)$quotation['id']);
+    $waShareMessage = 'Halo ' . $quotation['customer_name'] . ', berikut penawaran ' . $quotation['quotation_no'] . '. Silakan buka link berikut untuk melihat/menyimpan sebagai PDF: ' . $printPageUrl;
+    $waShareLink   = sunseaWaLink((string)($quotation['customer_whatsapp'] ?: $quotation['customer_phone'] ?? ''), $waShareMessage);
 ?>
     <!DOCTYPE html>
     <html lang="id">
@@ -800,11 +804,63 @@ if ($action === 'print' && $quotation):
                 body {
                     padding: 0;
                 }
+
+                .print-toolbar {
+                    display: none;
+                }
+            }
+
+            .print-toolbar {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                z-index: 999;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 8px;
+                padding: 10px 14px;
+                background: #1E293B;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, .2);
+            }
+
+            .print-toolbar a,
+            .print-toolbar button {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                border: none;
+                border-radius: 8px;
+                padding: 8px 14px;
+                font-size: 12.5px;
+                font-weight: 700;
+                font-family: inherit;
+                text-decoration: none;
+                cursor: pointer;
+            }
+
+            .print-toolbar .btn-back {
+                background: rgba(255, 255, 255, .12);
+                color: #fff;
+            }
+
+            .print-toolbar .btn-wa {
+                background: #25D366;
+                color: #fff;
+            }
+
+            body {
+                padding-top: 46px;
             }
         </style>
     </head>
 
     <body onload="window.print()">
+        <div class="print-toolbar">
+            <button type="button" class="btn-back" onclick="if (history.length > 1) { history.back(); } else { window.close(); }">&#8592; Kembali</button>
+            <?php if ($waShareLink): ?><a class="btn-wa" href="<?php echo htmlspecialchars($waShareLink); ?>" target="_blank">Kirim PDF via WA</a><?php endif; ?>
+        </div>
         <div class="accent-bar"></div>
         <div class="head">
             <div style="display:flex;align-items:center;">
