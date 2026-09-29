@@ -89,6 +89,27 @@ $monthIncome  = (float)$financeRow['total_income'];
 $monthExpense = (float)$financeRow['total_expense'];
 $monthBalance = $monthIncome - $monthExpense;
 
+// Booking/penawaran masuk dari form kontak website (belum diproses owner)
+$webQuotationCount = (int)$pdo->query("SELECT COUNT(*) FROM quotations WHERE created_by = 'website' AND status = 'draft'")->fetchColumn();
+$webQuotations = $pdo->query("
+    SELECT q.id, q.quotation_no, q.trip_date, q.pax_count, q.total_amount, q.valid_until,
+           c.name AS customer_name, c.phone AS customer_phone, c.whatsapp AS customer_whatsapp,
+           p.name AS package_name
+    FROM quotations q
+    JOIN customers c ON c.id = q.customer_id
+    LEFT JOIN trip_packages p ON p.id = q.package_id
+    WHERE q.created_by = 'website' AND q.status = 'draft'
+    ORDER BY q.created_at DESC
+    LIMIT 5
+")->fetchAll();
+foreach ($webQuotations as &$_wq) {
+    $waPhone = $_wq['customer_whatsapp'] ?: $_wq['customer_phone'];
+    $waShareUrl = rtrim(BASE_URL, '/') . '/modules/sunsea/quotations.php?action=print&id=' . $_wq['id'] . '&share=' . sunseaShareToken('quotation', (int)$_wq['id']);
+    $waMessage = "Halo {$_wq['customer_name']}, berikut penawaran perjalanan dari " . sunseaSetting($pdo, 'company_name', 'Explore Karimunjawa') . " nomor {$_wq['quotation_no']} sebesar " . sunseaRupiah((float)$_wq['total_amount']) . ". Berlaku sampai " . ($_wq['valid_until'] ? date('d M Y', strtotime($_wq['valid_until'])) : '-') . ". Lihat/download PDF penawaran di sini: {$waShareUrl}\nTerima kasih.";
+    $_wq['wa_link'] = $waPhone ? sunseaWaLink($waPhone, $waMessage) : '';
+}
+unset($_wq);
+
 $userName = $currentUser['full_name'] ?? $currentUser['username'] ?? 'Owner';
 
 $subscriptionReminder = null;
@@ -259,14 +280,14 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
         .ob-cards {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 8px;
+            gap: 6px;
             margin-bottom: 14px;
         }
 
         .ob-card {
             background: #fff;
-            border-radius: 11px;
-            padding: 9px 10px;
+            border-radius: 10px;
+            padding: 7px 8px;
             text-decoration: none;
             color: inherit;
             box-shadow: 0 1px 4px rgba(15, 23, 42, .05);
@@ -281,7 +302,7 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
         }
 
         .ob-card-label {
-            font-size: 8.5px;
+            font-size: 8px;
             color: var(--muted);
             text-transform: uppercase;
             font-weight: 700;
@@ -289,16 +310,37 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
         }
 
         .ob-card-value {
-            font-size: 14px;
+            font-size: 12.5px;
             font-weight: 800;
-            margin: 3px 0 1px;
+            margin: 2px 0 1px;
             letter-spacing: -.2px;
         }
 
         .ob-card-sub {
-            font-size: 9px;
+            font-size: 8.5px;
             color: var(--muted);
+            line-height: 1.3;
+        }
+
+        .ob-notif-badge {
+            background: var(--danger);
+            color: #fff;
+            font-size: 10px;
+            font-weight: 800;
+            padding: 1px 6px;
+            border-radius: 999px;
             line-height: 1.4;
+        }
+
+        .ob-mini-btn {
+            font-size: 10.5px;
+            font-weight: 700;
+            padding: 5px 10px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            color: var(--text);
+            text-decoration: none;
+            background: #fff;
         }
 
         .ob-section {
@@ -806,9 +848,39 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
             <a href="owner-finance.php" class="ob-card" style="--card-accent:<?php echo $monthBalance >= 0 ? 'var(--success)' : 'var(--danger)'; ?>;">
                 <div class="ob-card-label">Saldo Bulan Ini</div>
                 <div class="ob-card-value" style="color:<?php echo $monthBalance >= 0 ? 'var(--success)' : 'var(--danger)'; ?>;"><?php echo sunseaRupiah($monthBalance); ?></div>
-                <div class="ob-card-sub">Masuk <?php echo sunseaRupiah($monthIncome, true); ?> · Keluar <?php echo sunseaRupiah($monthExpense, true); ?></div>
             </a>
         </div>
+
+        <?php if ($webQuotationCount > 0): ?>
+        <div class="ob-section" style="border-left:3px solid var(--ocean);">
+            <div class="ob-section-head">
+                <div class="ob-section-title"><i data-feather="globe"></i> Booking dari Web <span class="ob-notif-badge"><?php echo $webQuotationCount; ?></span></div>
+                <a href="quotations.php?status=draft" class="ob-section-link">Lihat Semua →</a>
+            </div>
+            <?php foreach ($webQuotations as $wq): ?>
+                <div class="ob-row" style="align-items:flex-start;">
+                    <div class="ob-row-avatar" style="background:linear-gradient(135deg,#7C3AED,#A78BFA);"><?php echo htmlspecialchars(mb_strtoupper(mb_substr($wq['customer_name'], 0, 1))); ?></div>
+                    <div class="ob-row-body">
+                        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+                            <div>
+                                <div class="ob-row-title"><?php echo htmlspecialchars($wq['customer_name']); ?></div>
+                                <div class="ob-row-sub"><?php echo htmlspecialchars($wq['quotation_no']); ?><?php echo $wq['package_name'] ? ' · ' . htmlspecialchars($wq['package_name']) : ''; ?></div>
+                            </div>
+                            <div style="font-size:10px;font-weight:800;color:var(--ocean);text-align:right;flex-shrink:0;">
+                                <?php echo sunseaRupiah((float)$wq['total_amount']); ?>
+                            </div>
+                        </div>
+                        <div style="display:flex;gap:8px;align-items:center;margin-top:7px;">
+                            <a href="quotations.php?action=view&id=<?php echo $wq['id']; ?>" class="ob-mini-btn">Lihat &amp; Proses</a>
+                            <?php if ($wq['wa_link']): ?>
+                                <a href="<?php echo htmlspecialchars($wq['wa_link']); ?>" target="_blank" class="ob-mini-btn" style="background:#25D366;color:#fff;border-color:#25D366;">Kirim WA</a>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
 
         <div class="ob-section">
             <div class="ob-section-head">
