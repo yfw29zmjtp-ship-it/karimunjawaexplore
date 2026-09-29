@@ -856,7 +856,7 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
                 <div class="ob-section-head">
                     <div class="ob-section-title"><i data-feather="globe"></i> Booking dari Web <span class="ob-notif-badge"><?php echo $webQuotationCount; ?></span></div>
                     <div style="display:flex;gap:10px;align-items:center;">
-                        <a href="quotations.php?web_history=1" class="ob-section-link" title="Riwayat penawaran yang sudah dibuka"><i data-feather="clock"></i> Riwayat</a>
+                        <a href="owner-quotation-history.php" class="ob-section-link" title="Riwayat penawaran yang sudah dibuka"><i data-feather="clock"></i> Riwayat</a>
                         <a href="quotations.php?status=draft" class="ob-section-link">Lihat Semua →</a>
                     </div>
                 </div>
@@ -885,7 +885,7 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
             </div>
         <?php else: ?>
             <div class="ob-section" style="border-left:3px solid var(--ocean);padding:10px 14px;">
-                <a href="quotations.php?web_history=1" class="ob-section-link" style="display:flex;align-items:center;gap:6px;"><i data-feather="clock"></i> Riwayat Penawaran Web</a>
+                <a href="owner-quotation-history.php" class="ob-section-link" style="display:flex;align-items:center;gap:6px;"><i data-feather="clock"></i> Riwayat Penawaran Web</a>
             </div>
         <?php endif; ?>
 
