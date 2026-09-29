@@ -76,9 +76,11 @@ include 'owner-mobile-header.php';
     </div>
 
     <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
-        <a href="quotations.php?action=edit&id=<?php echo (int)$quotation['id']; ?>" class="ob-qbtn" style="flex:1;">
-            <i data-feather="edit-2"></i> Edit
-        </a>
+        <?php if ($quotation['status'] !== 'converted'): ?>
+            <a href="owner-quotation-edit.php?id=<?php echo (int)$quotation['id']; ?>" class="ob-qbtn" style="flex:1;">
+                <i data-feather="edit-2"></i> Edit
+            </a>
+        <?php endif; ?>
         <?php if ($waLink): ?>
             <a href="<?php echo htmlspecialchars($waLink); ?>" target="_blank" rel="noopener" class="ob-qbtn" style="flex:1;background:#25D366;border-color:#25D366;color:#fff;">
                 <i data-feather="message-circle"></i> Kirim Penawaran
