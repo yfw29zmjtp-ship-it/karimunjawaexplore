@@ -459,6 +459,7 @@ if ($action === 'print' && $quotation):
 
     <head>
         <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
         <title>Penawaran <?php echo htmlspecialchars($quotation['quotation_no']); ?></title>
         <style>
             @page {
@@ -473,12 +474,36 @@ if ($action === 'print' && $quotation):
                 color-adjust: exact;
             }
 
+            html, body {
+                margin: 0;
+            }
+
             body {
                 font-family: 'Segoe UI', Arial, sans-serif;
                 font-size: 12px;
-                padding: 12px 18px;
                 color: #1e293b;
+                background: #E2E8F0;
+            }
+
+            /* Bungkus konten jadi 1 lembar A4 yang rapi di layar HP maupun desktop */
+            .page-sheet {
+                max-width: 794px;
+                margin: 0 auto;
+                padding: 16px 20px;
                 background: #fff;
+                box-shadow: 0 2px 16px rgba(15, 23, 42, .12);
+            }
+
+            @media print {
+                body {
+                    background: #fff;
+                }
+
+                .page-sheet {
+                    max-width: none;
+                    padding: 0;
+                    box-shadow: none;
+                }
             }
 
             .accent-bar {
@@ -796,32 +821,18 @@ if ($action === 'print' && $quotation):
                 text-align: center;
             }
 
-            @media print {
-                body {
-                    padding: 0;
-                }
+            .pdf-action-bar {
+                display: flex;
+                gap: 12px;
+                max-width: 794px;
+                margin: 14px auto 24px;
+                padding: 0 20px;
+            }
 
+            @media print {
                 .pdf-action-bar {
                     display: none;
                 }
-            }
-
-            body {
-                padding-bottom: 74px;
-            }
-
-            .pdf-action-bar {
-                position: fixed;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                z-index: 50;
-                display: flex;
-                gap: 10px;
-                padding: 12px 14px;
-                background: #fff;
-                border-top: 1px solid #E2E8F0;
-                box-shadow: 0 -4px 14px rgba(15, 23, 42, .08);
             }
 
             .pdf-action-btn {
@@ -829,10 +840,10 @@ if ($action === 'print' && $quotation):
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                gap: 6px;
-                padding: 11px 12px;
-                border-radius: 10px;
-                font-size: 13px;
+                gap: 8px;
+                padding: 16px 14px;
+                border-radius: 12px;
+                font-size: 16px;
                 font-weight: 700;
                 border: 1px solid #CBD5E1;
                 background: #fff;
@@ -854,7 +865,7 @@ if ($action === 'print' && $quotation):
     </head>
 
     <body>
-        <div id="pdfContent">
+        <div class="page-sheet" id="pdfContent">
         <div class="accent-bar"></div>
         <div class="head">
             <div style="display:flex;align-items:center;">
