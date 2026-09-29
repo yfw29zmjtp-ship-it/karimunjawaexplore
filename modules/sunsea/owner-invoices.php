@@ -77,8 +77,8 @@ include 'owner-mobile-header.php';
             <div class="ob-bcard-top">
                 <div class="ob-bcard-avatar" style="background:linear-gradient(135deg,#0EA5E9,#0369A1);"><i data-feather="file-text" style="width:16px;height:16px;"></i></div>
                 <div class="ob-bcard-info">
-                    <div class="ob-bcard-name"><?php echo htmlspecialchars($inv['invoice_no']); ?></div>
-                    <div class="ob-bcard-no"><?php echo htmlspecialchars($inv['customer_name']); ?></div>
+                    <div class="ob-bcard-name"><?php echo htmlspecialchars($inv['customer_name']); ?></div>
+                    <div class="ob-bcard-no"><?php echo htmlspecialchars($inv['invoice_no']); ?></div>
                 </div>
                 <span class="ob-badge <?php echo $badge[0]; ?>"><?php echo htmlspecialchars($badge[1]); ?></span>
             </div>
