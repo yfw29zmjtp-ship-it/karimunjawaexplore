@@ -55,6 +55,10 @@ $pageTitle = 'Reservasi Tamu';
 include 'owner-mobile-header.php';
 ?>
 
+<a href="owner-booking-add.php" class="ob-qbtn" style="width:100%;margin-bottom:12px;">
+    <i data-feather="plus-circle"></i> Tambah Reservasi Baru
+</a>
+
 <div class="ob-tabs">
     <a href="owner-bookings.php" class="ob-tab <?php echo $statusFilter === '' ? 'active' : ''; ?>">Semua</a>
     <a href="owner-bookings.php?status=draft" class="ob-tab <?php echo $statusFilter === 'draft' ? 'active' : ''; ?>">Pending</a>
