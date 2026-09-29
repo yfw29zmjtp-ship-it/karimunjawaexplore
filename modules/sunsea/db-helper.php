@@ -1572,3 +1572,23 @@ function sunseaNotifyAdminNewQuotation(PDO $pdo, int $quotationId): void
         error_log('sunseaNotifyAdminNewQuotation error: ' . $e->getMessage());
     }
 }
+
+/**
+ * Kirim web push notification ke owner/developer yang sudah subscribe,
+ * supaya tetap dapat notifikasi walau app/browser tidak sedang dibuka.
+ * Gagal silent (tidak throw) kalau vendor push library belum ke-install.
+ */
+function sunseaNotifyOwnersPush(string $title, string $body, array $data = []): void
+{
+    try {
+        $autoloadPath = __DIR__ . '/../../vendor/autoload.php';
+        if (!file_exists($autoloadPath)) return;
+        require_once __DIR__ . '/../../config/database.php';
+        require_once __DIR__ . '/../../includes/PushNotificationHelper.php';
+
+        $push = new PushNotificationHelper(Database::getInstance());
+        $push->sendToAdmins($title, $body, $data);
+    } catch (Throwable $e) {
+        error_log('sunseaNotifyOwnersPush error: ' . $e->getMessage());
+    }
+}

@@ -611,7 +611,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updat
 
             // Saat dikonfirmasi, otomatis siapkan invoice-nya juga (booking sudah otomatis tampil di kalender karena status confirmed).
             if ($newStatus === 'confirmed') {
-                $bStmt = $pdo->prepare("SELECT id, booking_no, customer_id, start_date, end_date, pax_count FROM booking_orders WHERE id=?");
+                $bStmt = $pdo->prepare("SELECT b.id, b.booking_no, b.customer_id, b.start_date, b.end_date, b.pax_count, c.name AS customer_name FROM booking_orders b JOIN customers c ON c.id = b.customer_id WHERE b.id=?");
                 $bStmt->execute([$bookingId]);
                 $bRow = $bStmt->fetch(PDO::FETCH_ASSOC);
                 if ($bRow) {
@@ -622,6 +622,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updat
                         $_SESSION['flash_message'] = 'Status dikonfirmasi, tapi invoice gagal dibuat otomatis: ' . $e->getMessage();
                         $_SESSION['flash_type'] = 'error';
                     }
+                    sunseaNotifyOwnersPush(
+                        'Booking Baru Dikonfirmasi',
+                        $bRow['customer_name'] . ' - ' . $bRow['booking_no'] . ' (' . date('d M', strtotime($bRow['start_date'])) . ' - ' . date('d M Y', strtotime($bRow['end_date'])) . ')',
+                        ['url' => 'owner-booking-detail.php?id=' . $bookingId]
+                    );
                 }
             }
         } catch (Exception $e) {
