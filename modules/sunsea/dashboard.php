@@ -190,6 +190,8 @@ try {
         ORDER BY b.start_date ASC
         LIMIT 10
     ")->fetchAll();
+    $todayArrivals = array_values(array_filter($upcomingArrivals, fn($a) => $a['start_date'] === date('Y-m-d')));
+    $nextArrivals = array_values(array_filter($upcomingArrivals, fn($a) => $a['start_date'] !== date('Y-m-d')));
 } catch (Exception $e) {
     $dbError = $e->getMessage();
     $qStats = ['total' => 0, 'draft' => 0, 'sent' => 0, 'approved' => 0];
@@ -215,6 +217,8 @@ try {
     $packagePaxMonthly = json_encode([]);
     $packagePaxYearly = json_encode([]);
     $upcomingArrivals = [];
+    $todayArrivals = [];
+    $nextArrivals = [];
 }
 
 include 'layout-header.php';
@@ -421,28 +425,59 @@ if (isset($dbError)): ?>
                 <p>Belum ada booking dengan tanggal kedatangan hari ini atau sesudahnya</p>
             </div>
         <?php else: ?>
-            <div class="ss-table-wrap">
-                <table class="ss-table">
-                    <thead>
-                        <tr>
-                            <th>Tanggal</th>
-                            <th>Tamu</th>
-                            <th>Paket</th>
-                            <th>Pax</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($upcomingArrivals as $arrival): ?>
+            <div style="font-weight:700;font-size:13px;color:var(--ss-muted);margin:4px 0 8px;">Tiba Hari Ini</div>
+            <?php if (empty($todayArrivals)): ?>
+                <p style="color:var(--ss-muted);font-size:13px;margin-bottom:14px;">Tidak ada tamu tiba hari ini.</p>
+            <?php else: ?>
+                <div class="ss-table-wrap" style="margin-bottom:14px;">
+                    <table class="ss-table">
+                        <thead>
                             <tr>
-                                <td><?php echo htmlspecialchars(date('d M Y', strtotime($arrival['start_date']))); ?></td>
-                                <td><?php echo htmlspecialchars($arrival['customer_name']); ?></td>
-                                <td><?php echo htmlspecialchars($arrival['package_name'] ?? '-'); ?></td>
-                                <td><?php echo (int) $arrival['pax_count']; ?></td>
+                                <th>Tamu</th>
+                                <th>Paket</th>
+                                <th>Pax</th>
                             </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($todayArrivals as $arrival): ?>
+                                <tr>
+                                    <td><?php echo htmlspecialchars($arrival['customer_name']); ?></td>
+                                    <td><?php echo htmlspecialchars($arrival['package_name'] ?? '-'); ?></td>
+                                    <td><?php echo (int) $arrival['pax_count']; ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php endif; ?>
+
+            <div style="font-weight:700;font-size:13px;color:var(--ss-muted);margin:4px 0 8px;">Kedatangan Selanjutnya</div>
+            <?php if (empty($nextArrivals)): ?>
+                <p style="color:var(--ss-muted);font-size:13px;">Belum ada kedatangan terjadwal berikutnya.</p>
+            <?php else: ?>
+                <div class="ss-table-wrap">
+                    <table class="ss-table">
+                        <thead>
+                            <tr>
+                                <th>Tanggal</th>
+                                <th>Tamu</th>
+                                <th>Paket</th>
+                                <th>Pax</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($nextArrivals as $arrival): ?>
+                                <tr>
+                                    <td><?php echo htmlspecialchars(date('d M Y', strtotime($arrival['start_date']))); ?></td>
+                                    <td><?php echo htmlspecialchars($arrival['customer_name']); ?></td>
+                                    <td><?php echo htmlspecialchars($arrival['package_name'] ?? '-'); ?></td>
+                                    <td><?php echo (int) $arrival['pax_count']; ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php endif; ?>
         <?php endif; ?>
     </div>
 
