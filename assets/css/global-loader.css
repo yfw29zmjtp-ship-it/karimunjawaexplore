@@ -108,6 +108,10 @@
     object-fit: contain;
     border-radius: 8px;
     animation: adf-loader-pulse 1.6s ease-in-out infinite;
+    /* Force the logo to render gold, regardless of its original PNG colors:
+       brightness(0) flattens it to a black silhouette (keeps transparency),
+       the rest re-tints that silhouette to a gold tone (~#D4AF37). */
+    filter: brightness(0) saturate(100%) invert(72%) sepia(46%) saturate(923%) hue-rotate(1deg) brightness(101%) contrast(92%);
 }
 
 @keyframes adf-loader-pulse {
