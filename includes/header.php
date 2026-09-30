@@ -242,6 +242,9 @@ $faviconUrl = BASE_URL . '/assets/img/developer-logo.png';
     <!-- Main CSS with Cache Busting -->
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>/assets/css/style.css?v=<?php echo time(); ?>">
 
+    <!-- Global Loading Indicator (progress bar + overlay) -->
+    <link rel="stylesheet" href="<?php echo BASE_URL; ?>/assets/css/global-loader.css?v=<?php echo time(); ?>">
+
     <!-- Icons (Feather Icons) -->
     <script src="https://unpkg.com/feather-icons"></script>
 

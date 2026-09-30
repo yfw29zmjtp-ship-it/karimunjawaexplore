@@ -1,0 +1,133 @@
+/* ============================================
+   ADF System - Global Loading Indicator
+   Top progress bar (AJAX/background) + full
+   overlay (page navigation / heavy actions)
+   ============================================ */
+
+#adf-loader-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 3px;
+    width: 0%;
+    background: linear-gradient(90deg, #6366f1, #0ea5e9, #22d3ee);
+    background-size: 200% 100%;
+    box-shadow: 0 0 8px rgba(99, 102, 241, 0.7), 0 0 3px rgba(14, 165, 233, 0.9);
+    z-index: 2147483647;
+    opacity: 0;
+    transition: width 0.25s ease-out, opacity 0.2s ease-in-out;
+    animation: adf-loader-bar-flow 1.4s linear infinite;
+    pointer-events: none;
+}
+
+#adf-loader-bar.adf-active {
+    opacity: 1;
+}
+
+@keyframes adf-loader-bar-flow {
+    0% { background-position: 0% 0%; }
+    100% { background-position: 200% 0%; }
+}
+
+#adf-loader-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 2147483646;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(15, 23, 42, 0.55);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.2s ease-in-out;
+}
+
+#adf-loader-overlay.adf-active {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+.adf-loader-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    padding: 28px 36px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 20px 45px -12px rgba(15, 23, 42, 0.45);
+    transform: translateY(6px) scale(0.96);
+    transition: transform 0.25s cubic-bezier(.34, 1.56, .64, 1);
+}
+
+#adf-loader-overlay.adf-active .adf-loader-box {
+    transform: translateY(0) scale(1);
+}
+
+.adf-loader-spinner {
+    position: relative;
+    width: 68px;
+    height: 68px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.adf-loader-spinner::before,
+.adf-loader-spinner::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 3px solid transparent;
+}
+
+.adf-loader-spinner::before {
+    border-top-color: #6366f1;
+    border-right-color: #6366f1;
+    animation: adf-loader-spin 0.9s linear infinite;
+}
+
+.adf-loader-spinner::after {
+    inset: 6px;
+    border-bottom-color: #0ea5e9;
+    animation: adf-loader-spin 1.3s linear infinite reverse;
+}
+
+@keyframes adf-loader-spin {
+    to { transform: rotate(360deg); }
+}
+
+.adf-loader-logo {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+    border-radius: 8px;
+    animation: adf-loader-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes adf-loader-pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(0.9); opacity: 0.75; }
+}
+
+.adf-loader-text {
+    font-family: 'Inter', 'Plus Jakarta Sans', system-ui, sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: #334155;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .adf-loader-spinner::before,
+    .adf-loader-spinner::after,
+    .adf-loader-logo,
+    #adf-loader-bar {
+        animation: none !important;
+    }
+}

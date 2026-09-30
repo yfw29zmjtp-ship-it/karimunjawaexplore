@@ -135,6 +135,10 @@ if (empty($sunseaNavItemsVisible)) {
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/feather-icons"></script>
 
+    <!-- Global Loading Indicator (progress bar + overlay) -->
+    <link rel="stylesheet" href="<?php echo BASE_URL; ?>/assets/css/global-loader.css?v=<?php echo time(); ?>">
+    <script src="<?php echo BASE_URL; ?>/assets/js/global-loader.js?v=<?php echo time(); ?>"></script>
+
     <style>
         /* ================================================
            SUNSEA DESIGN SYSTEM — Elegant Orange Theme

@@ -538,6 +538,10 @@ if (isset($_GET['biz'])) {
 
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>/assets/css/style.css">
 
+    <!-- Global Loading Indicator (progress bar + overlay) -->
+    <link rel="stylesheet" href="<?php echo BASE_URL; ?>/assets/css/global-loader.css?v=<?php echo time(); ?>">
+    <script src="<?php echo BASE_URL; ?>/assets/js/global-loader.js?v=<?php echo time(); ?>"></script>
+
     <style>
         @property --angle {
             syntax: '<angle>';

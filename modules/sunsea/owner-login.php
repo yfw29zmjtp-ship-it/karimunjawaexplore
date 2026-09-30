@@ -68,6 +68,9 @@ $loginBgSrc  = $loginBgFile ? sunseaAssetUrl('uploads/backgrounds/' . $loginBgFi
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#0369A1">
     <link rel="manifest" href="owner-manifest.php">
+    <!-- Global Loading Indicator (progress bar + overlay) -->
+    <link rel="stylesheet" href="<?php echo BASE_URL; ?>/assets/css/global-loader.css?v=<?php echo time(); ?>">
+    <script src="<?php echo BASE_URL; ?>/assets/js/global-loader.js?v=<?php echo time(); ?>"></script>
     <style>
         * {
             margin: 0;
@@ -91,8 +94,7 @@ $loginBgSrc  = $loginBgFile ? sunseaAssetUrl('uploads/backgrounds/' . $loginBgFi
             justify-content: center;
             padding: 20px;
             background: linear-gradient(160deg, #0369A1 0%, #0EA5E9 45%, #7DD3FC 100%);
-            <?php if ($loginBgSrc): ?>
-            background-image: linear-gradient(160deg, rgba(3, 105, 161, .55) 0%, rgba(3, 105, 161, .35) 100%), url('<?php echo htmlspecialchars($loginBgSrc, ENT_QUOTES); ?>');
+            <?php if ($loginBgSrc): ?>background-image: linear-gradient(160deg, rgba(3, 105, 161, .55) 0%, rgba(3, 105, 161, .35) 100%), url('<?php echo htmlspecialchars($loginBgSrc, ENT_QUOTES); ?>');
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
@@ -282,9 +284,9 @@ $loginBgSrc  = $loginBgFile ? sunseaAssetUrl('uploads/backgrounds/' . $loginBgFi
             var icon = document.getElementById('olEyeIcon');
             var showing = input.type === 'text';
             input.type = showing ? 'password' : 'text';
-            icon.innerHTML = showing
-                ? '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>'
-                : '<path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.6 18.6 0 0 1 5.06-5.94M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a18.6 18.6 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line>';
+            icon.innerHTML = showing ?
+                '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>' :
+                '<path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.6 18.6 0 0 1 5.06-5.94M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a18.6 18.6 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line>';
         }
     </script>
 </body>

@@ -17,6 +17,9 @@
            </main>
            </div>
 
+           <!-- Global Loading Indicator (progress bar + overlay) -->
+           <script src="<?php echo BASE_URL; ?>/assets/js/global-loader.js?v=<?php echo time(); ?>"></script>
+
            <!-- Main JavaScript -->
            <script src="<?php echo BASE_URL; ?>/assets/js/main.js?v=<?php echo time(); ?>"></script>
 
