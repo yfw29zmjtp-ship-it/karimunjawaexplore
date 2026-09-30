@@ -158,11 +158,15 @@ try {
 
             require_once dirname(__DIR__, 2) . '/includes/PushNotificationHelper.php';
             $pushHelper = new PushNotificationHelper($db);
-            $pushHelper->sendToAdmins($notifTitle, $notifMessage, [
+            $pushSentAt = date('Y-m-d H:i:s');
+            $pushResult = $pushHelper->sendToAdmins($notifTitle, $notifMessage, [
                 'type' => 'new_booking',
                 'tag'  => 'new_booking-' . $bookingId,
                 'url'  => '/index.php',
             ]);
+            // Temporary diagnostic: confirm the server actually dispatched the push at this timestamp,
+            // so a delay can be isolated to the device/OS/push-service side vs. our own code.
+            error_log('website create-booking push dispatched at ' . $pushSentAt . ' result=' . json_encode($pushResult));
         } catch (\Throwable $notifyErr) {
             error_log('website create-booking notify owner failed: ' . $notifyErr->getMessage());
         }
