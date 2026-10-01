@@ -29,6 +29,21 @@ if (!sunseaCanAccessMenu($pdo, $currentUser, 'owner_dashboard')) {
 sunseaEnsureBookingSchema($pdo);
 sunseaEnsureFinanceSchema($pdo);
 
+// Hitung progres menginap (Day X / Last Day) sinkron dengan tanggal di kalender booking
+function sunseaStayProgress(string $startDate, string $endDate, string $today): array
+{
+    $nights = max(1, (int)round((strtotime($endDate) - strtotime($startDate)) / 86400));
+    $dayNumber = (int)round((strtotime($today) - strtotime($startDate)) / 86400) + 1;
+    $dayNumber = max(1, min($dayNumber, $nights + 1));
+    $isLastDay = ($today === $endDate);
+
+    return [
+        'day' => $dayNumber,
+        'nights' => $nights,
+        'is_last_day' => $isLastDay,
+    ];
+}
+
 $today = date('Y-m-d');
 
 // Tamu yang tiba hari ini
@@ -40,13 +55,25 @@ $todayArrivals = $pdo->query("
     ORDER BY c.name ASC
 ")->fetchAll();
 
-// Reservasi tamu mendatang (confirmed, belum lewat)
+// Tamu yang sedang menginap (in-house): sudah check-in, belum check-out
+$inHouseBookings = $pdo->prepare("
+    SELECT b.id, b.booking_no, b.start_date, b.end_date, b.pax_count, b.status,
+           c.name AS customer_name
+    FROM booking_orders b
+    JOIN customers c ON c.id = b.customer_id
+    WHERE b.status IN ('confirmed', 'ongoing') AND b.start_date <= ? AND b.end_date >= ?
+    ORDER BY b.end_date ASC
+");
+$inHouseBookings->execute([$today, $today]);
+$inHouseBookings = $inHouseBookings->fetchAll();
+
+// Reservasi tamu mendatang (confirmed, belum check-in)
 $upcomingBookings = $pdo->prepare("
     SELECT b.id, b.booking_no, b.start_date, b.end_date, b.pax_count, b.status,
            c.name AS customer_name
     FROM booking_orders b
     JOIN customers c ON c.id = b.customer_id
-    WHERE b.status = 'confirmed' AND b.end_date >= ?
+    WHERE b.status = 'confirmed' AND b.start_date > ?
     ORDER BY b.start_date ASC
     LIMIT 6
 ");
@@ -442,6 +469,32 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
             color: var(--muted);
             text-align: center;
             padding: 16px 0;
+        }
+
+        .ob-stay-badge {
+            flex-shrink: 0;
+            font-size: 10px;
+            font-weight: 800;
+            padding: 4px 9px;
+            border-radius: 999px;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        .ob-stay-badge-day {
+            background: rgba(3, 105, 161, .1);
+            color: var(--ocean);
+        }
+
+        .ob-stay-badge-lastday {
+            background: rgba(220, 38, 38, .1);
+            color: var(--danger);
+        }
+
+        .ob-row-sub-meta {
+            font-size: 9.5px;
+            color: var(--muted);
+            margin-top: 1px;
         }
 
         .ob-bottom-nav {
@@ -891,6 +944,33 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
 
         <div class="ob-section">
             <div class="ob-section-head">
+                <div class="ob-section-title"><i data-feather="home"></i> Tamu Sedang Menginap</div>
+                <a href="owner-calendar.php" class="ob-section-link">Lihat Kalender →</a>
+            </div>
+            <?php if (empty($inHouseBookings)): ?>
+                <div class="ob-empty">Tidak ada tamu yang sedang in-house hari ini.</div>
+            <?php else: ?>
+                <?php foreach ($inHouseBookings as $b): ?>
+                    <?php $progress = sunseaStayProgress($b['start_date'], $b['end_date'], $today); ?>
+                    <a href="owner-bookings.php?status=confirmed" class="ob-row">
+                        <div class="ob-row-avatar"><?php echo htmlspecialchars(mb_strtoupper(mb_substr($b['customer_name'], 0, 1))); ?></div>
+                        <div class="ob-row-body">
+                            <div class="ob-row-title"><?php echo htmlspecialchars($b['customer_name']); ?></div>
+                            <div class="ob-row-sub"><?php echo htmlspecialchars($b['booking_no']); ?> · <?php echo (int)$b['pax_count']; ?> pax</div>
+                            <div class="ob-row-sub-meta"><?php echo date('d M', strtotime($b['start_date'])); ?> - <?php echo date('d M Y', strtotime($b['end_date'])); ?></div>
+                        </div>
+                        <?php if ($progress['is_last_day']): ?>
+                            <div class="ob-stay-badge ob-stay-badge-lastday">Last Day</div>
+                        <?php else: ?>
+                            <div class="ob-stay-badge ob-stay-badge-day">Day <?php echo $progress['day']; ?>/<?php echo $progress['nights'] + 1; ?></div>
+                        <?php endif; ?>
+                    </a>
+                <?php endforeach; ?>
+            <?php endif; ?>
+        </div>
+
+        <div class="ob-section">
+            <div class="ob-section-head">
                 <div class="ob-section-title"><i data-feather="users"></i> Reservasi Tamu Mendatang</div>
                 <a href="owner-calendar.php" class="ob-section-link">Lihat Kalender →</a>
             </div>
@@ -911,6 +991,7 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
                 <?php endforeach; ?>
             <?php endif; ?>
         </div>
+
 
         <div class="ob-section">
             <div class="ob-section-head">
