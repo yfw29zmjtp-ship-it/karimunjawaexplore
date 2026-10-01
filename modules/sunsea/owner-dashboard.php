@@ -944,11 +944,11 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
 
         <div class="ob-section">
             <div class="ob-section-head">
-                <div class="ob-section-title"><i data-feather="home"></i> Tamu Sedang Menginap</div>
+                <div class="ob-section-title"><i data-feather="map-pin"></i> Trip Sedang Berlangsung</div>
                 <a href="owner-calendar.php" class="ob-section-link">Lihat Kalender →</a>
             </div>
             <?php if (empty($inHouseBookings)): ?>
-                <div class="ob-empty">Tidak ada tamu yang sedang in-house hari ini.</div>
+                <div class="ob-empty">Tidak ada trip yang sedang berjalan hari ini.</div>
             <?php else: ?>
                 <?php foreach ($inHouseBookings as $b): ?>
                     <?php $progress = sunseaStayProgress($b['start_date'], $b['end_date'], $today); ?>
@@ -960,9 +960,9 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
                             <div class="ob-row-sub-meta"><?php echo date('d M', strtotime($b['start_date'])); ?> - <?php echo date('d M Y', strtotime($b['end_date'])); ?></div>
                         </div>
                         <?php if ($progress['is_last_day']): ?>
-                            <div class="ob-stay-badge ob-stay-badge-lastday">Last Day</div>
+                            <div class="ob-stay-badge ob-stay-badge-lastday">Hari Terakhir</div>
                         <?php else: ?>
-                            <div class="ob-stay-badge ob-stay-badge-day">Day <?php echo $progress['day']; ?>/<?php echo $progress['nights'] + 1; ?></div>
+                            <div class="ob-stay-badge ob-stay-badge-day">Hari ke-<?php echo $progress['day']; ?>/<?php echo $progress['nights'] + 1; ?></div>
                         <?php endif; ?>
                     </a>
                 <?php endforeach; ?>
