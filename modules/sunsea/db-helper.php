@@ -92,7 +92,11 @@ function sunseaGetMonthOptions(): array
     return $options;
 }
 
-
+/**
+ * Ensure booking-related tables and columns exist.
+ * Safe to call on every request.
+ */
+function sunseaEnsureBookingSchema(PDO $pdo): void
 {
     try {
         $pdo->exec("CREATE TABLE IF NOT EXISTS `booking_orders` (
