@@ -1346,18 +1346,22 @@ if (isset($_GET['biz'])) {
             if (!splash) return;
             const minDelay = 650;
             const start = Date.now();
+            let hidden = false;
             const hide = () => {
+                if (hidden) return;
+                hidden = true;
                 const wait = Math.max(0, minDelay - (Date.now() - start));
                 setTimeout(() => {
                     splash.classList.add('bootSplash-hide');
                     setTimeout(() => splash.remove(), 550);
                 }, wait);
             };
-            if (document.readyState === 'complete') {
-                hide();
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', hide, { once: true });
             } else {
-                window.addEventListener('load', hide, { once: true });
+                hide();
             }
+            setTimeout(hide, 2500); // safety net in case the above never fires
         })();
     </script>
 </body>
