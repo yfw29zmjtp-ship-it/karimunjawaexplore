@@ -1024,10 +1024,176 @@ if (isset($_GET['biz'])) {
                 grid-template-columns: 1fr;
             }
         }
+
+        /* ===== Boot / splash screen shown while the app first loads ===== */
+        #bootSplash {
+            position: fixed;
+            inset: 0;
+            z-index: 999999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(ellipse 60% 50% at 50% 30%, rgba(34, 211, 238, 0.14) 0%, transparent 65%), #030510;
+            transition: opacity 0.5s ease, visibility 0.5s ease;
+        }
+
+        #bootSplash.bootSplash-hide {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        .bootSplash-inner {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.1rem;
+            animation: bootFadeUp 0.7s ease both;
+        }
+
+        @keyframes bootFadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(14px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .bootSplash-ring {
+            position: relative;
+            width: 104px;
+            height: 104px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .bootSplash-ring::before,
+        .bootSplash-ring::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            border: 2.5px solid transparent;
+        }
+
+        .bootSplash-ring::before {
+            border-top-color: #22d3ee;
+            border-right-color: #a78bfa;
+            animation: bootSpin 1.1s linear infinite;
+        }
+
+        .bootSplash-ring::after {
+            inset: 10px;
+            border-bottom-color: #3b82f6;
+            animation: bootSpin 1.6s linear infinite reverse;
+            opacity: 0.7;
+        }
+
+        @keyframes bootSpin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .bootSplash-logo {
+            width: 56px;
+            height: 56px;
+            object-fit: contain;
+            border-radius: 14px;
+            filter: drop-shadow(0 0 18px rgba(34, 211, 238, 0.45));
+            animation: bootPulse 1.8s ease-in-out infinite;
+        }
+
+        @keyframes bootPulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(0.93);
+            }
+        }
+
+        .bootSplash-brand {
+            font-weight: 800;
+            font-size: 1.05rem;
+            letter-spacing: 0.04em;
+            background: linear-gradient(90deg, #e2e8f0, #a78bfa, #22d3ee);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .bootSplash-tagline {
+            font-size: 0.72rem;
+            color: var(--ink-600);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .bootSplash-dots span {
+            display: inline-block;
+            width: 5px;
+            height: 5px;
+            margin: 0 2px;
+            border-radius: 50%;
+            background: #22d3ee;
+            animation: bootDots 1.1s ease-in-out infinite;
+        }
+
+        .bootSplash-dots span:nth-child(2) {
+            animation-delay: 0.15s;
+        }
+
+        .bootSplash-dots span:nth-child(3) {
+            animation-delay: 0.3s;
+        }
+
+        @keyframes bootDots {
+
+            0%,
+            80%,
+            100% {
+                opacity: 0.25;
+                transform: scale(0.8);
+            }
+
+            40% {
+                opacity: 1;
+                transform: scale(1.15);
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+
+            .bootSplash-ring::before,
+            .bootSplash-ring::after,
+            .bootSplash-logo,
+            .bootSplash-dots span {
+                animation: none !important;
+            }
+        }
     </style>
 </head>
 
 <body>
+    <div id="bootSplash">
+        <div class="bootSplash-inner">
+            <div class="bootSplash-ring">
+                <img class="bootSplash-logo" src="<?php echo BASE_URL; ?>/assets/img/developer-logo.png?v=<?php echo time(); ?>" alt="ADF System">
+            </div>
+            <div class="bootSplash-brand">ADF System</div>
+            <div class="bootSplash-tagline">Memuat sistem</div>
+            <div class="bootSplash-dots"><span></span><span></span><span></span></div>
+        </div>
+    </div>
     <div class="login-container">
         <div class="login-shell">
             <div class="login-box">
@@ -1173,6 +1339,26 @@ if (isset($_GET['biz'])) {
                 localStorage.removeItem('remember_me');
             } catch (e) {}
         });
+
+        // Fade out the boot splash once the page is ready (min display time avoids a jarring flash)
+        (function() {
+            const splash = document.getElementById('bootSplash');
+            if (!splash) return;
+            const minDelay = 650;
+            const start = Date.now();
+            const hide = () => {
+                const wait = Math.max(0, minDelay - (Date.now() - start));
+                setTimeout(() => {
+                    splash.classList.add('bootSplash-hide');
+                    setTimeout(() => splash.remove(), 550);
+                }, wait);
+            };
+            if (document.readyState === 'complete') {
+                hide();
+            } else {
+                window.addEventListener('load', hide, { once: true });
+            }
+        })();
     </script>
 </body>
 
