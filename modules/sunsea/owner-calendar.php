@@ -186,24 +186,41 @@ $checkinsThisWeek = $pdo->prepare("
 $checkinsThisWeek->execute([$todayDate, $weekAhead]);
 $checkinsThisWeek = $checkinsThisWeek->fetchAll();
 
-$pageTitle = 'Kalender Booking';
-include 'owner-mobile-header.php';
+$ajaxCalendar = (($_GET['ajax'] ?? '') === 'calendar');
+if (!$ajaxCalendar) {
+    $pageTitle = 'Kalender Booking';
+    include 'owner-mobile-header.php';
+}
 ?>
-
+<?php if (!$ajaxCalendar): ?>
 <style>
+    .cal-fragment {
+        transition: opacity .18s ease;
+    }
+
+    .cal-fragment.is-loading {
+        opacity: .45;
+        pointer-events: none;
+    }
+
     .ob-cal-nav {
         display: flex;
         align-items: center;
         justify-content: space-between;
         gap: 8px;
         margin-bottom: 12px;
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 8px;
+        box-shadow: 0 2px 10px rgba(3, 105, 161, .06);
     }
 
     .ob-cal-nav a {
-        width: 32px;
-        height: 32px;
-        border-radius: 8px;
-        background: #fff;
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        background: var(--sky);
         border: 1px solid var(--border);
         display: flex;
         align-items: center;
@@ -211,6 +228,13 @@ include 'owner-mobile-header.php';
         text-decoration: none;
         color: var(--ocean);
         flex-shrink: 0;
+        transition: background .15s ease, transform .1s ease;
+    }
+
+    .ob-cal-nav a:active {
+        background: var(--ocean);
+        color: #fff;
+        transform: scale(.94);
     }
 
     .ob-cal-nav a svg {
@@ -220,9 +244,10 @@ include 'owner-mobile-header.php';
 
     .ob-cal-month {
         flex: 1;
-        font-size: 14px;
+        font-size: 14.5px;
         font-weight: 800;
         text-align: center;
+        letter-spacing: .01em;
     }
 
     /* Timeline balok reservasi, disamakan persis dengan tampilan Kalender Booking di system (calendar.php) */
@@ -310,6 +335,17 @@ include 'owner-mobile-header.php';
         background: var(--sky);
     }
 
+    .cal-guest-pax {
+        font-size: 9px;
+        font-weight: 800;
+        color: var(--ocean);
+        background: var(--sky);
+        border-radius: 999px;
+        padding: 1px 6px;
+        flex-shrink: 0;
+        margin-left: 4px;
+    }
+
     .cal-timeline {
         width: 100%;
         background: #fff;
@@ -344,6 +380,7 @@ include 'owner-mobile-header.php';
         background: var(--ocean);
         color: #fff;
         border-radius: 6px 6px 0 0;
+        box-shadow: inset 0 -2px 0 rgba(255, 255, 255, .4);
     }
 
     .cal-row-placeholder {
@@ -388,22 +425,28 @@ include 'owner-mobile-header.php';
     }
 
     .ob-cal-today-btn {
-        width: 32px;
-        height: 32px;
-        border-radius: 8px;
-        background: #fff;
-        border: 1px solid var(--border);
+        width: 40px;
+        height: 34px;
+        border-radius: 10px;
+        background: var(--ocean);
+        border: none;
         display: flex;
         align-items: center;
         justify-content: center;
-        color: var(--ocean);
+        color: #fff;
         flex-shrink: 0;
         font-size: 8.5px;
         font-weight: 800;
         text-transform: uppercase;
         letter-spacing: .01em;
         cursor: pointer;
-        line-height: 1.1;
+        line-height: 1.25;
+        box-shadow: 0 2px 6px rgba(3, 105, 161, .3);
+        transition: transform .1s ease;
+    }
+
+    .ob-cal-today-btn:active {
+        transform: scale(.94);
     }
 
     .cal-guest-avatar {
@@ -493,25 +536,48 @@ include 'owner-mobile-header.php';
         display: flex;
         flex-wrap: wrap;
         align-items: center;
-        gap: 8px;
+        gap: 6px;
         font-size: 9.5px;
         color: var(--muted);
         margin-top: 10px;
     }
 
+    .ob-cal-legend .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 3px 8px;
+        border-radius: 999px;
+        background: var(--sky);
+        font-weight: 600;
+    }
+
     .ob-cal-legend span.dot {
-        width: 8px;
-        height: 8px;
+        width: 7px;
+        height: 7px;
         border-radius: 50%;
         display: inline-block;
+        flex-shrink: 0;
+    }
+
+    .ob-cal-legend .note {
+        color: var(--muted);
+        font-weight: 500;
+    }
+
+    .cal-split {
+        box-shadow: 0 3px 14px rgba(3, 105, 161, .08);
+        border-radius: 14px;
     }
 </style>
+<?php endif; ?>
 
+<div id="calFragment" class="cal-fragment">
 <div class="ob-cal-nav">
-    <a href="?month=<?php echo $prevMonth; ?>"><i data-feather="chevron-left"></i></a>
+    <a href="?month=<?php echo $prevMonth; ?>" onclick="return calNavigate(this.href)"><i data-feather="chevron-left"></i></a>
     <div class="ob-cal-month"><?php echo date('F Y', strtotime($startMonth)); ?></div>
     <button type="button" class="ob-cal-today-btn" onclick="calGoToday()">Hari<br>Ini</button>
-    <a href="?month=<?php echo $nextMonth; ?>"><i data-feather="chevron-right"></i></a>
+    <a href="?month=<?php echo $nextMonth; ?>" onclick="return calNavigate(this.href)"><i data-feather="chevron-right"></i></a>
 </div>
 
 <div class="ob-section">
@@ -549,15 +615,16 @@ include 'owner-mobile-header.php';
                 ?>
                     <div class="cal-frozen-row" onclick="openBookingDetail(<?php echo (int)$b['id']; ?>)">
                         <span class="cal-guest-avatar" style="background:linear-gradient(135deg,<?php echo $barColor; ?>,#0EA5E9);"><?php echo htmlspecialchars($initial); ?></span>
-                        <div style="min-width:0;">
+                        <div style="min-width:0;flex:1;">
                             <div class="cal-guest-name">
                                 <?php if ((int)$b['pending_count'] > 0): ?>
                                     <span title="Ada layanan belum selesai" style="display:inline-block;width:5px;height:5px;border-radius:50%;background:#dc2626;margin-right:3px;"></span>
                                 <?php endif; ?>
                                 <?php echo htmlspecialchars($b['customer_name']); ?>
                             </div>
-                            <div class="cal-guest-meta"><?php echo htmlspecialchars($b['booking_no']); ?> · <?php echo (int)$b['pax_count']; ?> pax</div>
+                            <div class="cal-guest-meta"><?php echo htmlspecialchars($b['booking_no']); ?></div>
                         </div>
+                        <span class="cal-guest-pax"><?php echo (int)$b['pax_count']; ?>p</span>
                     </div>
                 <?php endforeach; ?>
             <?php endif; ?>
@@ -633,14 +700,16 @@ include 'owner-mobile-header.php';
 </div>
 <div class="ob-cal-legend">
     <?php foreach ($obCalLegend as $label => $color): ?>
-        <span style="display:inline-flex;align-items:center;gap:4px;">
+        <span class="chip">
             <span class="dot" style="background:<?php echo $color; ?>;"></span>
             <?php echo htmlspecialchars($label); ?>
         </span>
     <?php endforeach; ?>
-    <span style="color:var(--muted);">&middot; Geser ke samping untuk lihat tanggal lain (bulan depan tetap tersambung)</span>
+    <span class="note">&middot; Geser ke samping untuk lihat tanggal lain (bulan depan tetap tersambung)</span>
 </div>
 </div>
+</div><!-- /#calFragment -->
+<?php if ($ajaxCalendar) { exit; } ?>
 
 
 <div class="ob-section">
@@ -955,9 +1024,12 @@ include 'owner-mobile-header.php';
     // cukup pakai scroll horizontal - di HP tetap swipe/touch bawaan browser (halus, tanpa reload).
     // Drag mouse pakai Pointer Events + setPointerCapture supaya gerakan mouse tetap "ditangkap"
     // oleh timeline walau kursor sempat keluar dari elemen/jendela saat digeser cepat.
-    (function() {
+    // Dibungkus fungsi supaya bisa dipanggil ulang tiap kali #calFragment diganti via AJAX
+    // (ganti bulan), karena elemen scroller lama ikut terhapus bersama listener-nya.
+    function calInitDragScroll() {
         var scroller = document.getElementById('calTimelineScroll');
-        if (!scroller || !window.PointerEvent) return;
+        if (!scroller || !window.PointerEvent || scroller.dataset.dragInit) return;
+        scroller.dataset.dragInit = '1';
         var isDown = false,
             startX = 0,
             startScroll = 0,
@@ -1013,7 +1085,7 @@ include 'owner-mobile-header.php';
                 e.preventDefault();
             }
         }, true);
-    })();
+    }
 
     // Posisikan timeline supaya tanggal hari ini langsung terlihat saat pertama dibuka,
     // dengan 2 hari sebelumnya tetap kelihatan sebagai konteks (bukan mepet di ujung kiri).
@@ -1034,24 +1106,78 @@ include 'owner-mobile-header.php';
         }
     }
 
+    // Bulan yang sedang ditampilkan di #calFragment saat ini - diperbarui tiap kali
+    // navigasi AJAX berhasil, supaya "Hari Ini" tahu harus scroll atau pindah bulan
+    // tanpa perlu reload halaman untuk membaca ulang nilai dari server.
+    var calCurrentMonth = '<?php echo $month; ?>';
+
     function calGoToday() {
-        <?php if ($month === date('Y-m')): ?>
+        var d = new Date();
+        var nowMonth = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+        if (calCurrentMonth === nowMonth) {
             calScrollToToday(false);
-        <?php else: ?>
-            window.location.href = '?month=<?php echo date('Y-m'); ?>';
-        <?php endif; ?>
+        } else {
+            calNavigate('?month=' + nowMonth);
+        }
     }
 
+    // Navigasi ganti bulan tanpa reload halaman penuh: kalender bulan yang sedang
+    // dilihat tetap terlihat (cuma meredup sebentar) sambil bulan baru dimuat di
+    // belakang layar, baru ditukar begitu siap - jadi tidak ada "kedipan" layar putih.
+    function calNavigate(url) {
+        var frag = document.getElementById('calFragment');
+        if (!frag) return true;
+        frag.classList.add('is-loading');
+        var sep = url.indexOf('?') === -1 ? '?' : '&';
+        fetch(url + sep + 'ajax=calendar', {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(function(r) {
+                return r.text();
+            })
+            .then(function(html) {
+                var tmp = document.createElement('div');
+                tmp.innerHTML = html;
+                var newFrag = tmp.querySelector('#calFragment');
+                frag.innerHTML = newFrag ? newFrag.innerHTML : html;
+                frag.classList.remove('is-loading');
+                var mMatch = url.match(/month=(\d{4}-\d{2})/);
+                if (mMatch) calCurrentMonth = mMatch[1];
+                if (window.feather) feather.replace();
+                calInitDragScroll();
+                calInitMonthLabelSync();
+                calScrollToToday(true);
+                history.pushState({
+                    calMonth: calCurrentMonth
+                }, '', url);
+            })
+            .catch(function() {
+                window.location.href = url;
+            });
+        return false;
+    }
+
+    window.addEventListener('popstate', function(e) {
+        var url = (e.state && e.state.calMonth) ? ('?month=' + e.state.calMonth) : window.location.pathname + window.location.search;
+        calNavigate(url);
+    });
+
     document.addEventListener('DOMContentLoaded', function() {
+        calInitDragScroll();
+        calInitMonthLabelSync();
         calScrollToToday(true);
     });
 
     // Update label bulan di pojok sidebar (frozen) sesuai tanggal yang lagi terlihat
     // di sisi kiri area scroll, biar user tahu lagi lihat bulan apa tanpa reload halaman.
-    (function() {
+    // Dibungkus fungsi supaya bisa dipanggil ulang tiap kali #calFragment diganti via AJAX.
+    function calInitMonthLabelSync() {
         var scroller = document.getElementById('calTimelineScroll');
         var monthLabel = document.getElementById('calFrozenMonth');
-        if (!scroller || !monthLabel) return;
+        if (!scroller || !monthLabel || scroller.dataset.monthSyncInit) return;
+        scroller.dataset.monthSyncInit = '1';
         var dayCols = Array.prototype.slice.call(scroller.querySelectorAll('.cal-day-col[data-month-label]'));
         if (!dayCols.length) return;
         var ticking = false;
@@ -1081,7 +1207,7 @@ include 'owner-mobile-header.php';
         });
 
         syncMonthLabel();
-    })();
+    }
 </script>
 
 <?php include 'owner-mobile-footer.php'; ?>
