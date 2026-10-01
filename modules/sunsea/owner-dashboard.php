@@ -296,12 +296,14 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
         .ob-greeting {
             font-size: 12px;
             opacity: .85;
+            margin-left: -4px;
         }
 
         .ob-title {
             font-size: 19px;
             font-weight: 800;
             margin-top: 2px;
+            margin-left: -4px;
         }
 
         .ob-sub-status {
@@ -617,9 +619,9 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
         }
 
         .ob-brand-logo {
-            width: 30px;
-            height: 30px;
-            border-radius: 9px;
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
             background: #fff;
             padding: 3px;
             display: flex;
