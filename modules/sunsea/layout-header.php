@@ -512,6 +512,81 @@ if (empty($sunseaNavItemsVisible)) {
             color: var(--ss-ocean);
         }
 
+        .ss-sub-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 8px;
+            border-radius: 99px;
+            cursor: pointer;
+            border: none;
+            background: transparent;
+        }
+
+        .ss-sub-status-dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            animation: ssSubStatusBlink 1.4s ease-in-out infinite;
+        }
+
+        .ss-sub-status-dot.ss-sub-status-dot-green {
+            background: #22C55E;
+            box-shadow: 0 0 0 0 rgba(34, 197, 94, .5);
+        }
+
+        .ss-sub-status-dot.ss-sub-status-dot-yellow {
+            background: #F59E0B;
+            box-shadow: 0 0 0 0 rgba(245, 158, 11, .5);
+        }
+
+        .ss-sub-status-dot.ss-sub-status-dot-red {
+            background: #DC2626;
+            box-shadow: 0 0 0 0 rgba(220, 38, 38, .5);
+        }
+
+        .ss-sub-status-text {
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .ss-sub-status-text.ss-sub-status-text-yellow {
+            color: #B45309;
+            animation: ssSubStatusTextBlink 1.4s ease-in-out infinite;
+        }
+
+        .ss-sub-status-text.ss-sub-status-text-red {
+            color: #B91C1C;
+            animation: ssSubStatusTextBlink 1.4s ease-in-out infinite;
+        }
+
+        @keyframes ssSubStatusBlink {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: .45;
+                transform: scale(.85);
+            }
+        }
+
+        @keyframes ssSubStatusTextBlink {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: .5;
+            }
+        }
+
         .ss-content {
             flex: 1;
             padding: 28px;
@@ -1483,10 +1558,25 @@ if (empty($sunseaNavItemsVisible)) {
             ?>
             <div class="ss-topbar-actions">
                 <span class="ss-badge ss-badge-ocean" id="ssLiveClock">🕒 --:--:--</span>
-                <?php if ($subscriptionStatusInvoice && !($subscriptionReminder['overdue'] ?? false)): ?>
-                    <span class="ss-badge ss-badge-ocean" style="cursor:pointer;background:#DCFCE7;color:#166534;" onclick="document.getElementById('ssSubStatusModal').style.display='flex'">
-                        🟢 Aktif sampai <?php echo htmlspecialchars(date('d M Y', strtotime($subscriptionStatusInvoice['due_date']))); ?>
-                    </span>
+                <?php if ($subscriptionStatusInvoice && !($subscriptionReminder['overdue'] ?? false)):
+                    $__daysLeft = $subscriptionReminder['days_left'] ?? 99;
+                    if ($__daysLeft <= 1) {
+                        $__subState = 'red';
+                        $__subText = 'Tagihan jatuh tempo, segera bayar';
+                    } elseif ($__daysLeft <= 7) {
+                        $__subState = 'yellow';
+                        $__subText = 'Tagihan bisa dibayar';
+                    } else {
+                        $__subState = 'green';
+                        $__subText = '';
+                    }
+                ?>
+                    <button type="button" class="ss-sub-status" onclick="document.getElementById('ssSubStatusModal').style.display='flex'" title="Aktif sampai <?php echo htmlspecialchars(date('d M Y', strtotime($subscriptionStatusInvoice['due_date']))); ?>">
+                        <span class="ss-sub-status-dot ss-sub-status-dot-<?php echo $__subState; ?>"></span>
+                        <?php if ($__subText): ?>
+                            <span class="ss-sub-status-text ss-sub-status-text-<?php echo $__subState; ?>"><?php echo htmlspecialchars($__subText); ?></span>
+                        <?php endif; ?>
+                    </button>
                 <?php endif; ?>
                 <span class="ss-badge ss-badge-ocean">🌊 Karimunjawa Explore</span>
                 <a href="<?php echo BASE_URL; ?>/logout.php" style="color:var(--ss-muted);text-decoration:none;font-size:12px;">

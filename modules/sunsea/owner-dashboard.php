@@ -29,6 +29,20 @@ if (!sunseaCanAccessMenu($pdo, $currentUser, 'owner_dashboard')) {
 sunseaEnsureBookingSchema($pdo);
 sunseaEnsureFinanceSchema($pdo);
 
+// Selektor bulan di header: default bulan berjalan, bisa pilih bulan lalu untuk lihat histori transaksi
+$selectedMonth = $_GET['month'] ?? date('Y-m');
+if (!preg_match('/^\d{4}-\d{2}$/', $selectedMonth) || !checkdate((int)substr($selectedMonth, 5, 2), 1, (int)substr($selectedMonth, 0, 4))) {
+    $selectedMonth = date('Y-m');
+}
+$isCurrentMonth = ($selectedMonth === date('Y-m'));
+$idMonthNames = ['01' => 'Januari', '02' => 'Februari', '03' => 'Maret', '04' => 'April', '05' => 'Mei', '06' => 'Juni', '07' => 'Juli', '08' => 'Agustus', '09' => 'September', '10' => 'Oktober', '11' => 'November', '12' => 'Desember'];
+$monthOptions = [];
+for ($mi = 0; $mi < 13; $mi++) {
+    $mKey = date('Y-m', strtotime("-{$mi} months"));
+    $monthOptions[$mKey] = $idMonthNames[substr($mKey, 5, 2)] . ' ' . substr($mKey, 0, 4);
+}
+$selectedMonthLabel = $monthOptions[$selectedMonth] ?? ($idMonthNames[substr($selectedMonth, 5, 2)] . ' ' . substr($selectedMonth, 0, 4));
+
 // Hitung progres menginap (Day X / Last Day) sinkron dengan tanggal di kalender booking
 function sunseaStayProgress(string $startDate, string $endDate, string $today): array
 {
@@ -102,7 +116,7 @@ foreach ($recentInvoices as &$_inv) {
 }
 unset($_inv);
 
-// Finance bulan berjalan
+// Finance bulan terpilih (default bulan berjalan, bisa pilih bulan lalu via selektor bulan di header)
 $financeRow = $pdo->prepare("
     SELECT
         COALESCE(SUM(CASE WHEN type='income' THEN amount ELSE 0 END),0) AS total_income,
@@ -110,7 +124,7 @@ $financeRow = $pdo->prepare("
     FROM cash_book
     WHERE transaction_date BETWEEN ? AND ?
 ");
-$financeRow->execute([date('Y-m-01'), date('Y-m-t')]);
+$financeRow->execute([$selectedMonth . '-01', date('Y-m-t', strtotime($selectedMonth . '-01'))]);
 $financeRow = $financeRow->fetch();
 $monthIncome  = (float)$financeRow['total_income'];
 $monthExpense = (float)$financeRow['total_expense'];
@@ -176,12 +190,12 @@ $financePieTotal = $monthIncome + $monthExpense;
 $monthIncomePct = $financePieTotal > 0 ? round($monthIncome / $financePieTotal * 100) : 0;
 $monthProfit = max(0, $monthIncome - $monthExpense);
 
-// Total Pax dalam 1 bulan ini (per hari), pengganti donut Status Booking
-$paxDaysInMonth = (int)date('t');
+// Total Pax dalam 1 bulan terpilih (per hari), pengganti donut Status Booking
+$paxDaysInMonth = (int)date('t', strtotime($selectedMonth . '-01'));
 $paxDayLabels = [];
 $paxDayTotals = [];
 for ($pd = 1; $pd <= $paxDaysInMonth; $pd++) {
-    $paxDayKey = date('Y-m-') . str_pad((string)$pd, 2, '0', STR_PAD_LEFT);
+    $paxDayKey = $selectedMonth . '-' . str_pad((string)$pd, 2, '0', STR_PAD_LEFT);
     $paxDayLabels[] = (string)$pd;
     $paxDayTotals[] = (int)$pdo->query("
         SELECT COALESCE(SUM(pax_count),0) FROM booking_orders
@@ -296,6 +310,80 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
             font-size: 19px;
             font-weight: 800;
             margin-top: 2px;
+        }
+
+        .ob-sub-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            background: rgba(255, 255, 255, .22);
+            border-radius: 20px;
+            padding: 4px 10px;
+            white-space: nowrap;
+        }
+
+        .ob-sub-status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            animation: obSubDotBlink 1.4s ease-in-out infinite;
+        }
+
+        .ob-sub-status-text {
+            font-size: 10.5px;
+            font-weight: 700;
+            color: #fff;
+            animation: obSubTextBlink 1.4s ease-in-out infinite;
+        }
+
+        @keyframes obSubDotBlink {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: .4;
+                transform: scale(.8);
+            }
+        }
+
+        @keyframes obSubTextBlink {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: .55;
+            }
+        }
+
+        .ob-month-select {
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .ob-month-select select {
+            background: rgba(255, 255, 255, .18);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, .35);
+            border-radius: 9px;
+            padding: 5px 9px;
+            font-size: 11.5px;
+            font-weight: 700;
+            appearance: none;
+        }
+
+        .ob-month-select select option {
+            color: #1E293B;
         }
 
         .ob-container {
@@ -752,9 +840,25 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
                 Karimunjawa Explore
             </div>
             <div class="ob-user">
-                <?php if ($subscriptionStatusInvoice && !($subscriptionReminder['overdue'] ?? false)): ?>
-                    <span onclick="document.getElementById('obSubStatusModal').style.display='flex'" style="cursor:pointer;background:rgba(255,255,255,.25);color:#fff;border-radius:20px;padding:4px 10px;font-size:11px;font-weight:700;white-space:nowrap;">
-                        🟢 Aktif sampai <?php echo htmlspecialchars(date('d M Y', strtotime($subscriptionStatusInvoice['due_date']))); ?>
+                <?php if ($subscriptionStatusInvoice && !($subscriptionReminder['overdue'] ?? false)):
+                    $__daysLeft = $subscriptionReminder['days_left'] ?? 99;
+                    if ($__daysLeft <= 1) {
+                        $__subState = 'red';
+                        $__subText = 'Tagihan jatuh tempo, segera bayar';
+                    } elseif ($__daysLeft <= 7) {
+                        $__subState = 'yellow';
+                        $__subText = 'Tagihan bisa dibayar';
+                    } else {
+                        $__subState = 'green';
+                        $__subText = '';
+                    }
+                    $__subDotColor = ['green' => '#4ADE80', 'yellow' => '#FBBF24', 'red' => '#F87171'][$__subState];
+                ?>
+                    <span onclick="document.getElementById('obSubStatusModal').style.display='flex'" class="ob-sub-status" title="Aktif sampai <?php echo htmlspecialchars(date('d M Y', strtotime($subscriptionStatusInvoice['due_date']))); ?>">
+                        <span class="ob-sub-status-dot" style="background:<?php echo $__subDotColor; ?>;"></span>
+                        <?php if ($__subText): ?>
+                            <span class="ob-sub-status-text"><?php echo htmlspecialchars($__subText); ?></span>
+                        <?php endif; ?>
                     </span>
                 <?php endif; ?>
                 <div class="ob-avatar"><?php echo strtoupper(substr($userName, 0, 1)); ?></div>
@@ -766,6 +870,16 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
         </div>
         <div class="ob-greeting">Welcome back,</div>
         <div class="ob-title">Owner Dashboard</div>
+        <div class="ob-month-select">
+            <i data-feather="calendar" style="width:14px;height:14px;"></i>
+            <form method="GET" style="margin:0;">
+                <select name="month" onchange="this.form.submit()">
+                    <?php foreach ($monthOptions as $mKey => $mLabel): ?>
+                        <option value="<?php echo htmlspecialchars($mKey); ?>" <?php echo $mKey === $selectedMonth ? 'selected' : ''; ?>><?php echo htmlspecialchars($mLabel); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </form>
+        </div>
     </div>
 
     <?php if (!empty($todayArrivals)): ?>
@@ -863,13 +977,13 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
         <div class="ob-pies-panel">
             <div class="ob-pies-row">
                 <div class="ob-pie-card">
-                    <div class="ob-pie-title">Total Pax Bulan Ini</div>
+                    <div class="ob-pie-title">Total Pax <?php echo $isCurrentMonth ? 'Bulan Ini' : htmlspecialchars($selectedMonthLabel); ?></div>
                     <div style="position:relative;height:130px;">
                         <canvas id="obPaxMonthChart"></canvas>
                     </div>
                 </div>
                 <div class="ob-pie-card">
-                    <div class="ob-pie-title">Keuangan Bulan Ini</div>
+                    <div class="ob-pie-title">Keuangan <?php echo $isCurrentMonth ? 'Bulan Ini' : htmlspecialchars($selectedMonthLabel); ?></div>
                     <div style="position:relative;height:130px;">
                         <canvas id="obFinancePieChart"></canvas>
                     </div>
@@ -899,7 +1013,7 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
                 <div class="ob-card-sub"><?php echo sunseaRupiah((float)$invoiceStats['total_outstanding']); ?></div>
             </a>
             <a href="owner-finance.php" class="ob-card" style="--card-accent:<?php echo $monthBalance >= 0 ? 'var(--success)' : 'var(--danger)'; ?>;">
-                <div class="ob-card-label">Saldo Bulan Ini</div>
+                <div class="ob-card-label">Saldo <?php echo $isCurrentMonth ? 'Bulan Ini' : htmlspecialchars($selectedMonthLabel); ?></div>
                 <div class="ob-card-value" style="color:<?php echo $monthBalance >= 0 ? 'var(--success)' : 'var(--danger)'; ?>;"><?php echo sunseaRupiah($monthBalance); ?></div>
             </a>
         </div>
