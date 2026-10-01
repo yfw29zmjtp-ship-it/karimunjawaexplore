@@ -26,6 +26,11 @@ try {
         throw new Exception('Invalid request data');
     }
     
+    // Honeypot: a real visitor never sees or fills this field, bots usually fill everything
+    if (!empty($input['website'])) {
+        throw new Exception('Invalid submission');
+    }
+
     // Validate required fields
     $required = ['room_id', 'check_in', 'check_out', 'guest_name', 'guest_email', 'guest_phone'];
     foreach ($required as $field) {
@@ -40,6 +45,17 @@ try {
     $guestName = trim($input['guest_name']);
     $guestEmail = trim($input['guest_email']);
     $guestPhone = trim($input['guest_phone']);
+
+    // Reject spam/bot-injected names (URLs, promo codes, excessive length/symbols)
+    if (mb_strlen($guestName) < 2 || mb_strlen($guestName) > 80) {
+        throw new Exception('Invalid name length');
+    }
+    if (preg_match('/https?:\/\/|www\.|\.(com|net|org|ru|xyz|top|info|online)\b|->>|\bhs=/i', $guestName)) {
+        throw new Exception('Invalid name format');
+    }
+    if (!preg_match('/^[\p{L}\p{M}\x27\.\-\s]+$/u', $guestName)) {
+        throw new Exception('Name contains invalid characters');
+    }
     $guests = (int)($input['guests'] ?? 2);
     $idCardType = $input['id_card_type'] ?? 'ktp';
     $idCardNumber = trim($input['id_card_number'] ?? '');
