@@ -278,7 +278,7 @@ if (!$ajaxCalendar) {
     /* Kolom nama tamu FISIK terpisah dari area scroll tanggal (bukan position:sticky) -
        jadi dijamin selalu diam di tempat, tidak mungkin ikut ter-drag walau di HP manapun. */
     .cal-frozen {
-        width: 150px;
+        width: 118px;
         flex-shrink: 0;
         background: #fff;
         border-right: 1px solid var(--border);
@@ -320,11 +320,11 @@ if (!$ajaxCalendar) {
     }
 
     .cal-frozen-row {
-        height: 44px;
+        height: 40px;
         box-sizing: border-box;
         display: flex;
         align-items: center;
-        padding: 0 7px;
+        padding: 0 6px;
         overflow: hidden;
         cursor: pointer;
         border-bottom: 1px solid rgba(15, 23, 42, .06);
@@ -450,21 +450,21 @@ if (!$ajaxCalendar) {
     }
 
     .cal-guest-avatar {
-        width: 24px;
-        height: 24px;
+        width: 20px;
+        height: 20px;
         border-radius: 50%;
         color: #fff;
-        font-size: 10.5px;
+        font-size: 9px;
         font-weight: 800;
         display: inline-flex;
         align-items: center;
         justify-content: center;
         flex-shrink: 0;
-        margin-right: 6px;
+        margin-right: 5px;
     }
 
     .cal-guest-name {
-        font-size: 12px;
+        font-size: 10.5px;
         font-weight: 700;
         color: var(--text);
         white-space: nowrap;
@@ -473,7 +473,7 @@ if (!$ajaxCalendar) {
     }
 
     .cal-guest-meta {
-        font-size: 9.5px;
+        font-size: 8px;
         font-weight: 500;
         color: var(--muted);
         white-space: nowrap;
@@ -482,7 +482,7 @@ if (!$ajaxCalendar) {
     }
 
     .cal-cell {
-        height: 44px;
+        height: 40px;
         box-sizing: border-box;
         border-left: 1px solid rgba(15, 23, 42, .03);
         border-bottom: 1px solid rgba(15, 23, 42, .06);
@@ -498,7 +498,7 @@ if (!$ajaxCalendar) {
     }
 
     .cal-bar {
-        height: 28px;
+        height: 24px;
         margin: 0 1px;
         border-radius: 999px;
         box-shadow: 0 2px 6px rgba(3, 105, 161, .28);
