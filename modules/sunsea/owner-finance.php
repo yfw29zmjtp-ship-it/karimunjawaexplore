@@ -26,8 +26,14 @@ if (!sunseaCanAccessMenu($pdo, $currentUser, 'owner_dashboard')) {
 
 sunseaEnsureFinanceSchema($pdo);
 
-$dateFrom = date('Y-m-01');
-$dateTo   = date('Y-m-t');
+// Bulan terpilih dishare dengan dashboard owner via session; bisa diganti dari sini juga
+$selectedMonth = sunseaGetSelectedMonth();
+$monthOptions = sunseaGetMonthOptions();
+$selectedMonthLabel = $monthOptions[$selectedMonth] ?? $selectedMonth;
+$isCurrentMonth = ($selectedMonth === date('Y-m'));
+
+$dateFrom = $selectedMonth . '-01';
+$dateTo   = date('Y-m-t', strtotime($dateFrom));
 
 $rows = $pdo->prepare("
     SELECT cb.type, cb.amount, cb.transaction_date, cb.description, c.name AS customer_name
@@ -316,7 +322,35 @@ include 'owner-mobile-header.php';
         font-weight: 600;
         color: var(--text);
     }
+
+    .ob-month-select {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 12px;
+    }
+
+    .ob-month-select select {
+        background: #fff;
+        color: var(--text);
+        border: 1px solid var(--border);
+        border-radius: 9px;
+        padding: 6px 10px;
+        font-size: 12px;
+        font-weight: 700;
+    }
 </style>
+
+<div class="ob-month-select">
+    <i data-feather="calendar" style="width:14px;height:14px;color:var(--muted);"></i>
+    <form method="GET" style="margin:0;">
+        <select name="month" onchange="this.form.submit()">
+            <?php foreach ($monthOptions as $mKey => $mLabel): ?>
+                <option value="<?php echo htmlspecialchars($mKey); ?>" <?php echo $mKey === $selectedMonth ? 'selected' : ''; ?>><?php echo htmlspecialchars($mLabel); ?></option>
+            <?php endforeach; ?>
+        </select>
+    </form>
+</div>
 
 <div class="ob-summary">
     <div class="ob-summary-item">
@@ -374,7 +408,7 @@ include 'owner-mobile-header.php';
         <div class="ob-section-title">Riwayat Transaksi</div>
     </div>
     <?php if (empty($rows)): ?>
-        <div class="ob-empty">Belum ada transaksi bulan ini.</div>
+        <div class="ob-empty">Belum ada transaksi <?php echo $isCurrentMonth ? 'bulan ini' : 'di ' . htmlspecialchars($selectedMonthLabel); ?>.</div>
     <?php else: ?>
         <?php foreach ($rows as $r): ?>
             <div class="ob-tx-row">

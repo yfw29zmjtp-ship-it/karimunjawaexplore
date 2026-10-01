@@ -29,19 +29,11 @@ if (!sunseaCanAccessMenu($pdo, $currentUser, 'owner_dashboard')) {
 sunseaEnsureBookingSchema($pdo);
 sunseaEnsureFinanceSchema($pdo);
 
-// Selektor bulan di header: default bulan berjalan, bisa pilih bulan lalu untuk lihat histori transaksi
-$selectedMonth = $_GET['month'] ?? date('Y-m');
-if (!preg_match('/^\d{4}-\d{2}$/', $selectedMonth) || !checkdate((int)substr($selectedMonth, 5, 2), 1, (int)substr($selectedMonth, 0, 4))) {
-    $selectedMonth = date('Y-m');
-}
+// Selektor bulan di header: default bulan berjalan, dishare lintas halaman (dashboard/finance) via session
+$selectedMonth = sunseaGetSelectedMonth();
 $isCurrentMonth = ($selectedMonth === date('Y-m'));
-$idMonthNames = ['01' => 'Januari', '02' => 'Februari', '03' => 'Maret', '04' => 'April', '05' => 'Mei', '06' => 'Juni', '07' => 'Juli', '08' => 'Agustus', '09' => 'September', '10' => 'Oktober', '11' => 'November', '12' => 'Desember'];
-$monthOptions = [];
-for ($mi = 0; $mi < 13; $mi++) {
-    $mKey = date('Y-m', strtotime("-{$mi} months"));
-    $monthOptions[$mKey] = $idMonthNames[substr($mKey, 5, 2)] . ' ' . substr($mKey, 0, 4);
-}
-$selectedMonthLabel = $monthOptions[$selectedMonth] ?? ($idMonthNames[substr($selectedMonth, 5, 2)] . ' ' . substr($selectedMonth, 0, 4));
+$monthOptions = sunseaGetMonthOptions();
+$selectedMonthLabel = $monthOptions[$selectedMonth] ?? $selectedMonth;
 
 // Hitung progres menginap (Day X / Last Day) sinkron dengan tanggal di kalender booking
 function sunseaStayProgress(string $startDate, string $endDate, string $today): array
@@ -1012,7 +1004,7 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
                 <div class="ob-card-value" style="color:var(--danger);"><?php echo (int)$invoiceStats['cnt']; ?></div>
                 <div class="ob-card-sub"><?php echo sunseaRupiah((float)$invoiceStats['total_outstanding']); ?></div>
             </a>
-            <a href="owner-finance.php" class="ob-card" style="--card-accent:<?php echo $monthBalance >= 0 ? 'var(--success)' : 'var(--danger)'; ?>;">
+            <a href="owner-finance.php?month=<?php echo urlencode($selectedMonth); ?>" class="ob-card" style="--card-accent:<?php echo $monthBalance >= 0 ? 'var(--success)' : 'var(--danger)'; ?>;">
                 <div class="ob-card-label">Saldo <?php echo $isCurrentMonth ? 'Bulan Ini' : htmlspecialchars($selectedMonthLabel); ?></div>
                 <div class="ob-card-value" style="color:<?php echo $monthBalance >= 0 ? 'var(--success)' : 'var(--danger)'; ?>;"><?php echo sunseaRupiah($monthBalance); ?></div>
             </a>
@@ -1147,7 +1139,7 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
         <a href="owner-bookings.php" class="ob-navbtn"><i data-feather="briefcase"></i> Reservasi</a>
         <a href="owner-calendar.php" class="ob-navbtn"><i data-feather="calendar"></i> Kalender</a>
         <a href="owner-invoices.php" class="ob-navbtn"><i data-feather="credit-card"></i> Invoice</a>
-        <a href="owner-finance.php" class="ob-navbtn"><i data-feather="dollar-sign"></i> Finance</a>
+        <a href="owner-finance.php?month=<?php echo urlencode($selectedMonth); ?>" class="ob-navbtn"><i data-feather="dollar-sign"></i> Finance</a>
     </div>
 
     <div class="ob-install-banner" id="obInstallBanner">

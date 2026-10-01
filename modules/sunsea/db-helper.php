@@ -54,10 +54,45 @@ function getSunseaConnection(): PDO
 }
 
 /**
- * Ensure booking-related tables and columns exist.
- * Safe to call on every request.
+ * Resolve the "selected month" (YYYY-MM) shared across owner pages (dashboard,
+ * finance, etc.) via session, so picking a month on one page carries over to
+ * the others until changed again. A `month` GET param always wins and updates
+ * the session; otherwise falls back to the session value, then current month.
  */
-function sunseaEnsureBookingSchema(PDO $pdo): void
+function sunseaGetSelectedMonth(): string
+{
+    $isValid = static function (?string $m): bool {
+        return $m && preg_match('/^\d{4}-\d{2}$/', $m) && checkdate((int)substr($m, 5, 2), 1, (int)substr($m, 0, 4));
+    };
+
+    if (!empty($_GET['month']) && $isValid($_GET['month'])) {
+        $_SESSION['sunsea_selected_month'] = $_GET['month'];
+        return $_GET['month'];
+    }
+
+    if (!empty($_SESSION['sunsea_selected_month']) && $isValid($_SESSION['sunsea_selected_month'])) {
+        return $_SESSION['sunsea_selected_month'];
+    }
+
+    return date('Y-m');
+}
+
+/**
+ * Last 13 months (current + 12 back) as [YYYY-MM => 'Nama Bulan YYYY'] for
+ * month-selector dropdowns, newest first.
+ */
+function sunseaGetMonthOptions(): array
+{
+    $idMonthNames = ['01' => 'Januari', '02' => 'Februari', '03' => 'Maret', '04' => 'April', '05' => 'Mei', '06' => 'Juni', '07' => 'Juli', '08' => 'Agustus', '09' => 'September', '10' => 'Oktober', '11' => 'November', '12' => 'Desember'];
+    $options = [];
+    for ($i = 0; $i < 13; $i++) {
+        $key = date('Y-m', strtotime("-{$i} months"));
+        $options[$key] = $idMonthNames[substr($key, 5, 2)] . ' ' . substr($key, 0, 4);
+    }
+    return $options;
+}
+
+
 {
     try {
         $pdo->exec("CREATE TABLE IF NOT EXISTS `booking_orders` (
