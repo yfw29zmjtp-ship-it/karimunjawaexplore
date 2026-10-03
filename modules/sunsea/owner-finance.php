@@ -56,6 +56,9 @@ foreach ($rows as $r) {
     }
 }
 $balance = $totalIncome - $totalExpense;
+// Saldo kas nyambung dari bulan lalu (saldo awal + arus kas bulan ini), sama seperti Buku Kas di finance.php.
+$openingBalance = sunseaCashBalanceBefore($pdo, $dateFrom);
+$closingBalance = $openingBalance + $balance;
 
 // Pie: proporsi masuk vs keluar bulan ini
 $pieTotal = $totalIncome + $totalExpense;
@@ -363,7 +366,7 @@ include 'owner-mobile-header.php';
     </div>
     <div class="ob-summary-item">
         <div class="ob-summary-label">Saldo</div>
-        <div class="ob-summary-value" style="color:<?php echo $balance >= 0 ? 'var(--success)' : 'var(--danger)'; ?>;"><?php echo sunseaRupiah($balance, true); ?></div>
+        <div class="ob-summary-value" style="color:<?php echo $closingBalance >= 0 ? 'var(--success)' : 'var(--danger)'; ?>;"><?php echo sunseaRupiah($closingBalance, true); ?></div>
     </div>
 </div>
 

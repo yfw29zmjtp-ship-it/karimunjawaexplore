@@ -5,9 +5,9 @@ $obCurrentPage = basename($_SERVER['SCRIPT_NAME'] ?? '');
 $obNavItems = [
     ['file' => 'owner-dashboard.php', 'icon' => 'home', 'label' => 'Dashboard'],
     ['file' => 'owner-bookings.php', 'icon' => 'briefcase', 'label' => 'Reservasi'],
+    ['file' => 'owner-finance.php', 'icon' => 'dollar-sign', 'label' => 'Finance'],
     ['file' => 'owner-calendar.php', 'icon' => 'calendar', 'label' => 'Kalender'],
     ['file' => 'owner-invoices.php', 'icon' => 'credit-card', 'label' => 'Invoice'],
-    ['file' => 'owner-finance.php', 'icon' => 'dollar-sign', 'label' => 'Finance'],
 ];
 $obActiveMap = [
     'owner-booking-add.php' => 'owner-bookings.php',

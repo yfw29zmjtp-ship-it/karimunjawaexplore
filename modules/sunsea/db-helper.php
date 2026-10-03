@@ -757,6 +757,16 @@ function sunseaNextNumber(PDO $pdo, string $type): string
 }
 
 /**
+ * Saldo kas yang dibawa dari periode sebelumnya (akumulasi semua transaksi sebelum $date).
+ */
+function sunseaCashBalanceBefore(PDO $pdo, string $date): float
+{
+    $stmt = $pdo->prepare("SELECT COALESCE(SUM(CASE WHEN type='income' THEN amount ELSE -amount END),0) FROM cash_book WHERE transaction_date < ?");
+    $stmt->execute([$date]);
+    return (float)$stmt->fetchColumn();
+}
+
+/**
  * Format Rupiah
  */
 function sunseaRupiah(float $amount, bool $short = false): string

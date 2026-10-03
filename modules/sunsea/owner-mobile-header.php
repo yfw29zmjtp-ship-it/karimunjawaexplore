@@ -57,7 +57,7 @@ $backUrl = $backUrl ?? 'owner-dashboard.php';
             align-items: center;
             justify-content: center;
             gap: 3px;
-            padding: 8px 2px 7px;
+            padding: 6px 2px 14px;
             text-decoration: none;
             color: var(--muted);
             font-size: 9.5px;

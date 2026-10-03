@@ -121,6 +121,9 @@ $financeRow = $financeRow->fetch();
 $monthIncome  = (float)$financeRow['total_income'];
 $monthExpense = (float)$financeRow['total_expense'];
 $monthBalance = $monthIncome - $monthExpense;
+// Saldo kas nyambung dari bulan lalu: saldo awal + arus kas bulan ini (sama seperti Buku Kas di finance.php).
+$monthOpening = sunseaCashBalanceBefore($pdo, $selectedMonth . '-01');
+$monthClosing = $monthOpening + $monthBalance;
 
 // Booking/penawaran masuk dari form kontak website (belum diproses owner / belum dibuka)
 $webQuotationCount = (int)$pdo->query("SELECT COUNT(*) FROM quotations WHERE created_by = 'website' AND status = 'draft' AND viewed_at IS NULL")->fetchColumn();
@@ -180,7 +183,7 @@ $confirmedPct = $bookingPieTotal > 0 ? round($confirmedCount / $bookingPieTotal 
 // Pie 2: keuangan bulan ini (masuk vs keluar)
 $financePieTotal = $monthIncome + $monthExpense;
 $monthIncomePct = $financePieTotal > 0 ? round($monthIncome / $financePieTotal * 100) : 0;
-$monthProfit = max(0, $monthIncome - $monthExpense);
+$monthProfit = max(0, $monthClosing); // sisa saldo kas (nyambung dari bulan lalu)
 
 // Total Pax dalam 1 bulan terpilih (per hari), pengganti donut Status Booking
 $paxDaysInMonth = (int)date('t', strtotime($selectedMonth . '-01'));
@@ -599,7 +602,7 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
             align-items: center;
             justify-content: center;
             gap: 3px;
-            padding: 8px 2px 7px;
+            padding: 6px 2px 14px;
             text-decoration: none;
             color: var(--muted);
             font-size: 9.5px;
@@ -984,7 +987,7 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
                     <div class="ob-pie-legend">
                         <span><span class="ob-pie-dot" style="background:#10b981;"></span> Masuk</span>
                         <span><span class="ob-pie-dot" style="background:#ef4444;"></span> Keluar</span>
-                        <span><span class="ob-pie-dot" style="background:#0369A1;"></span> Profit</span>
+                        <span><span class="ob-pie-dot" style="background:#0369A1;"></span> Saldo</span>
                     </div>
                 </div>
             </div>
@@ -1006,9 +1009,10 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
                 <div class="ob-card-value" style="color:var(--danger);"><?php echo (int)$invoiceStats['cnt']; ?></div>
                 <div class="ob-card-sub"><?php echo sunseaRupiah((float)$invoiceStats['total_outstanding']); ?></div>
             </a>
-            <a href="owner-finance.php?month=<?php echo urlencode($selectedMonth); ?>" class="ob-card" style="--card-accent:<?php echo $monthBalance >= 0 ? 'var(--success)' : 'var(--danger)'; ?>;">
-                <div class="ob-card-label">Saldo <?php echo $isCurrentMonth ? 'Bulan Ini' : htmlspecialchars($selectedMonthLabel); ?></div>
-                <div class="ob-card-value" style="color:<?php echo $monthBalance >= 0 ? 'var(--success)' : 'var(--danger)'; ?>;"><?php echo sunseaRupiah($monthBalance); ?></div>
+            <a href="owner-finance.php?month=<?php echo urlencode($selectedMonth); ?>" class="ob-card" style="--card-accent:<?php echo $monthClosing >= 0 ? 'var(--success)' : 'var(--danger)'; ?>;">
+                <div class="ob-card-label">Saldo Kas</div>
+                <div class="ob-card-value" style="color:<?php echo $monthClosing >= 0 ? 'var(--success)' : 'var(--danger)'; ?>;"><?php echo sunseaRupiah($monthClosing); ?></div>
+                <div class="ob-card-sub">Arus <?php echo $isCurrentMonth ? 'bulan ini' : htmlspecialchars($selectedMonthLabel); ?>: <?php echo ($monthBalance >= 0 ? '+ ' : '- ') . sunseaRupiah(abs($monthBalance)); ?></div>
             </a>
         </div>
 
@@ -1139,9 +1143,9 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
     <div class="ob-bottom-nav">
         <a href="owner-dashboard.php" class="ob-navbtn ob-navbtn-active"><i data-feather="home"></i> Dashboard</a>
         <a href="owner-bookings.php" class="ob-navbtn"><i data-feather="briefcase"></i> Reservasi</a>
+        <a href="owner-finance.php?month=<?php echo urlencode($selectedMonth); ?>" class="ob-navbtn"><i data-feather="dollar-sign"></i> Finance</a>
         <a href="owner-calendar.php" class="ob-navbtn"><i data-feather="calendar"></i> Kalender</a>
         <a href="owner-invoices.php" class="ob-navbtn"><i data-feather="credit-card"></i> Invoice</a>
-        <a href="owner-finance.php?month=<?php echo urlencode($selectedMonth); ?>" class="ob-navbtn"><i data-feather="dollar-sign"></i> Finance</a>
     </div>
 
     <div class="ob-install-banner" id="obInstallBanner">
@@ -1209,13 +1213,13 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
             });
         }
 
-        // Keuangan Bulan Ini: Pemasukan vs Pengeluaran vs Profit Margin (sama seperti dashboard system)
+        // Keuangan Bulan Ini: Pemasukan vs Pengeluaran vs Sisa Saldo Kas (sama seperti dashboard system)
         const obFinanceCtx = document.getElementById('obFinancePieChart');
         if (obFinanceCtx) {
             new Chart(obFinanceCtx, {
                 type: 'pie',
                 data: {
-                    labels: ['Pemasukan', 'Pengeluaran', 'Profit Margin'],
+                    labels: ['Pemasukan', 'Pengeluaran', 'Sisa Saldo Kas'],
                     datasets: [{
                         data: [<?php echo (float)$monthIncome; ?>, <?php echo (float)$monthExpense; ?>, <?php echo (float)$monthProfit; ?>],
                         backgroundColor: ['#10b981', '#ef4444', '#0369A1'],
