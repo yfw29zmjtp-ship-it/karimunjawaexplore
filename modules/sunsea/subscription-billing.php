@@ -20,6 +20,8 @@ if (!in_array($currentUser['role'] ?? '', ['developer', 'owner', 'manager'], tru
 $pdo = getSunseaConnection();
 sunseaEnsureSubscriptionBillingSchema($pdo);
 sunseaEnsureBookingSchema($pdo);
+// Sekali jalan: catat riwayat tagihan yang sudah lunas ke halaman Transaksi ADF System.
+sunseaBackfillAdfPaymentHistory($pdo);
 
 // ---- Save connection to ADF System (client key/token only — pricing is NOT editable here) ----
 // Developer-only, even if someone crafts the POST directly (UI form is hidden for other roles).

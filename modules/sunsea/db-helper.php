@@ -1401,15 +1401,16 @@ function sunseaGetRecentPaidSubscriptionInvoice(PDO $pdo, ?int $withinHours = 72
  * client's configured notify_email automatically (set up from ADF System's
  * own admin panel). Fire-and-forget: failures are logged, never fatal.
  */
-function sunseaNotifyAdfSystemPaymentSuccess(PDO $pdo, array $invoice): void
+function sunseaNotifyAdfSystemPaymentSuccess(PDO $pdo, array $invoice, bool $recordOnly = false): bool
 {
     $syncUrl = sunseaSetting($pdo, 'subscription_sync_url', 'https://adfsystem.store/api/subscription-config.php');
-    $notifyUrl = str_replace('subscription-config.php', 'subscription-payment-notify.php', $syncUrl);
+    // recordOnly: endpoint khusus pencatatan (tidak pernah kirim email) untuk backfill riwayat.
+    $notifyUrl = str_replace('subscription-config.php', $recordOnly ? 'subscription-payment-record.php' : 'subscription-payment-notify.php', $syncUrl);
     $clientKey = sunseaSetting($pdo, 'subscription_client_key', '');
     $clientToken = sunseaSetting($pdo, 'subscription_client_token', '');
     if ($clientKey === '' || $clientToken === '') {
         error_log('sunseaNotifyAdfSystemPaymentSuccess skipped: client_key/client_token not configured');
-        return;
+        return false;
     }
 
     try {
@@ -1422,6 +1423,11 @@ function sunseaNotifyAdfSystemPaymentSuccess(PDO $pdo, array $invoice): void
                 'period' => $invoice['period'],
                 'total_amount' => (float) $invoice['total_amount'],
                 'paid_at' => $invoice['paid_at'] ?? date('c'),
+                // order_id + description supaya ADF System mencatat pembayaran ini di halaman Transaksi-nya.
+                'order_id' => $invoice['order_id'] ?? '',
+                'description' => ($invoice['type'] ?? 'recurring') === 'manual'
+                    ? ($invoice['description'] ?: 'Tagihan Manual')
+                    : ('Langganan ' . $invoice['period']),
             ]),
             CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
             CURLOPT_USERAGENT => 'KarimunjawaExplore-SubscriptionNotify/1.0',
@@ -1433,13 +1439,50 @@ function sunseaNotifyAdfSystemPaymentSuccess(PDO $pdo, array $invoice): void
         $curlError = curl_error($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
-        if ($curlError !== '' || $httpCode >= 400) {
+        $recordedOk = !$recordOnly || !empty((json_decode((string) $response, true) ?: [])['recorded']);
+        if ($curlError !== '' || $httpCode >= 400 || $httpCode === 0 || !$recordedOk) {
             error_log("sunseaNotifyAdfSystemPaymentSuccess failed: url={$notifyUrl} http_code={$httpCode} curl_error={$curlError} response={$response}");
-        } else {
-            error_log("sunseaNotifyAdfSystemPaymentSuccess ok: http_code={$httpCode} response={$response}");
+            return false;
         }
+        error_log("sunseaNotifyAdfSystemPaymentSuccess ok: http_code={$httpCode} response={$response}");
+        return true;
     } catch (Exception $e) {
         error_log('sunseaNotifyAdfSystemPaymentSuccess error: ' . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Sekali jalan: kirim (tanpa email) semua tagihan langganan yang SUDAH lunas ke ADF System, supaya
+ * pembayaran sebelum fitur pencatatan transaksi ada ikut tampil di halaman Transaksi ADF.
+ * Ditandai selesai lewat setting supaya tidak diulang; kalau ada yang gagal, dicoba lagi lain kali.
+ */
+function sunseaBackfillAdfPaymentHistory(PDO $pdo): void
+{
+    if (sunseaSetting($pdo, 'subscription_adf_payment_backfill_v1', '') === 'done') {
+        return;
+    }
+    if (sunseaSetting($pdo, 'subscription_client_key', '') === '') {
+        return;
+    }
+    // Kalau ADF System belum siap (endpoint belum ter-deploy), coba lagi paling cepat 1 jam kemudian.
+    if ((int) sunseaSetting($pdo, 'subscription_adf_payment_backfill_try', '0') > time() - 3600) {
+        return;
+    }
+    sunseaSetSetting($pdo, 'subscription_adf_payment_backfill_try', (string) time());
+    try {
+        $paid = $pdo->query("SELECT * FROM subscription_invoices WHERE status = 'paid' ORDER BY paid_at")->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        return;
+    }
+    $allOk = true;
+    foreach ($paid as $inv) {
+        if (!sunseaNotifyAdfSystemPaymentSuccess($pdo, $inv, true)) {
+            $allOk = false;
+        }
+    }
+    if ($allOk) {
+        sunseaSetSetting($pdo, 'subscription_adf_payment_backfill_v1', 'done');
     }
 }
 
