@@ -85,17 +85,74 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['ids']) && ($_POST['c
     <meta charset="UTF-8">
     <title>Spam Booking Cleanup</title>
     <style>
-        body { font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0; padding: 2rem; }
-        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
-        th, td { padding: 0.6rem 0.75rem; border-bottom: 1px solid #334155; text-align: left; font-size: 0.85rem; }
-        th { color: #94a3b8; text-transform: uppercase; font-size: 0.7rem; }
-        .msg { background: #10b98122; border: 1px solid #10b981; padding: 0.75rem 1rem; border-radius: 0.5rem; margin-bottom: 1rem; }
-        .empty { color: #64748b; padding: 2rem; text-align: center; }
-        .actions { margin-top: 1rem; display: flex; gap: 0.75rem; }
-        button { padding: 0.6rem 1.25rem; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 600; }
-        .btn-cancel { background: #f59e0b; color: #1e293b; }
-        .btn-delete { background: #ef4444; color: #fff; }
-        code { color: #f5d67d; }
+        body {
+            font-family: system-ui, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            padding: 2rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        th,
+        td {
+            padding: 0.6rem 0.75rem;
+            border-bottom: 1px solid #334155;
+            text-align: left;
+            font-size: 0.85rem;
+        }
+
+        th {
+            color: #94a3b8;
+            text-transform: uppercase;
+            font-size: 0.7rem;
+        }
+
+        .msg {
+            background: #10b98122;
+            border: 1px solid #10b981;
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .empty {
+            color: #64748b;
+            padding: 2rem;
+            text-align: center;
+        }
+
+        .actions {
+            margin-top: 1rem;
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        button {
+            padding: 0.6rem 1.25rem;
+            border: none;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .btn-cancel {
+            background: #f59e0b;
+            color: #1e293b;
+        }
+
+        .btn-delete {
+            background: #ef4444;
+            color: #fff;
+        }
+
+        code {
+            color: #f5d67d;
+        }
     </style>
 </head>
 

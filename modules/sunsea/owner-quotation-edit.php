@@ -716,7 +716,9 @@ include 'owner-mobile-header.php';
     function obRemoveItinRow(btn) {
         var rowsWrap = btn.closest('.ob-itin-rows');
         if (rowsWrap.children.length <= 1) {
-            rowsWrap.querySelectorAll('input').forEach(function(inp) { inp.value = ''; });
+            rowsWrap.querySelectorAll('input').forEach(function(inp) {
+                inp.value = '';
+            });
             return;
         }
         btn.closest('.ob-itin-row').remove();

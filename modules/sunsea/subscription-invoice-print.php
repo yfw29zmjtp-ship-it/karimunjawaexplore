@@ -197,28 +197,28 @@ $logoSrc = $cfg['provider_logo'];
 
         <h1>Invoice Pembayaran Langganan System</h1>
         <?php if (($invoice['type'] ?? 'recurring') === 'manual'): ?>
-        <div class="sub"><?php echo htmlspecialchars($invoice['description'] ?: 'Tagihan Manual'); ?></div>
+            <div class="sub"><?php echo htmlspecialchars($invoice['description'] ?: 'Tagihan Manual'); ?></div>
         <?php else: ?>
-        <div class="sub">Periode <?php echo htmlspecialchars($invoice['period']); ?></div>
+            <div class="sub">Periode <?php echo htmlspecialchars($invoice['period']); ?></div>
         <?php endif; ?>
         <div class="sub">Ditagihkan kepada: <strong><?php echo htmlspecialchars($cfg['client_name'] !== '' ? $cfg['client_name'] : sunseaSetting($pdo, 'company_name', 'Klien')); ?></strong></div>
         <span class="paid-badge">✓ LUNAS</span>
 
         <table>
             <?php if (($invoice['type'] ?? 'recurring') === 'manual'): ?>
-            <tr class="muted">
-                <td><?php echo htmlspecialchars($invoice['description'] ?: 'Tagihan Manual'); ?></td>
-                <td style="text-align:right;"><?php echo sunseaRupiah((float) $invoice['total_amount']); ?></td>
-            </tr>
+                <tr class="muted">
+                    <td><?php echo htmlspecialchars($invoice['description'] ?: 'Tagihan Manual'); ?></td>
+                    <td style="text-align:right;"><?php echo sunseaRupiah((float) $invoice['total_amount']); ?></td>
+                </tr>
             <?php else: ?>
-            <tr class="muted">
-                <td>Biaya Dasar Bulanan</td>
-                <td style="text-align:right;"><?php echo sunseaRupiah((float) $invoice['base_fee']); ?></td>
-            </tr>
-            <tr class="muted">
-                <td>Tamu Confirmed (<?php echo (int) $invoice['guest_count']; ?> &times; <?php echo sunseaRupiah((float) $invoice['per_guest_fee']); ?>)</td>
-                <td style="text-align:right;"><?php echo sunseaRupiah((float) $invoice['guest_total']); ?></td>
-            </tr>
+                <tr class="muted">
+                    <td>Biaya Dasar Bulanan</td>
+                    <td style="text-align:right;"><?php echo sunseaRupiah((float) $invoice['base_fee']); ?></td>
+                </tr>
+                <tr class="muted">
+                    <td>Tamu Confirmed (<?php echo (int) $invoice['guest_count']; ?> &times; <?php echo sunseaRupiah((float) $invoice['per_guest_fee']); ?>)</td>
+                    <td style="text-align:right;"><?php echo sunseaRupiah((float) $invoice['guest_total']); ?></td>
+                </tr>
             <?php endif; ?>
             <tr class="total">
                 <td>Total Dibayar</td>
@@ -228,9 +228,9 @@ $logoSrc = $cfg['provider_logo'];
 
         <div class="meta">
             <?php if (!empty($invoice['due_date'])): ?>Jatuh Tempo: <?php echo htmlspecialchars(date('d M Y', strtotime($invoice['due_date']))); ?><br><?php endif; ?>
-            <?php if (!empty($invoice['paid_at'])): ?>Tanggal Bayar: <?php echo htmlspecialchars(date('d M Y H:i', strtotime($invoice['paid_at']))); ?> WIB<br><?php endif; ?>
-            <?php if (!empty($invoice['order_id'])): ?>No. Order: <?php echo htmlspecialchars($invoice['order_id']); ?><br><?php endif; ?>
-            <?php if (!empty($invoice['txn_id'])): ?>No. Transaksi Pakasir: <?php echo htmlspecialchars($invoice['txn_id']); ?><?php endif; ?>
+        <?php if (!empty($invoice['paid_at'])): ?>Tanggal Bayar: <?php echo htmlspecialchars(date('d M Y H:i', strtotime($invoice['paid_at']))); ?> WIB<br><?php endif; ?>
+    <?php if (!empty($invoice['order_id'])): ?>No. Order: <?php echo htmlspecialchars($invoice['order_id']); ?><br><?php endif; ?>
+<?php if (!empty($invoice['txn_id'])): ?>No. Transaksi Pakasir: <?php echo htmlspecialchars($invoice['txn_id']); ?><?php endif; ?>
         </div>
 
         <div class="thanks">Terima kasih atas pembayaran tepat waktu.</div>

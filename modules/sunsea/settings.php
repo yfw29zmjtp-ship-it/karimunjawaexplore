@@ -1090,6 +1090,7 @@ $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : '
             var f = document.getElementById('resetPassForm' + id);
             f.style.display = (f.style.display === 'none' || !f.style.display) ? 'block' : 'none';
         }
+
         function togglePermRow(id) {
             var f = document.getElementById('permForm' + id);
             f.style.display = (f.style.display === 'none' || !f.style.display) ? 'block' : 'none';

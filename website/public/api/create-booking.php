@@ -1,4 +1,5 @@
 <?php
+
 /**
  * API: Create Booking
  * Creates a new booking in the HOTEL database (adf_narayana_hotel)
@@ -21,11 +22,11 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 try {
     $input = json_decode(file_get_contents('php://input'), true);
-    
+
     if (!$input) {
         throw new Exception('Invalid request data');
     }
-    
+
     // Honeypot: a real visitor never sees or fills this field, bots usually fill everything
     if (!empty($input['website'])) {
         throw new Exception('Invalid submission');
@@ -38,7 +39,7 @@ try {
             throw new Exception("Missing required field: $field");
         }
     }
-    
+
     $roomId = (int)$input['room_id'];
     $checkIn = $input['check_in'];
     $checkOut = $input['check_out'];
@@ -61,7 +62,7 @@ try {
     $idCardNumber = trim($input['id_card_number'] ?? '');
     $nationality = trim($input['nationality'] ?? 'Indonesia');
     $specialRequest = trim($input['special_request'] ?? '');
-    
+
     // Validate dates
     if (strtotime($checkIn) >= strtotime($checkOut)) {
         throw new Exception('Check-out must be after check-in');
@@ -69,15 +70,15 @@ try {
     if (strtotime($checkIn) < strtotime(date('Y-m-d'))) {
         throw new Exception('Check-in cannot be in the past');
     }
-    
+
     // Validate email
     if (!filter_var($guestEmail, FILTER_VALIDATE_EMAIL)) {
         throw new Exception('Invalid email address');
     }
-    
+
     // All queries use $pdo = adf_narayana_hotel (the hotel system DB)
     // This ensures bookings show in both website AND ADF frontdesk
-    
+
     // Check room exists and get price
     $room = dbFetch("
         SELECT r.*, rt.type_name, rt.base_price, rt.max_occupancy
@@ -85,16 +86,16 @@ try {
         JOIN room_types rt ON r.room_type_id = rt.id 
         WHERE r.id = ?
     ", [$roomId]);
-    
+
     if (!$room) {
         throw new Exception('Room not found');
     }
-    
+
     // Check guest count doesn't exceed room capacity
     if ($guests > $room['max_occupancy']) {
         throw new Exception('Number of guests exceeds room capacity (' . $room['max_occupancy'] . ' max)');
     }
-    
+
     // Check room is still available for these dates
     $conflict = dbFetch("
         SELECT COUNT(*) as count FROM bookings 
@@ -102,28 +103,28 @@ try {
         AND status IN ('pending', 'confirmed', 'checked_in')
         AND check_in_date < ? AND check_out_date > ?
     ", [$roomId, $checkOut, $checkIn]);
-    
+
     if ($conflict['count'] > 0) {
         throw new Exception('This room is no longer available for your selected dates. Please choose another room.');
     }
-    
+
     // Calculate pricing
     $nights = (new DateTime($checkIn))->diff(new DateTime($checkOut))->days;
     $roomPrice = $room['base_price'];
     $totalPrice = $roomPrice * $nights;
-    
+
     // Generate booking code
     $bookingCode = 'BK-' . date('Ymd') . '-' . str_pad(random_int(1000, 9999), 4, '0', STR_PAD_LEFT);
-    
+
     // Write directly to hotel DB ($pdo) — NOT web DB
     $pdo->beginTransaction();
-    
+
     try {
         // Create or find guest in hotel DB
         $stmt = $pdo->prepare("SELECT id FROM guests WHERE email = ? OR phone = ?");
         $stmt->execute([$guestEmail, $guestPhone]);
         $existingGuest = $stmt->fetch();
-        
+
         if ($existingGuest) {
             $guestId = $existingGuest['id'];
             // Update guest info
@@ -134,21 +135,36 @@ try {
             $stmt->execute([$guestName, $guestPhone, $guestEmail, $idCardType, $idCardNumber, $nationality]);
             $guestId = $pdo->lastInsertId();
         }
-        
+
         // Create booking in hotel DB
         $stmt = $pdo->prepare("
             INSERT INTO bookings (booking_code, guest_id, room_id, check_in_date, check_out_date, adults, children, room_price, total_nights, total_price, discount, final_price, status, payment_status, paid_amount, booking_source, special_request, notes) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
         $stmt->execute([
-            $bookingCode, $guestId, $roomId, $checkIn, $checkOut,
-            $guests, 0, $roomPrice, $nights, $totalPrice, 0, $totalPrice,
-            'confirmed', 'unpaid', 0, 'online', $specialRequest, 'Booked via website'
+            $bookingCode,
+            $guestId,
+            $roomId,
+            $checkIn,
+            $checkOut,
+            $guests,
+            0,
+            $roomPrice,
+            $nights,
+            $totalPrice,
+            0,
+            $totalPrice,
+            'confirmed',
+            'unpaid',
+            0,
+            'online',
+            $specialRequest,
+            'Booked via website'
         ]);
         $bookingId = $pdo->lastInsertId();
-        
+
         $pdo->commit();
-        
+
         // Notify owner/admin dashboard (bell + push) — best effort, must not break the booking response
         try {
             $db = Database::getInstance();
@@ -186,7 +202,7 @@ try {
         } catch (\Throwable $notifyErr) {
             error_log('website create-booking notify owner failed: ' . $notifyErr->getMessage());
         }
-        
+
         echo json_encode([
             'success' => true,
             'data' => [
@@ -202,12 +218,10 @@ try {
             ],
             'message' => 'Reservation confirmed successfully!'
         ]);
-        
     } catch (Exception $e) {
         $pdo->rollBack();
         throw $e;
     }
-    
 } catch (Exception $e) {
     http_response_code(400);
     echo json_encode([

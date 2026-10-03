@@ -221,7 +221,9 @@ a {
   z-index: 20;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.18s ease, transform 0.18s ease;
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease;
 }
 .we-pax-bubble::after {
   content: "";

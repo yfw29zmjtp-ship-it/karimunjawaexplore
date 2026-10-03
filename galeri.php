@@ -37,21 +37,21 @@ $weLodgingPhotos = $pdo->query("SELECT * FROM website_gallery WHERE is_active = 
 </section>
 
 <?php if ($weLodgingPhotos): ?>
-<section class="we-section" style="background:#f8fafc;">
-    <div class="we-container">
-        <div class="we-section-title">
-            <h2>Galeri Penginapan</h2>
-            <p>Pilihan penginapan yang kami sediakan untuk tamu</p>
+    <section class="we-section" style="background:#f8fafc;">
+        <div class="we-container">
+            <div class="we-section-title">
+                <h2>Galeri Penginapan</h2>
+                <p>Pilihan penginapan yang kami sediakan untuk tamu</p>
+            </div>
+            <div class="we-gallery-grid">
+                <?php foreach ($weLodgingPhotos as $photo): ?>
+                    <div class="we-gallery-item" style="padding:0;overflow:hidden;">
+                        <img src="<?php echo htmlspecialchars(sunseaAssetUrl($photo['image_path'])); ?>" alt="<?php echo htmlspecialchars($photo['caption'] ?: 'Penginapan'); ?>" style="width:100%;height:100%;object-fit:cover;display:block;">
+                    </div>
+                <?php endforeach; ?>
+            </div>
         </div>
-        <div class="we-gallery-grid">
-            <?php foreach ($weLodgingPhotos as $photo): ?>
-                <div class="we-gallery-item" style="padding:0;overflow:hidden;">
-                    <img src="<?php echo htmlspecialchars(sunseaAssetUrl($photo['image_path'])); ?>" alt="<?php echo htmlspecialchars($photo['caption'] ?: 'Penginapan'); ?>" style="width:100%;height:100%;object-fit:cover;display:block;">
-                </div>
-            <?php endforeach; ?>
-        </div>
-    </div>
-</section>
+    </section>
 <?php endif; ?>
 
 <?php require __DIR__ . '/includes/website-footer.php'; ?>

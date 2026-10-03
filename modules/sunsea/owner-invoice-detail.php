@@ -128,26 +128,67 @@ include 'owner-mobile-header.php';
 ?>
 
 <style>
-    .ob-form-group { margin-bottom: 12px; }
-    .ob-form-label { display: block; font-size: 11.5px; font-weight: 700; color: var(--text); margin-bottom: 5px; }
+    .ob-form-group {
+        margin-bottom: 12px;
+    }
+
+    .ob-form-label {
+        display: block;
+        font-size: 11.5px;
+        font-weight: 700;
+        color: var(--text);
+        margin-bottom: 5px;
+    }
+
     .ob-form-input {
-        width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 9px;
-        font-size: 13px; background: #fff; color: var(--text); font-family: inherit;
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid var(--border);
+        border-radius: 9px;
+        font-size: 13px;
+        background: #fff;
+        color: var(--text);
+        font-family: inherit;
     }
+
     .ob-submit-btn {
-        width: 100%; padding: 13px; border: none; border-radius: 10px; background: var(--success);
-        color: #fff; font-size: 14px; font-weight: 800; cursor: pointer; margin-top: 4px;
+        width: 100%;
+        padding: 13px;
+        border: none;
+        border-radius: 10px;
+        background: var(--success);
+        color: #fff;
+        font-size: 14px;
+        font-weight: 800;
+        cursor: pointer;
+        margin-top: 4px;
     }
+
     .ob-alert-error {
-        background: #FEE2E2; color: var(--danger); padding: 10px 12px; border-radius: 9px;
-        font-size: 12.5px; margin-bottom: 12px;
+        background: #FEE2E2;
+        color: var(--danger);
+        padding: 10px 12px;
+        border-radius: 9px;
+        font-size: 12.5px;
+        margin-bottom: 12px;
     }
+
     .ob-alert-success {
-        background: #D1FAE5; color: var(--success); padding: 10px 12px; border-radius: 9px;
-        font-size: 12.5px; margin-bottom: 12px;
+        background: #D1FAE5;
+        color: var(--success);
+        padding: 10px 12px;
+        border-radius: 9px;
+        font-size: 12.5px;
+        margin-bottom: 12px;
     }
-    .ob-pay-form { display: none; }
-    .ob-pay-form.open { display: block; }
+
+    .ob-pay-form {
+        display: none;
+    }
+
+    .ob-pay-form.open {
+        display: block;
+    }
 </style>
 
 <?php if (!empty($_GET['paid'])): ?>

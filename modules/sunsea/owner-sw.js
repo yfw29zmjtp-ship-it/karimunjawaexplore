@@ -64,27 +64,35 @@ self.addEventListener('push', event => {
   }
 
   event.waitUntil(
-    self.registration.showNotification(data.title, options)
+    self.registration
+      .showNotification(data.title, options)
       .then(() => self.registration.getNotifications())
       .then(list => {
-        if ('setAppBadge' in navigator) return navigator.setAppBadge(list.length)
+        if ('setAppBadge' in navigator)
+          return navigator.setAppBadge(list.length)
       })
   )
 })
 
 self.addEventListener('notificationclick', event => {
   event.notification.close()
-  const urlToOpen = event.notification.data && event.notification.data.url
-    ? event.notification.data.url
-    : './owner-dashboard.php'
+  const urlToOpen =
+    event.notification.data && event.notification.data.url
+      ? event.notification.data.url
+      : './owner-dashboard.php'
 
   event.waitUntil(
-    self.registration.getNotifications()
+    self.registration
+      .getNotifications()
       .then(list => {
         if (!('setAppBadge' in navigator)) return
-        return list.length > 0 ? navigator.setAppBadge(list.length) : navigator.clearAppBadge()
+        return list.length > 0
+          ? navigator.setAppBadge(list.length)
+          : navigator.clearAppBadge()
       })
-      .then(() => clients.matchAll({ type: 'window', includeUncontrolled: true }))
+      .then(() =>
+        clients.matchAll({ type: 'window', includeUncontrolled: true })
+      )
       .then(clientList => {
         for (const client of clientList) {
           if ('focus' in client) {

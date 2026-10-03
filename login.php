@@ -1357,7 +1357,9 @@ if (isset($_GET['biz'])) {
                 }, wait);
             };
             if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', hide, { once: true });
+                document.addEventListener('DOMContentLoaded', hide, {
+                    once: true
+                });
             } else {
                 hide();
             }
