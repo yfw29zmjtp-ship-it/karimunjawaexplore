@@ -229,6 +229,34 @@ foreach ($rows as $r) {
 }
 $balance = $totalIncome - $totalExpense;
 
+// Saldo kas berjalan: saldo awal = akumulasi semua transaksi sebelum date_from (dibawa dari bulan lalu),
+// jadi saldo tidak "mulai dari nol" tiap bulan. Dihitung untuk seluruh kas (tidak ikut filter jenis/tamu).
+$kasOpeningStmt = $pdo->prepare("SELECT COALESCE(SUM(CASE WHEN type='income' THEN amount ELSE -amount END),0) FROM cash_book WHERE transaction_date < ?");
+$kasOpeningStmt->execute([$dateFrom]);
+$kasOpening = (float)$kasOpeningStmt->fetchColumn();
+$kasPeriodStmt = $pdo->prepare("
+    SELECT COALESCE(SUM(CASE WHEN type='income' THEN amount ELSE 0 END),0) AS kas_in,
+           COALESCE(SUM(CASE WHEN type='expense' THEN amount ELSE 0 END),0) AS kas_out
+    FROM cash_book WHERE transaction_date BETWEEN ? AND ?
+");
+$kasPeriodStmt->execute([$dateFrom, $dateTo]);
+$kasPeriod   = $kasPeriodStmt->fetch();
+$kasIn       = (float)$kasPeriod['kas_in'];
+$kasOut      = (float)$kasPeriod['kas_out'];
+$kasClosing  = $kasOpening + $kasIn - $kasOut;
+$finIsFiltered = $filterType !== '' || $filterCust > 0;
+$finColCount   = $finIsFiltered ? 9 : 10;
+
+// Kolom saldo berjalan per baris (hanya saat tidak difilter jenis/tamu, supaya angkanya nyambung dengan saldo awal).
+$runningBalances = [];
+if (!$finIsFiltered) {
+    $run = $kasOpening;
+    for ($i = count($rows) - 1; $i >= 0; $i--) {
+        $run += $rows[$i]['type'] === 'income' ? (float)$rows[$i]['amount'] : -(float)$rows[$i]['amount'];
+        $runningBalances[$i] = $run;
+    }
+}
+
 // Ringkasan pengeluaran per tamu (dalam rentang tanggal terpilih)
 $perGuest = $pdo->prepare("
     SELECT c.id, c.name, COUNT(cb.id) AS tx_count, SUM(cb.amount) AS total_expense
@@ -268,18 +296,23 @@ $activePage = 'finance';
 include 'layout-header.php';
 ?>
 
-<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px;">
+<div class="fin-summary-grid">
     <div class="ss-card">
-        <div style="font-size:12px;color:var(--ss-muted);">Total Pemasukan</div>
-        <div style="font-size:17px;font-weight:800;color:var(--ss-success);"><?php echo sunseaRupiah($totalIncome); ?></div>
+        <div style="font-size:12px;color:var(--ss-muted);">Saldo Awal <span style="font-size:10.5px;">(s/d <?php echo date('d/m/Y', strtotime($dateFrom . ' -1 day')); ?>)</span></div>
+        <div style="font-size:17px;font-weight:800;color:<?php echo $kasOpening < 0 ? 'var(--ss-danger)' : 'var(--ss-ocean)'; ?>;"><?php echo sunseaRupiah($kasOpening); ?></div>
     </div>
     <div class="ss-card">
-        <div style="font-size:12px;color:var(--ss-muted);">Total Pengeluaran</div>
-        <div style="font-size:17px;font-weight:800;color:var(--ss-danger);"><?php echo sunseaRupiah($totalExpense); ?></div>
+        <div style="font-size:12px;color:var(--ss-muted);">Pemasukan Periode Ini</div>
+        <div style="font-size:17px;font-weight:800;color:var(--ss-success);">+ <?php echo sunseaRupiah($kasIn); ?></div>
     </div>
     <div class="ss-card">
-        <div style="font-size:12px;color:var(--ss-muted);">Saldo Kas (periode ini)</div>
-        <div style="font-size:17px;font-weight:800;color:var(--ss-ocean);"><?php echo sunseaRupiah($balance); ?></div>
+        <div style="font-size:12px;color:var(--ss-muted);">Pengeluaran Periode Ini</div>
+        <div style="font-size:17px;font-weight:800;color:var(--ss-danger);">- <?php echo sunseaRupiah($kasOut); ?></div>
+    </div>
+    <div class="ss-card">
+        <div style="font-size:12px;color:var(--ss-muted);">Saldo Akhir <span style="font-size:10.5px;">(per <?php echo date('d/m/Y', strtotime($dateTo)); ?>)</span></div>
+        <div style="font-size:17px;font-weight:800;color:<?php echo $kasClosing < 0 ? 'var(--ss-danger)' : 'var(--ss-ocean)'; ?>;"><?php echo sunseaRupiah($kasClosing); ?></div>
+        <div style="font-size:10.5px;color:var(--ss-muted);margin-top:2px;">Arus kas periode: <?php echo ($kasIn - $kasOut >= 0 ? '+ ' : '- ') . sunseaRupiah(abs($kasIn - $kasOut)); ?></div>
     </div>
 </div>
 
@@ -340,6 +373,7 @@ include 'layout-header.php';
                         <th style="font-size:11px;">Tamu / Trip</th>
                         <th style="font-size:11px;">Kategori</th>
                         <th style="width:130px;font-size:11px;">Jumlah</th>
+                        <?php if (!$finIsFiltered): ?><th style="width:130px;font-size:11px;">Saldo</th><?php endif; ?>
                         <th style="width:110px;font-size:11px;">Diinput Oleh</th>
                         <th style="width:40px;"></th>
                     </tr>
@@ -347,14 +381,14 @@ include 'layout-header.php';
                 <tbody>
                     <?php if (empty($rows)): ?>
                         <tr>
-                            <td colspan="9" style="text-align:center;color:var(--ss-muted);padding:20px;font-size:12px;">Belum ada transaksi pada periode ini.</td>
+                            <td colspan="<?php echo $finColCount; ?>" style="text-align:center;color:var(--ss-muted);padding:20px;font-size:12px;">Belum ada transaksi pada periode ini.</td>
                         </tr>
                     <?php endif; ?>
                     <?php $finLastDate = null; ?>
-                    <?php foreach ($rows as $r): ?>
+                    <?php foreach ($rows as $finIdx => $r): ?>
                         <?php if ($r['transaction_date'] !== $finLastDate): $finLastDate = $r['transaction_date']; ?>
                             <tr>
-                                <td colspan="9" style="background:var(--ss-gray-1);font-weight:700;font-size:11.5px;padding:6px 10px;color:var(--ss-ocean);">
+                                <td colspan="<?php echo $finColCount; ?>" style="background:var(--ss-gray-1);font-weight:700;font-size:11.5px;padding:6px 10px;color:var(--ss-ocean);">
                                     <?php echo htmlspecialchars(date('d M Y', strtotime($finLastDate))); ?>
                                 </td>
                             </tr>
@@ -378,6 +412,9 @@ include 'layout-header.php';
                             <td style="font-size:12px;font-weight:600;color:<?php echo $r['type'] === 'income' ? 'var(--ss-success)' : 'var(--ss-danger)'; ?>;">
                                 <?php echo ($r['type'] === 'income' ? '+ ' : '- ') . sunseaRupiah((float)$r['amount']); ?>
                             </td>
+                            <?php if (!$finIsFiltered): ?>
+                                <td style="font-size:12px;font-weight:600;color:<?php echo $runningBalances[$finIdx] < 0 ? 'var(--ss-danger)' : 'var(--ss-ocean)'; ?>;"><?php echo sunseaRupiah($runningBalances[$finIdx]); ?></td>
+                            <?php endif; ?>
                             <td style="font-size:11.5px;color:var(--ss-muted);"><?php echo htmlspecialchars($r['created_by'] ?: '-'); ?></td>
                             <td>
                                 <?php if (!$r['invoice_id'] && !$r['booking_item_id']): ?>
@@ -403,6 +440,14 @@ include 'layout-header.php';
                             </td>
                         </tr>
                     <?php endforeach; ?>
+                    <?php if (!$finIsFiltered): ?>
+                        <tr style="background:#F8FAFC;">
+                            <td colspan="6" style="font-size:12px;color:var(--ss-muted);font-style:italic;">Saldo awal (dibawa dari sebelum <?php echo date('d/m/Y', strtotime($dateFrom)); ?>)</td>
+                            <td></td>
+                            <td style="font-size:12px;font-weight:700;color:<?php echo $kasOpening < 0 ? 'var(--ss-danger)' : 'var(--ss-ocean)'; ?>;"><?php echo sunseaRupiah($kasOpening); ?></td>
+                            <td colspan="2"></td>
+                        </tr>
+                    <?php endif; ?>
                 </tbody>
                 <?php if (!empty($rows)): ?>
                     <tfoot>
@@ -417,7 +462,7 @@ include 'layout-header.php';
                                     <span style="color:<?php echo $balance < 0 ? 'var(--ss-danger)' : 'var(--ss-ocean)'; ?>;"><?php echo sunseaRupiah($balance); ?></span>
                                 <?php endif; ?>
                             </td>
-                            <td colspan="2"></td>
+                            <td colspan="<?php echo $finIsFiltered ? 2 : 3; ?>"></td>
                         </tr>
                     </tfoot>
                 <?php endif; ?>
@@ -649,6 +694,19 @@ include 'layout-header.php';
 </div>
 
 <style>
+    .fin-summary-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 14px;
+        margin-bottom: 18px;
+    }
+
+    @media (max-width: 900px) {
+        .fin-summary-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
     .fin-modal-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
