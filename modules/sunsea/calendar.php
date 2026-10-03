@@ -72,7 +72,7 @@ if (($_GET['ajax'] ?? '') === 'detail' && (int)($_GET['id'] ?? 0) > 0) {
     $mitraItems = array_values(array_filter($items, fn($it) => $it['component_code'] !== 'paket'));
 
     // Riwayat pembayaran/DP: invoice booking ini bisa dibayar bertahap (DP 1, DP 2, pelunasan, dst) di tabel payments.
-    $invStmt = $pdo->prepare("SELECT id, invoice_no, total_amount FROM invoices WHERE internal_notes = ? OR internal_notes = ?");
+    $invStmt = $pdo->prepare("SELECT id, invoice_no, total_amount FROM invoices WHERE status != 'cancelled' AND (internal_notes = ? OR internal_notes = ?)");
     $invStmt->execute(['booking_id:' . $bId, 'Generated from Reservasi: ' . $booking['booking_no']]);
     $bookingInvoices = $invStmt->fetchAll();
 
@@ -972,7 +972,7 @@ include 'layout-header.php';
 
                 // Riwayat DP/pembayaran: kalau tamu bayar bertahap (DP 1, DP 2, dst) semua baris tampil di sini.
                 var paidColor = data.remainingPayment <= 0 && data.totalInvoiceAmount > 0 ? 'var(--ss-success)' : 'var(--ss-warning, #d97706)';
-                html += '<div class="bd-section-title">Riwayat Pembayaran (DP)</div>';
+                html += '<div class="bd-section-title">Riwayat Pembayaran</div>';
                 if (!data.payments || data.payments.length === 0) {
                     html += '<div style="font-size:12px;color:var(--ss-muted);">Belum ada pembayaran/DP tercatat untuk booking ini.</div>';
                 } else {

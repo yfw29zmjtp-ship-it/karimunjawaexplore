@@ -45,7 +45,7 @@ function ownerCreateCustomer(PDO $pdo, string $name, string $phone, string $emai
 function ownerEnsureInvoiceFromBooking(PDO $pdo, string $username, array $booking): int
 {
     $internalRef = 'booking_id:' . (int)$booking['id'];
-    $invStmt = $pdo->prepare("SELECT id FROM invoices WHERE internal_notes=? ORDER BY id DESC LIMIT 1");
+    $invStmt = $pdo->prepare("SELECT id FROM invoices WHERE internal_notes=? ORDER BY (status = 'cancelled'), paid_amount DESC, id DESC LIMIT 1");
     $invStmt->execute([$internalRef]);
     $invoiceId = (int)($invStmt->fetchColumn() ?: 0);
     if ($invoiceId > 0) {

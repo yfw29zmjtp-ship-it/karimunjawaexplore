@@ -78,12 +78,24 @@ if (($_GET['ajax'] ?? '') === 'detail' && (int)($_GET['id'] ?? 0) > 0) {
 
     // Info DP/pembayaran: invoice dibuat otomatis dari booking dan ditautkan lewat internal_notes
     // 'booking_id:<id>' (jalur normal) atau pola 'Generated from Reservasi: <no>' (jalur konversi invoice manual).
-    $invStmt = $pdo->prepare("SELECT invoice_no, status, total_amount, paid_amount, remaining_amount FROM invoices WHERE internal_notes=? OR internal_notes=? ORDER BY id DESC LIMIT 1");
+    // Invoice duplikat yang sudah dibatalkan (cancelled) diabaikan; kalau masih ada >1 invoice aktif, dijumlahkan
+    // (sama seperti detail booking di system utama) supaya tidak kepilih invoice yang salah.
+    $invStmt = $pdo->prepare("SELECT invoice_no, total_amount, paid_amount FROM invoices WHERE status != 'cancelled' AND (internal_notes=? OR internal_notes=?) ORDER BY id ASC");
     $invStmt->execute(['booking_id:' . $bId, 'Generated from Reservasi: ' . $booking['booking_no']]);
-    $linkedInvoice = $invStmt->fetch(PDO::FETCH_ASSOC) ?: null;
-    if ($linkedInvoice) {
+    $activeInvoices = $invStmt->fetchAll(PDO::FETCH_ASSOC);
+    $linkedInvoice = null;
+    if ($activeInvoices) {
+        $invTotal = array_sum(array_map('floatval', array_column($activeInvoices, 'total_amount')));
+        $invPaid  = array_sum(array_map('floatval', array_column($activeInvoices, 'paid_amount')));
         // Hitung ulang sisa tagihan dari total - terbayar, jangan percaya kolom remaining_amount yang bisa basi.
-        $linkedInvoice['remaining_amount'] = max(0, (float)$linkedInvoice['total_amount'] - (float)$linkedInvoice['paid_amount']);
+        $invRemaining = max(0, $invTotal - $invPaid);
+        $linkedInvoice = [
+            'invoice_no'       => implode(', ', array_column($activeInvoices, 'invoice_no')),
+            'status'           => $invRemaining <= 0.01 && $invPaid > 0 ? 'paid' : ($invPaid > 0 ? 'partial' : 'issued'),
+            'total_amount'     => $invTotal,
+            'paid_amount'      => $invPaid,
+            'remaining_amount' => $invRemaining,
+        ];
     }
 
     echo json_encode([
@@ -933,7 +945,7 @@ if (!$ajaxCalendar) {
                 html += '<div><strong>Total RAB/Penawaran</strong><span class="bd-val" style="color:var(--ocean);">' + fmt(data.totalRab) + '</span></div>';
                 html += '</div>';
 
-                html += '<div class="bd-section-title">Info Pembayaran (DP)</div>';
+                html += '<div class="bd-section-title">Info Pembayaran</div>';
                 if (!data.invoice) {
                     html += '<div style="font-size:11.5px;color:var(--muted);">Belum ada invoice/DP tercatat untuk reservasi ini.</div>';
                 } else {
@@ -947,7 +959,7 @@ if (!$ajaxCalendar) {
                     var dpBadgeClass = inv.status === 'paid' ? 'ob-badge-paid' : (inv.status === 'partial' ? 'ob-badge-partial' : 'ob-badge-issued');
                     html += '<div class="bd-grid" style="grid-template-columns:repeat(3,1fr);">';
                     html += '<div><strong>No. Invoice</strong><span class="bd-val" style="font-size:11.5px;">' + inv.invoice_no + '</span></div>';
-                    html += '<div><strong>Sudah Dibayar (DP)</strong><span class="bd-val" style="color:var(--success);">' + fmt(inv.paid_amount) + '</span></div>';
+                    html += '<div><strong>' + (inv.status === 'paid' ? 'Sudah Dibayar (Lunas)' : (inv.status === 'partial' ? 'Sudah Dibayar (DP)' : 'Sudah Dibayar')) + '</strong><span class="bd-val" style="color:var(--success);">' + fmt(inv.paid_amount) + '</span></div>';
                     html += '<div><strong>Sisa Tagihan</strong><span class="bd-val" style="color:' + (parseFloat(inv.remaining_amount) > 0 ? 'var(--danger)' : 'var(--success)') + ';">' + fmt(inv.remaining_amount) + '</span></div>';
                     html += '</div>';
                     html += '<div style="margin:-6px 0 12px;"><span class="ob-badge ' + dpBadgeClass + '">' + (invStatusLabels[inv.status] || inv.status) + '</span></div>';

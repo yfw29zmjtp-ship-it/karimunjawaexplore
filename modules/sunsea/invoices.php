@@ -1222,7 +1222,7 @@ if ($action === 'print' && $invoice):
             </div>
 
             <?php if (!empty($payments)): ?>
-                <div style="font-weight:700;font-size:12px;margin-top:14px;color:#334155;">Detail Pembayaran (DP)</div>
+                <div style="font-weight:700;font-size:12px;margin-top:14px;color:#334155;">Detail Pembayaran</div>
                 <table class="items" style="margin-top:6px;">
                     <thead>
                         <tr>

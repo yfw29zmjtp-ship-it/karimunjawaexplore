@@ -80,7 +80,7 @@ function ensureInvoiceFromBooking(PDO $pdo, Auth $auth, array $booking): int
     try {
         // Cek juga pola lama 'Generated from Reservasi: <no>' (invoice yang dibuat sebelum internal_notes
         // distandarkan ke 'booking_id:<id>') supaya tidak membuat invoice duplikat untuk booking yang sama.
-        $invStmt = $pdo->prepare("SELECT id FROM invoices WHERE internal_notes=? OR internal_notes=? ORDER BY id DESC LIMIT 1");
+        $invStmt = $pdo->prepare("SELECT id FROM invoices WHERE internal_notes=? OR internal_notes=? ORDER BY (status = 'cancelled'), paid_amount DESC, id DESC LIMIT 1");
         $invStmt->execute([$internalRef, 'Generated from Reservasi: ' . $booking['booking_no']]);
         $invoiceId = (int)($invStmt->fetchColumn() ?: 0);
     } catch (Exception $e) {
@@ -951,7 +951,7 @@ include 'layout-header.php';
     $marginPct = $totalRabActual > 0 ? round($marginActual / $totalRabActual * 100) : 0;
 
     // Riwayat pembayaran/DP: invoice booking ini bisa dibayar bertahap (DP 1, DP 2, pelunasan, dst) di tabel payments.
-    $detailInvStmt = $pdo->prepare("SELECT id, total_amount FROM invoices WHERE internal_notes = ? OR internal_notes = ?");
+    $detailInvStmt = $pdo->prepare("SELECT id, total_amount FROM invoices WHERE status != 'cancelled' AND (internal_notes = ? OR internal_notes = ?)");
     $detailInvStmt->execute(['booking_id:' . $viewId, 'Generated from Reservasi: ' . $detail['booking_no']]);
     $detailBookingInvoices = $detailInvStmt->fetchAll();
 

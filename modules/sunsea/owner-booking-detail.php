@@ -31,7 +31,7 @@ $username = $currentUser['username'] ?? 'system';
 function ownerEnsureInvoiceFromBooking(PDO $pdo, string $username, array $booking): int
 {
     $internalRef = 'booking_id:' . (int)$booking['id'];
-    $invStmt = $pdo->prepare("SELECT id FROM invoices WHERE internal_notes=? OR internal_notes=? ORDER BY id DESC LIMIT 1");
+    $invStmt = $pdo->prepare("SELECT id FROM invoices WHERE internal_notes=? OR internal_notes=? ORDER BY (status = 'cancelled'), paid_amount DESC, id DESC LIMIT 1");
     $invStmt->execute([$internalRef, 'Generated from Reservasi: ' . $booking['booking_no']]);
     $invoiceId = (int)($invStmt->fetchColumn() ?: 0);
     if ($invoiceId > 0) {
@@ -199,7 +199,7 @@ foreach ($items as $it) {
 // Bisa ada LEBIH DARI SATU invoice tertaut ke booking yang sama (mis. invoice lama +
 // invoice duplikat) - jumlahkan semuanya (sama seperti detail booking di system utama),
 // jangan ambil satu (LIMIT 1) saja krn bisa kepilih invoice duplikat yang belum dibayar.
-$invStmt = $pdo->prepare("SELECT invoice_no, status, total_amount, paid_amount FROM invoices WHERE internal_notes=? OR internal_notes=? ORDER BY id ASC");
+$invStmt = $pdo->prepare("SELECT invoice_no, status, total_amount, paid_amount FROM invoices WHERE status != 'cancelled' AND (internal_notes=? OR internal_notes=?) ORDER BY id ASC");
 $invStmt->execute(['booking_id:' . $id, 'Generated from Reservasi: ' . $booking['booking_no']]);
 $bookingInvoices = $invStmt->fetchAll(PDO::FETCH_ASSOC);
 
