@@ -1797,7 +1797,7 @@ include 'layout-header.php';
                         $paidTotalRow = (float)$r['paid_amount_total'];
                         $isLunas = $sellTotalRow > 0 && $paidTotalRow >= $sellTotalRow - 0.01;
                         ?>
-                        <tr>
+                        <tr class="bk-row-link" data-href="bookings.php?view=<?php echo (int)$r['id']; ?>" title="Klik untuk lihat detail">
                             <td>
                                 <?php if ($r['status'] === 'cancelled'): ?>
                                     <input type="checkbox" class="booking-row-check" value="<?php echo $r['id']; ?>" onchange="updateBulkDeleteBookingBtn()">
@@ -1880,7 +1880,29 @@ include 'layout-header.php';
     </div>
 <?php endif; ?>
 
+<style>
+    .bk-row-link {
+        cursor: pointer;
+    }
+
+    .bk-row-link:hover td {
+        background: #FFF7ED;
+    }
+</style>
+
 <script>
+    // Klik baris reservasi langsung buka detail, kecuali klik pada kontrol di dalam baris (status, aksi, WA, checkbox).
+    document.addEventListener('click', function(e) {
+        var row = e.target.closest('.bk-row-link');
+        if (!row || e.target.closest('a, button, select, input, label, details, form')) return;
+        if (window.getSelection && String(window.getSelection()).length > 0) return;
+        if (e.ctrlKey || e.metaKey) {
+            window.open(row.getAttribute('data-href'), '_blank');
+        } else {
+            window.location.href = row.getAttribute('data-href');
+        }
+    });
+
     function toggleAllBookingRows(checkAllBox) {
         document.querySelectorAll('.booking-row-check').forEach(function(cb) {
             cb.checked = checkAllBox.checked;
