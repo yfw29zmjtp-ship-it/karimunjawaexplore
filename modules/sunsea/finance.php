@@ -175,24 +175,27 @@ if (($_GET['action'] ?? '') === 'delete' && (int)($_GET['id'] ?? 0) > 0) {
         $_SESSION['flash_message'] = 'Transaksi kas dihapus.';
         $_SESSION['flash_type']    = 'success';
     }
-    header('Location: finance.php');
+    $delMonth = (string)($_GET['month'] ?? '');
+    header('Location: finance.php' . (preg_match('/^\d{4}-\d{2}$/', $delMonth) ? '?month=' . $delMonth : ''));
     exit;
 }
 
 // ---- FILTERS ----
-$dateFrom   = $_GET['date_from'] ?? date('Y-m-01');
-$dateTo     = $_GET['date_to'] ?? date('Y-m-d');
+// Filter per bulan (?month=YYYY-MM). Link lama dengan date_from tetap didukung: diambil bulannya saja.
+$finMonth = $_GET['month'] ?? substr((string)($_GET['date_from'] ?? ''), 0, 7);
+if (!preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $finMonth)) {
+    $finMonth = date('Y-m');
+}
+$dateFrom   = $finMonth . '-01';
+$dateTo     = date('Y-m-t', strtotime($dateFrom));
 $filterType = $_GET['type'] ?? '';
 $filterCust = (int)($_GET['customer_id'] ?? 0);
 
-// Untuk tombol navigasi bulan (Bulan Sebelumnya / Bulan Ini / Bulan Berikutnya), dihitung dari bulan date_from yang aktif.
-$finMonthBase      = strtotime($dateFrom) ?: time();
-$finPrevMonthStart = date('Y-m-01', strtotime('-1 month', $finMonthBase));
-$finPrevMonthEnd   = date('Y-m-t', strtotime('-1 month', $finMonthBase));
-$finThisMonthStart = date('Y-m-01');
-$finThisMonthEnd   = date('Y-m-d');
-$finNextMonthStart = date('Y-m-01', strtotime('+1 month', $finMonthBase));
-$finNextMonthEnd   = date('Y-m-t', strtotime('+1 month', $finMonthBase));
+$finMonthNames  = [1 => 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+$finMonthLabel  = $finMonthNames[(int)substr($finMonth, 5, 2)] . ' ' . substr($finMonth, 0, 4);
+$finPrevMonth   = date('Y-m', strtotime('-1 month', strtotime($dateFrom)));
+$finNextMonth   = date('Y-m', strtotime('+1 month', strtotime($dateFrom)));
+$finIsThisMonth = $finMonth === date('Y-m');
 $finMonthQs = ($filterType ? '&type=' . urlencode($filterType) : '') . ($filterCust > 0 ? '&customer_id=' . $filterCust : '');
 
 $where  = ['cb.transaction_date BETWEEN ? AND ?'];
@@ -310,7 +313,7 @@ include 'layout-header.php';
         <div style="font-size:17px;font-weight:800;color:var(--ss-danger);">- <?php echo sunseaRupiah($kasOut); ?></div>
     </div>
     <div class="ss-card">
-        <div style="font-size:12px;color:var(--ss-muted);">Saldo Akhir <span style="font-size:10.5px;">(per <?php echo date('d/m/Y', strtotime($dateTo)); ?>)</span></div>
+        <div style="font-size:12px;color:var(--ss-muted);">Saldo Akhir <span style="font-size:10.5px;">(per <?php echo date('d/m/Y', strtotime($finIsThisMonth ? date('Y-m-d') : $dateTo)); ?>)</span></div>
         <div style="font-size:17px;font-weight:800;color:<?php echo $kasClosing < 0 ? 'var(--ss-danger)' : 'var(--ss-success)'; ?>;"><?php echo sunseaRupiah($kasClosing); ?></div>
         <div style="font-size:10.5px;color:var(--ss-muted);margin-top:2px;">Arus kas periode: <?php echo ($kasIn - $kasOut >= 0 ? '+ ' : '- ') . sunseaRupiah(abs($kasIn - $kasOut)); ?></div>
     </div>
@@ -327,12 +330,12 @@ include 'layout-header.php';
         </div>
         <form method="GET" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:14px;">
             <div class="ss-form-group" style="margin:0;">
-                <label class="ss-label" style="font-size:11px;">Dari Tanggal</label>
-                <input type="date" name="date_from" class="ss-input" style="font-size:12px;padding:6px 8px;" value="<?php echo htmlspecialchars($dateFrom); ?>">
-            </div>
-            <div class="ss-form-group" style="margin:0;">
-                <label class="ss-label" style="font-size:11px;">Sampai Tanggal</label>
-                <input type="date" name="date_to" class="ss-input" style="font-size:12px;padding:6px 8px;" value="<?php echo htmlspecialchars($dateTo); ?>">
+                <label class="ss-label" style="font-size:11px;">Bulan</label>
+                <div class="fin-month-nav">
+                    <a href="finance.php?month=<?php echo $finPrevMonth . $finMonthQs; ?>" class="fin-month-arrow" title="Bulan sebelumnya"><i data-feather="chevron-left"></i></a>
+                    <input type="month" name="month" class="ss-input fin-month-input" value="<?php echo htmlspecialchars($finMonth); ?>" onchange="this.form.submit()" title="<?php echo htmlspecialchars($finMonthLabel); ?>">
+                    <a href="finance.php?month=<?php echo $finNextMonth . $finMonthQs; ?>" class="fin-month-arrow" title="Bulan berikutnya"><i data-feather="chevron-right"></i></a>
+                </div>
             </div>
             <div class="ss-form-group" style="margin:0;">
                 <label class="ss-label" style="font-size:11px;">Jenis</label>
@@ -353,13 +356,11 @@ include 'layout-header.php';
             </div>
             <button type="submit" class="ss-btn ss-btn-outline ss-btn-sm"><i data-feather="filter"></i> Filter</button>
             <?php if ($filterCust > 0): ?>
-                <a href="finance.php?date_from=<?php echo urlencode($dateFrom); ?>&date_to=<?php echo urlencode($dateTo); ?>" class="ss-btn ss-btn-outline ss-btn-sm">Reset Tamu</a>
+                <a href="finance.php?month=<?php echo urlencode($finMonth); ?>" class="ss-btn ss-btn-outline ss-btn-sm">Reset Tamu</a>
             <?php endif; ?>
-            <div style="display:flex;gap:6px;margin-left:auto;">
-                <a href="finance.php?date_from=<?php echo $finPrevMonthStart; ?>&date_to=<?php echo $finPrevMonthEnd . $finMonthQs; ?>" class="ss-btn ss-btn-outline ss-btn-sm" title="<?php echo date('F Y', strtotime($finPrevMonthStart)); ?>"><i data-feather="chevron-left"></i> Bulan Sebelumnya</a>
-                <a href="finance.php?date_from=<?php echo $finThisMonthStart; ?>&date_to=<?php echo $finThisMonthEnd . $finMonthQs; ?>" class="ss-btn ss-btn-outline ss-btn-sm">Bulan Ini</a>
-                <a href="finance.php?date_from=<?php echo $finNextMonthStart; ?>&date_to=<?php echo $finNextMonthEnd . $finMonthQs; ?>" class="ss-btn ss-btn-outline ss-btn-sm" title="<?php echo date('F Y', strtotime($finNextMonthStart)); ?>">Bulan Berikutnya <i data-feather="chevron-right"></i></a>
-            </div>
+            <?php if (!$finIsThisMonth): ?>
+                <a href="finance.php?month=<?php echo date('Y-m') . $finMonthQs; ?>" class="ss-btn ss-btn-outline ss-btn-sm" style="margin-left:auto;">Bulan Ini</a>
+            <?php endif; ?>
         </form>
 
         <div class="ss-table-wrap">
@@ -432,7 +433,7 @@ include 'layout-header.php';
                                                                                                 "reference" => $r["reference"],
                                                                                                 "input_by" => $r["created_by"],
                                                                                             ], JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_HEX_TAG); ?>)' style="color:var(--ss-ocean);" title="Edit transaksi"><i data-feather="edit-3" style="width:14px;height:14px;"></i></a>
-                                        <a href="finance.php?action=delete&id=<?php echo $r['id']; ?>"
+                                        <a href="finance.php?action=delete&id=<?php echo $r['id']; ?>&month=<?php echo urlencode($finMonth); ?>"
                                             onclick="return confirm('Hapus transaksi ini?');"
                                             style="color:var(--ss-danger);" title="Hapus transaksi"><i data-feather="trash-2" style="width:14px;height:14px;"></i></a>
                                     </div>
@@ -494,7 +495,7 @@ include 'layout-header.php';
                             <td style="font-size:12px;"><?php echo (int)$g['tx_count']; ?></td>
                             <td style="font-size:12px;font-weight:600;color:var(--ss-danger);"><?php echo sunseaRupiah((float)$g['total_expense']); ?></td>
                             <td>
-                                <a href="finance.php?date_from=<?php echo urlencode($dateFrom); ?>&date_to=<?php echo urlencode($dateTo); ?>&type=expense&customer_id=<?php echo $g['id']; ?>"
+                                <a href="finance.php?month=<?php echo urlencode($finMonth); ?>&type=expense&customer_id=<?php echo $g['id']; ?>"
                                     class="ss-btn ss-btn-outline ss-btn-sm">Detail</a>
                             </td>
                         </tr>
@@ -705,6 +706,41 @@ include 'layout-header.php';
         .fin-summary-grid {
             grid-template-columns: repeat(2, 1fr);
         }
+    }
+
+    .fin-month-nav {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .fin-month-input {
+        font-size: 12px;
+        font-weight: 700;
+        padding: 6px 8px;
+        width: 160px;
+        cursor: pointer;
+    }
+
+    .fin-month-arrow {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 30px;
+        height: 30px;
+        border: 1px solid var(--ss-gray-2);
+        border-radius: 6px;
+        background: #fff;
+        color: var(--ss-ocean);
+    }
+
+    .fin-month-arrow:hover {
+        background: var(--ss-gray-1);
+    }
+
+    .fin-month-arrow svg {
+        width: 16px;
+        height: 16px;
     }
 
     .fin-modal-grid {
