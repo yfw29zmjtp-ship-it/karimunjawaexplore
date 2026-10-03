@@ -66,7 +66,10 @@ try {
         SELECT COALESCE(SUM(amount),0) FROM cash_book
         WHERE type='expense' AND YEAR(transaction_date)=YEAR(NOW()) AND MONTH(transaction_date)=MONTH(NOW())
     ")->fetchColumn();
-    $monthProfit = $monthRevenue - $monthExpense;
+    // Profit dihitung per trip (tanggal mulai trip + RAB), bukan dari uang masuk/keluar bulan ini,
+    // supaya DP yang masuk bulan lalu untuk trip bulan ini tidak bikin profit bulan ini minus.
+    $tripProfit = sunseaTripProfit($pdo, date('Y-m-01'), date('Y-m-t'));
+    $monthProfit = $tripProfit['profit'];
 
     // Recent quotations (5)
     $recentQuotations = $pdo->query("
@@ -200,6 +203,7 @@ try {
     $monthRevenue = 0;
     $monthExpense = 0;
     $monthProfit = 0;
+    $tripProfit = ['trip_count' => 0, 'revenue' => 0, 'trip_cost' => 0, 'ops_cost' => 0, 'profit' => 0];
     $bookingStats = ['total' => 0, 'active' => 0];
     $recentQuotations = $recentInvoices = [];
     $monthLabels = json_encode([]);
@@ -317,21 +321,21 @@ if (isset($dbError)): ?>
         <div class="ss-stat-icon warning"><i data-feather="trending-up"></i></div>
         <div>
             <div class="ss-stat-value" style="font-size:16px;"><?php echo sunseaRupiah($monthRevenue, true); ?></div>
-            <div class="ss-stat-label">Pendapatan Bulan Ini</div>
+            <div class="ss-stat-label">Uang Masuk Bulan Ini</div>
         </div>
     </div>
     <div class="ss-stat-card">
         <div class="ss-stat-icon danger"><i data-feather="trending-down"></i></div>
         <div>
             <div class="ss-stat-value" style="font-size:16px;"><?php echo sunseaRupiah($monthExpense, true); ?></div>
-            <div class="ss-stat-label">Pengeluaran Bulan Ini</div>
+            <div class="ss-stat-label">Uang Keluar Bulan Ini</div>
         </div>
     </div>
     <div class="ss-stat-card">
         <div class="ss-stat-icon <?php echo $monthProfit >= 0 ? 'success' : 'danger'; ?>"><i data-feather="pie-chart"></i></div>
         <div>
             <div class="ss-stat-value" style="font-size:16px;color:<?php echo $monthProfit >= 0 ? 'var(--ss-success)' : 'var(--ss-danger)'; ?>;"><?php echo sunseaRupiah($monthProfit, true); ?></div>
-            <div class="ss-stat-label">Profit Margin Bulan Ini</div>
+            <div class="ss-stat-label">Profit Trip Bulan Ini <span style="color:var(--ss-muted);">(<?php echo (int)$tripProfit['trip_count']; ?> trip)</span></div>
         </div>
     </div>
     <a href="invoices.php?filter=outstanding" class="ss-stat-card" style="text-decoration:none;color:inherit;">
@@ -372,12 +376,12 @@ if (isset($dbError)): ?>
         </div>
     </div>
 
-    <!-- Finance Pie Chart: Pemasukan vs Pengeluaran vs Profit Margin bulan ini -->
+    <!-- Finance Pie Chart: profit trip bulan ini (pendapatan RAB trip vs biaya trip vs biaya operasional) -->
     <div class="ss-card">
         <div class="ss-card-header">
             <div>
-                <div class="ss-card-title">Pemasukan, Pengeluaran &amp; Profit Margin</div>
-                <div class="ss-card-sub">Ringkasan Finance bulan ini (<?php echo date('F Y'); ?>)</div>
+                <div class="ss-card-title">Profit Trip Bulan Ini</div>
+                <div class="ss-card-sub">Trip yang mulai di <?php echo date('F Y'); ?>: Pendapatan (RAB) <?php echo sunseaRupiah($tripProfit['revenue']); ?> − Biaya Trip <?php echo sunseaRupiah($tripProfit['trip_cost']); ?> − Operasional <?php echo sunseaRupiah($tripProfit['ops_cost']); ?></div>
             </div>
         </div>
         <div style="position:relative;height:300px;padding:10px;">
@@ -689,10 +693,10 @@ if (isset($dbError)): ?>
         new Chart(financePieCtx, {
             type: 'pie',
             data: {
-                labels: ['Pemasukan', 'Pengeluaran', 'Profit Margin'],
+                labels: ['Biaya Trip', 'Biaya Operasional', 'Profit'],
                 datasets: [{
-                    data: [<?php echo (float)$monthRevenue; ?>, <?php echo (float)$monthExpense; ?>, <?php echo max(0, (float)$monthProfit); ?>],
-                    backgroundColor: [oceanColors.success, oceanColors.danger, oceanColors.primary],
+                    data: [<?php echo (float)$tripProfit['trip_cost']; ?>, <?php echo (float)$tripProfit['ops_cost']; ?>, <?php echo max(0, (float)$monthProfit); ?>],
+                    backgroundColor: [oceanColors.danger, '#f59e0b', oceanColors.success],
                     borderColor: '#fff',
                     borderWidth: 2
                 }]

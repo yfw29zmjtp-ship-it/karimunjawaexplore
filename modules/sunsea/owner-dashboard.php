@@ -183,7 +183,9 @@ $confirmedPct = $bookingPieTotal > 0 ? round($confirmedCount / $bookingPieTotal 
 // Pie 2: keuangan bulan ini (masuk vs keluar)
 $financePieTotal = $monthIncome + $monthExpense;
 $monthIncomePct = $financePieTotal > 0 ? round($monthIncome / $financePieTotal * 100) : 0;
-$monthProfit = max(0, $monthClosing); // sisa saldo kas (nyambung dari bulan lalu)
+// Profit per trip (tanggal mulai trip + RAB) bulan terpilih, sama seperti dashboard system.
+$tripProfit = sunseaTripProfit($pdo, $selectedMonth . '-01', date('Y-m-t', strtotime($selectedMonth . '-01')));
+$monthProfit = $tripProfit['profit'];
 
 // Total Pax dalam 1 bulan terpilih (per hari), pengganti donut Status Booking
 $paxDaysInMonth = (int)date('t', strtotime($selectedMonth . '-01'));
@@ -980,14 +982,16 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
                     </div>
                 </div>
                 <div class="ob-pie-card">
-                    <div class="ob-pie-title">Keuangan <?php echo $isCurrentMonth ? 'Bulan Ini' : htmlspecialchars($selectedMonthLabel); ?></div>
+                    <div class="ob-pie-title">Profit Trip <?php echo $isCurrentMonth ? 'Bulan Ini' : htmlspecialchars($selectedMonthLabel); ?></div>
+                    <div style="text-align:center;font-size:15px;font-weight:800;color:<?php echo $monthProfit < 0 ? 'var(--danger)' : 'var(--success)'; ?>;"><?php echo sunseaRupiah($monthProfit); ?></div>
+                    <div style="text-align:center;font-size:9.5px;color:var(--muted);margin-bottom:4px;"><?php echo (int)$tripProfit['trip_count']; ?> trip · RAB <?php echo sunseaRupiah($tripProfit['revenue'], true); ?></div>
                     <div style="position:relative;height:130px;">
                         <canvas id="obFinancePieChart"></canvas>
                     </div>
                     <div class="ob-pie-legend">
-                        <span><span class="ob-pie-dot" style="background:#10b981;"></span> Masuk</span>
-                        <span><span class="ob-pie-dot" style="background:#ef4444;"></span> Keluar</span>
-                        <span><span class="ob-pie-dot" style="background:#0369A1;"></span> Saldo</span>
+                        <span><span class="ob-pie-dot" style="background:#ef4444;"></span> Biaya Trip</span>
+                        <span><span class="ob-pie-dot" style="background:#f59e0b;"></span> Operasional</span>
+                        <span><span class="ob-pie-dot" style="background:#10b981;"></span> Profit</span>
                     </div>
                 </div>
             </div>
@@ -1213,16 +1217,16 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
             });
         }
 
-        // Keuangan Bulan Ini: Pemasukan vs Pengeluaran vs Sisa Saldo Kas (sama seperti dashboard system)
+        // Profit Trip: pendapatan RAB trip dibagi jadi biaya trip, biaya operasional, dan profit (sama seperti dashboard system)
         const obFinanceCtx = document.getElementById('obFinancePieChart');
         if (obFinanceCtx) {
             new Chart(obFinanceCtx, {
                 type: 'pie',
                 data: {
-                    labels: ['Pemasukan', 'Pengeluaran', 'Sisa Saldo Kas'],
+                    labels: ['Biaya Trip', 'Biaya Operasional', 'Profit'],
                     datasets: [{
-                        data: [<?php echo (float)$monthIncome; ?>, <?php echo (float)$monthExpense; ?>, <?php echo (float)$monthProfit; ?>],
-                        backgroundColor: ['#10b981', '#ef4444', '#0369A1'],
+                        data: [<?php echo (float)$tripProfit['trip_cost']; ?>, <?php echo (float)$tripProfit['ops_cost']; ?>, <?php echo max(0, (float)$monthProfit); ?>],
+                        backgroundColor: ['#ef4444', '#f59e0b', '#10b981'],
                         borderColor: '#fff',
                         borderWidth: 2
                     }]

@@ -788,6 +788,63 @@ function sunseaFetchBookingExpenses(PDO $pdo, int $bookingId): array
 }
 
 /**
+ * Profit per trip untuk satu periode (dasar trip, bukan dasar kas):
+ * - Pendapatan  = RAB (total harga jual item) booking confirmed/ongoing/completed yang TANGGAL MULAI trip-nya di periode ini,
+ *                 kapan pun DP/pelunasannya dibayar.
+ * - Biaya trip  = pengeluaran Buku Kas yang tertaut ke booking-booking tsb (aturan sama dgn sunseaFetchBookingExpenses),
+ *                 kapan pun dibayarnya.
+ * - Biaya ops   = pengeluaran di periode ini (tanggal transaksi) yang tidak tertaut ke trip confirmed mana pun.
+ */
+function sunseaTripProfit(PDO $pdo, string $dateFrom, string $dateTo): array
+{
+    $activeStatuses = ['confirmed', 'ongoing', 'completed'];
+
+    $revStmt = $pdo->prepare("
+        SELECT COUNT(*) AS trip_count,
+               COALESCE(SUM((SELECT COALESCE(SUM(i.total_sell),0) FROM booking_order_items i WHERE i.booking_id = b.id)),0) AS revenue
+        FROM booking_orders b
+        WHERE b.status IN ('confirmed','ongoing','completed') AND b.start_date BETWEEN ? AND ?
+    ");
+    $revStmt->execute([$dateFrom, $dateTo]);
+    $rev = $revStmt->fetch(PDO::FETCH_ASSOC);
+
+    // Tiap pengeluaran dipetakan ke booking-nya: booking_id langsung, atau lewat tamu kalau tamu itu cuma punya 1 booking.
+    $expStmt = $pdo->prepare("
+        SELECT cb.amount, cb.transaction_date, bo.start_date, bo.status
+        FROM cash_book cb
+        LEFT JOIN booking_orders bo ON bo.id = COALESCE(cb.booking_id, (
+            SELECT b.id FROM booking_orders b
+            WHERE b.customer_id = cb.customer_id
+              AND NOT EXISTS (SELECT 1 FROM booking_orders b2 WHERE b2.customer_id = b.customer_id AND b2.id <> b.id)
+        ))
+        WHERE cb.type = 'expense' AND (cb.transaction_date BETWEEN ? AND ? OR bo.start_date BETWEEN ? AND ?)
+    ");
+    $expStmt->execute([$dateFrom, $dateTo, $dateFrom, $dateTo]);
+
+    $tripCost = 0.0;
+    $opsCost = 0.0;
+    foreach ($expStmt->fetchAll(PDO::FETCH_ASSOC) as $e) {
+        $isTripExpense = $e['status'] !== null && in_array($e['status'], $activeStatuses, true);
+        if ($isTripExpense) {
+            if ($e['start_date'] >= $dateFrom && $e['start_date'] <= $dateTo) {
+                $tripCost += (float)$e['amount'];
+            }
+        } elseif ($e['transaction_date'] >= $dateFrom && $e['transaction_date'] <= $dateTo) {
+            $opsCost += (float)$e['amount'];
+        }
+    }
+
+    $revenue = (float)$rev['revenue'];
+    return [
+        'trip_count' => (int)$rev['trip_count'],
+        'revenue'    => $revenue,
+        'trip_cost'  => $tripCost,
+        'ops_cost'   => $opsCost,
+        'profit'     => $revenue - $tripCost - $opsCost,
+    ];
+}
+
+/**
  * Format Rupiah
  */
 function sunseaRupiah(float $amount, bool $short = false): string
