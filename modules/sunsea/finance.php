@@ -299,7 +299,7 @@ include 'layout-header.php';
 <div class="fin-summary-grid">
     <div class="ss-card">
         <div style="font-size:12px;color:var(--ss-muted);">Saldo Awal <span style="font-size:10.5px;">(s/d <?php echo date('d/m/Y', strtotime($dateFrom . ' -1 day')); ?>)</span></div>
-        <div style="font-size:17px;font-weight:800;color:<?php echo $kasOpening < 0 ? 'var(--ss-danger)' : 'var(--ss-ocean)'; ?>;"><?php echo sunseaRupiah($kasOpening); ?></div>
+        <div style="font-size:17px;font-weight:800;color:<?php echo $kasOpening < 0 ? 'var(--ss-danger)' : 'var(--ss-success)'; ?>;"><?php echo sunseaRupiah($kasOpening); ?></div>
     </div>
     <div class="ss-card">
         <div style="font-size:12px;color:var(--ss-muted);">Pemasukan Periode Ini</div>
@@ -311,7 +311,7 @@ include 'layout-header.php';
     </div>
     <div class="ss-card">
         <div style="font-size:12px;color:var(--ss-muted);">Saldo Akhir <span style="font-size:10.5px;">(per <?php echo date('d/m/Y', strtotime($dateTo)); ?>)</span></div>
-        <div style="font-size:17px;font-weight:800;color:<?php echo $kasClosing < 0 ? 'var(--ss-danger)' : 'var(--ss-ocean)'; ?>;"><?php echo sunseaRupiah($kasClosing); ?></div>
+        <div style="font-size:17px;font-weight:800;color:<?php echo $kasClosing < 0 ? 'var(--ss-danger)' : 'var(--ss-success)'; ?>;"><?php echo sunseaRupiah($kasClosing); ?></div>
         <div style="font-size:10.5px;color:var(--ss-muted);margin-top:2px;">Arus kas periode: <?php echo ($kasIn - $kasOut >= 0 ? '+ ' : '- ') . sunseaRupiah(abs($kasIn - $kasOut)); ?></div>
     </div>
 </div>
@@ -413,7 +413,7 @@ include 'layout-header.php';
                                 <?php echo ($r['type'] === 'income' ? '+ ' : '- ') . sunseaRupiah((float)$r['amount']); ?>
                             </td>
                             <?php if (!$finIsFiltered): ?>
-                                <td style="font-size:12px;font-weight:600;color:<?php echo $runningBalances[$finIdx] < 0 ? 'var(--ss-danger)' : 'var(--ss-ocean)'; ?>;"><?php echo sunseaRupiah($runningBalances[$finIdx]); ?></td>
+                                <td style="font-size:12px;font-weight:600;color:<?php echo $runningBalances[$finIdx] < 0 ? 'var(--ss-danger)' : 'var(--ss-success)'; ?>;"><?php echo sunseaRupiah($runningBalances[$finIdx]); ?></td>
                             <?php endif; ?>
                             <td style="font-size:11.5px;color:var(--ss-muted);"><?php echo htmlspecialchars($r['created_by'] ?: '-'); ?></td>
                             <td>
@@ -444,7 +444,7 @@ include 'layout-header.php';
                         <tr style="background:#F8FAFC;">
                             <td colspan="6" style="font-size:12px;color:var(--ss-muted);font-style:italic;">Saldo awal (dibawa dari sebelum <?php echo date('d/m/Y', strtotime($dateFrom)); ?>)</td>
                             <td></td>
-                            <td style="font-size:12px;font-weight:700;color:<?php echo $kasOpening < 0 ? 'var(--ss-danger)' : 'var(--ss-ocean)'; ?>;"><?php echo sunseaRupiah($kasOpening); ?></td>
+                            <td style="font-size:12px;font-weight:700;color:<?php echo $kasOpening < 0 ? 'var(--ss-danger)' : 'var(--ss-success)'; ?>;"><?php echo sunseaRupiah($kasOpening); ?></td>
                             <td colspan="2"></td>
                         </tr>
                     <?php endif; ?>
