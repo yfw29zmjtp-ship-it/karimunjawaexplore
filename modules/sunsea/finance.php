@@ -273,6 +273,16 @@ $perGuest->execute([$dateFrom, $dateTo]);
 $perGuest = $perGuest->fetchAll();
 
 $customers = $pdo->query("SELECT id, name, phone FROM customers WHERE is_active=1 ORDER BY name")->fetchAll();
+// Dropdown filter Tamu: hanya tamu yang punya booking sudah confirmed (termasuk ongoing/completed),
+// plus tamu yang sedang dipilih supaya filter aktif tetap terlihat.
+$filterCustStmt = $pdo->prepare("
+    SELECT c.id, c.name FROM customers c
+    WHERE EXISTS (SELECT 1 FROM booking_orders b WHERE b.customer_id = c.id AND b.status IN ('confirmed','ongoing','completed'))
+       OR c.id = ?
+    ORDER BY c.name
+");
+$filterCustStmt->execute([$filterCust]);
+$filterCustomers = $filterCustStmt->fetchAll();
 $bookings  = $pdo->query("
     SELECT bo.id, bo.booking_no, bo.customer_id, c.name AS customer_name
     FROM booking_orders bo
@@ -347,12 +357,25 @@ include 'layout-header.php';
             </div>
             <div class="ss-form-group" style="margin:0;min-width:200px;">
                 <label class="ss-label" style="font-size:11px;">Tamu</label>
-                <select name="customer_id" class="ss-select" style="font-size:12px;padding:6px 8px;">
-                    <option value="0">Semua Tamu</option>
-                    <?php foreach ($customers as $c): ?>
-                        <option value="<?php echo $c['id']; ?>" <?php echo $filterCust === (int)$c['id'] ? 'selected' : ''; ?>><?php echo htmlspecialchars($c['name']); ?></option>
-                    <?php endforeach; ?>
-                </select>
+                <?php
+                $finCustLabel = 'Semua Tamu';
+                foreach ($filterCustomers as $c) {
+                    if ($filterCust === (int)$c['id']) $finCustLabel = $c['name'];
+                }
+                ?>
+                <div class="fin-cust-dd" id="finCustDd">
+                    <input type="hidden" name="customer_id" id="finCustValue" value="<?php echo (int)$filterCust; ?>">
+                    <button type="button" class="ss-select fin-cust-toggle" onclick="toggleFinCustDd()"><?php echo htmlspecialchars($finCustLabel); ?></button>
+                    <div class="fin-cust-panel">
+                        <input type="text" class="ss-input fin-cust-search" placeholder="Cari tamu..." oninput="filterFinCustDd(this.value)">
+                        <div class="fin-cust-list">
+                            <div class="fin-cust-opt<?php echo $filterCust === 0 ? ' active' : ''; ?>" data-id="0">Semua Tamu</div>
+                            <?php foreach ($filterCustomers as $c): ?>
+                                <div class="fin-cust-opt<?php echo $filterCust === (int)$c['id'] ? ' active' : ''; ?>" data-id="<?php echo (int)$c['id']; ?>"><?php echo htmlspecialchars($c['name']); ?></div>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                </div>
             </div>
             <button type="submit" class="ss-btn ss-btn-outline ss-btn-sm"><i data-feather="filter"></i> Filter</button>
             <?php if ($filterCust > 0): ?>
@@ -708,6 +731,74 @@ include 'layout-header.php';
         }
     }
 
+    .fin-cust-dd {
+        position: relative;
+    }
+
+    .fin-cust-toggle {
+        width: 100%;
+        min-width: 200px;
+        font-size: 12px;
+        padding: 6px 28px 6px 8px;
+        text-align: left;
+        cursor: pointer;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .fin-cust-panel {
+        display: none;
+        position: absolute;
+        top: calc(100% + 4px);
+        left: 0;
+        width: 100%;
+        min-width: 240px;
+        background: #fff;
+        border: 1px solid var(--ss-gray-2);
+        border-radius: 8px;
+        box-shadow: 0 10px 25px rgba(15, 23, 42, .15);
+        padding: 6px;
+        z-index: 50;
+    }
+
+    .fin-cust-dd.open .fin-cust-panel {
+        display: block;
+    }
+
+    .fin-cust-search {
+        font-size: 12px;
+        padding: 6px 8px;
+        margin-bottom: 4px;
+    }
+
+    .fin-cust-list {
+        /* 5 baris terlihat, sisanya scroll */
+        max-height: 160px;
+        overflow-y: auto;
+    }
+
+    .fin-cust-opt {
+        height: 32px;
+        line-height: 32px;
+        padding: 0 8px;
+        font-size: 12px;
+        border-radius: 5px;
+        cursor: pointer;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .fin-cust-opt:hover {
+        background: var(--ss-gray-1);
+    }
+
+    .fin-cust-opt.active {
+        color: var(--ss-ocean);
+        font-weight: 700;
+    }
+
     .fin-month-nav {
         display: flex;
         align-items: center;
@@ -880,6 +971,36 @@ include 'layout-header.php';
 </style>
 
 <script>
+    function toggleFinCustDd() {
+        var dd = document.getElementById('finCustDd');
+        dd.classList.toggle('open');
+        if (dd.classList.contains('open')) {
+            var search = dd.querySelector('.fin-cust-search');
+            search.value = '';
+            filterFinCustDd('');
+            search.focus();
+        }
+    }
+
+    function filterFinCustDd(q) {
+        q = q.toLowerCase().trim();
+        document.querySelectorAll('#finCustDd .fin-cust-opt').forEach(function(opt) {
+            opt.style.display = !q || opt.textContent.toLowerCase().indexOf(q) !== -1 ? '' : 'none';
+        });
+    }
+
+    document.querySelectorAll('#finCustDd .fin-cust-opt').forEach(function(opt) {
+        opt.addEventListener('click', function() {
+            document.getElementById('finCustValue').value = opt.getAttribute('data-id');
+            document.getElementById('finCustDd').closest('form').submit();
+        });
+    });
+
+    document.addEventListener('click', function(e) {
+        var dd = document.getElementById('finCustDd');
+        if (dd && !dd.contains(e.target)) dd.classList.remove('open');
+    });
+
     function switchTxTab(tab) {
         var isManual = tab === 'manual';
         document.getElementById('finTabManual').style.display = isManual ? '' : 'none';
