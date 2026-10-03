@@ -938,7 +938,11 @@ include 'layout-header.php';
     }
 
     // Samakan sumber angka finance dengan modal detail di Kalender: RAB dari item, Pengeluaran dari transaksi Finance asli (cash_book), bukan cost_total/margin_amount statis.
-    $detailExpenses = safeFetchAll($pdo, "SELECT transaction_date, category, description, amount FROM cash_book WHERE booking_id=? AND type='expense' ORDER BY transaction_date, id", [$viewId], 'expense booking');
+    try {
+        $detailExpenses = sunseaFetchBookingExpenses($pdo, $viewId);
+    } catch (Exception $e) {
+        $detailExpenses = [];
+    }
     $totalExpenseActual = 0;
     foreach ($detailExpenses as $ex) $totalExpenseActual += (float)$ex['amount'];
     $totalRabActual = 0;

@@ -66,9 +66,7 @@ if (($_GET['ajax'] ?? '') === 'detail' && (int)($_GET['id'] ?? 0) > 0) {
     $nights = max(0, (int)round((strtotime($booking['end_date']) - strtotime($booking['start_date'])) / 86400));
     $durationLabel = ($nights + 1) . 'H' . $nights . 'M';
 
-    $expenses = $pdo->prepare("SELECT transaction_date, category, description, amount, reference, created_by FROM cash_book WHERE booking_id=? AND type='expense' ORDER BY transaction_date, id");
-    $expenses->execute([$bId]);
-    $expenses = $expenses->fetchAll();
+    $expenses = sunseaFetchBookingExpenses($pdo, $bId);
 
     $totalExpense = 0;
     foreach ($expenses as $ex) $totalExpense += (float)$ex['amount'];

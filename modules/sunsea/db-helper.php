@@ -767,6 +767,27 @@ function sunseaCashBalanceBefore(PDO $pdo, string $date): float
 }
 
 /**
+ * Pengeluaran Buku Kas untuk satu booking: yang ditautkan langsung ke booking, plus yang hanya ditautkan ke tamunya
+ * (tanpa booking) selama tamu itu cuma punya satu booking - aturan yang sama dengan laporan.php.
+ */
+function sunseaFetchBookingExpenses(PDO $pdo, int $bookingId): array
+{
+    $stmt = $pdo->prepare("
+        SELECT cb.transaction_date, cb.category, cb.description, cb.amount, cb.reference, cb.created_by
+        FROM cash_book cb
+        WHERE cb.type = 'expense' AND (
+            cb.booking_id = ?
+            OR (cb.booking_id IS NULL
+                AND cb.customer_id = (SELECT b.customer_id FROM booking_orders b WHERE b.id = ?)
+                AND NOT EXISTS (SELECT 1 FROM booking_orders b2 WHERE b2.customer_id = cb.customer_id AND b2.id <> ?))
+        )
+        ORDER BY cb.transaction_date, cb.id
+    ");
+    $stmt->execute([$bookingId, $bookingId, $bookingId]);
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+/**
  * Format Rupiah
  */
 function sunseaRupiah(float $amount, bool $short = false): string
