@@ -969,142 +969,153 @@ include 'layout-header.php';
     foreach ($detailPayments as $dp) $totalPaidActual += (float)$dp['amount'];
     $remainingPaymentActual = max(0, $totalInvoiceAmountActual - $totalPaidActual);
 ?>
-    <div style="margin-bottom:14px;"><a class="ss-btn ss-btn-outline ss-btn-sm" href="bookings.php"><i data-feather="arrow-left"></i> Kembali</a></div>
+<div class="bkd">
+    <div style="margin-bottom:10px;"><a class="ss-btn ss-btn-outline ss-btn-sm" href="bookings.php"><i data-feather="arrow-left"></i> Kembali</a></div>
 
     <!-- 1. Identitas Booking: nama tamu, nomor, tanggal, status, tim lapangan -->
-    <div class="ss-card" style="margin-bottom:14px;">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;margin-bottom:4px;">
+    <div class="ss-card bkd-head">
+        <div class="bkd-head-top">
             <div>
-                <div style="font-size:20px;font-weight:800;color:var(--ss-text);"><?php echo htmlspecialchars($detail['customer_name']); ?></div>
-                <div style="font-size:12px;color:var(--ss-muted);margin-top:2px;">
-                    <?php echo htmlspecialchars($detail['booking_no']); ?> · <?php echo date('d M Y', strtotime($detail['start_date'])); ?> - <?php echo date('d M Y', strtotime($detail['end_date'])); ?> · <?php echo (int)$detail['pax_count']; ?> pax
+                <div class="bkd-name"><?php echo htmlspecialchars($detail['customer_name']); ?></div>
+                <div class="bkd-meta">
+                    <?php echo htmlspecialchars($detail['booking_no']); ?> · <?php echo date('d M Y', strtotime($detail['start_date'])); ?> – <?php echo date('d M Y', strtotime($detail['end_date'])); ?> · <?php echo (int)$detail['pax_count']; ?> pax
                 </div>
             </div>
-            <span class="ss-status ss-status-<?php echo $detail['status'] === 'completed' ? 'approved' : ($detail['status'] === 'cancelled' ? 'rejected' : ($detail['status'] === 'draft' ? 'draft' : 'sent')); ?>" style="font-size:12px;"><?php echo $detail['status'] === 'draft' ? 'Pending' : ucfirst($detail['status']); ?></span>
+            <span class="ss-status ss-status-<?php echo $detail['status'] === 'completed' ? 'approved' : ($detail['status'] === 'cancelled' ? 'rejected' : ($detail['status'] === 'draft' ? 'draft' : 'sent')); ?>" style="font-size:11px;"><?php echo $detail['status'] === 'draft' ? 'Pending' : ucfirst($detail['status']); ?></span>
         </div>
-        <?php if (!empty($detail['notes'])): ?>
-            <div style="font-size:12.5px;color:var(--ss-muted);margin-top:8px;padding-top:8px;border-top:1px solid var(--ss-gray-2);"><?php echo nl2br(htmlspecialchars($detail['notes'])); ?></div>
-        <?php endif; ?>
-        <div style="display:flex;gap:22px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid var(--ss-gray-2);font-size:12.5px;">
-            <div><span style="color:var(--ss-muted);">Koordinator: </span><strong><?php echo htmlspecialchars($detail['coordinator_name'] ?: '-'); ?></strong></div>
-            <div><span style="color:var(--ss-muted);">Guide Darat: </span><strong><?php echo htmlspecialchars($detail['guide_darat_name'] ?: '-'); ?></strong></div>
-            <div><span style="color:var(--ss-muted);">Guide Laut: </span><strong><?php echo htmlspecialchars($detail['guide_laut_name'] ?: '-'); ?></strong></div>
+        <div class="bkd-team">
+            <span><em>Koordinator</em> <?php echo htmlspecialchars($detail['coordinator_name'] ?: '-'); ?></span>
+            <span><em>Guide Darat</em> <?php echo htmlspecialchars($detail['guide_darat_name'] ?: '-'); ?></span>
+            <span><em>Guide Laut</em> <?php echo htmlspecialchars($detail['guide_laut_name'] ?: '-'); ?></span>
             <?php if (!empty($detail['accommodation_manual'])): ?>
-                <div><span style="color:var(--ss-muted);">Penginapan: </span><strong><?php echo htmlspecialchars($detail['accommodation_manual']); ?></strong></div>
+                <span><em>Penginapan</em> <?php echo htmlspecialchars($detail['accommodation_manual']); ?></span>
             <?php endif; ?>
         </div>
-    </div>
-
-    <!-- 2. Ringkasan Keuangan: disamakan dengan modal detail di Kalender (RAB item vs pengeluaran nyata di Finance) -->
-    <div class="ss-card" style="margin-bottom:14px;">
-        <div class="ss-card-title" style="margin-bottom:12px;">💰 Ringkasan Keuangan</div>
-        <div style="display:grid;grid-template-columns:150px 1fr;gap:22px;align-items:center;">
-            <div style="position:relative;width:150px;height:150px;">
-                <canvas id="bookingFinancePie" width="150" height="150"></canvas>
-            </div>
-            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;">
-                <div>
-                    <div style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--ss-muted);"><span style="width:9px;height:9px;border-radius:50%;background:#dc2626;display:inline-block;"></span> Total Pengeluaran (Finance)</div>
-                    <div style="font-size:17px;font-weight:800;margin-top:4px;"><?php echo sunseaRupiah($totalExpenseActual); ?></div>
-                </div>
-                <div>
-                    <div style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--ss-muted);"><span style="width:9px;height:9px;border-radius:50%;background:var(--ss-success);display:inline-block;"></span> Margin (<?php echo $marginPct; ?>%)</div>
-                    <div style="font-size:17px;font-weight:800;margin-top:4px;color:var(--ss-success);"><?php echo sunseaRupiah($marginActual); ?></div>
-                </div>
-                <div>
-                    <div style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--ss-muted);"><span style="width:9px;height:9px;border-radius:50%;background:var(--ss-ocean);display:inline-block;"></span> Total RAB/Penawaran</div>
-                    <div style="font-size:17px;font-weight:800;margin-top:4px;color:var(--ss-ocean);"><?php echo sunseaRupiah($totalRabActual); ?></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 2b. Pengeluaran Trip Ini (dari Finance): daftar transaksi cash_book nyata, sama seperti modal Kalender -->
-    <div class="ss-card" style="margin-bottom:14px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-            <div class="ss-card-title" style="margin:0;">🧾 Pengeluaran Trip Ini (dari Finance)</div>
-            <a href="finance.php?customer_id=<?php echo (int)$detail['customer_id']; ?>" class="ss-btn ss-btn-outline ss-btn-sm">Lihat di Finance</a>
-        </div>
-        <?php if (empty($detailExpenses)): ?>
-            <div style="font-size:12px;color:var(--ss-muted);">Belum ada pengeluaran dicatat di Finance untuk trip ini.</div>
-        <?php else: ?>
-            <div class="ss-table-wrap">
-                <table class="ss-table">
-                    <thead>
-                        <tr>
-                            <th style="white-space:nowrap;">Tanggal</th>
-                            <th>Keterangan</th>
-                            <th style="width:130px;white-space:nowrap;">Jumlah</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($detailExpenses as $ex): ?>
-                            <tr>
-                                <td style="white-space:nowrap;"><?php echo htmlspecialchars($ex['transaction_date']); ?></td>
-                                <td><?php echo htmlspecialchars($ex['description']); ?><?php if (!empty($ex['category'])): ?><br><small style="color:var(--ss-muted);"><?php echo htmlspecialchars($ex['category']); ?></small><?php endif; ?></td>
-                                <td style="font-weight:600;color:var(--ss-danger);white-space:nowrap;"><?php echo sunseaRupiah((float)$ex['amount']); ?></td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                    <tfoot>
-                        <tr style="border-top:2px solid var(--ss-gray-2);">
-                            <td colspan="2" style="text-align:right;"><strong>Total Pengeluaran</strong></td>
-                            <td style="font-weight:700;color:var(--ss-danger);white-space:nowrap;"><?php echo sunseaRupiah($totalExpenseActual); ?></td>
-                        </tr>
-                    </tfoot>
-                </table>
-            </div>
+        <?php if (!empty($detail['notes'])): ?>
+            <div class="bkd-notes"><?php echo nl2br(htmlspecialchars($detail['notes'])); ?></div>
         <?php endif; ?>
     </div>
 
-    <!-- 2c. Riwayat Pembayaran (DP): sama seperti modal detail di Kalender, tampilkan semua tahap DP -->
-    <div class="ss-card" style="margin-bottom:14px;">
-        <div class="ss-card-title" style="margin-bottom:10px;">💳 Riwayat Pembayaran (DP)</div>
-        <?php if (empty($detailPayments)): ?>
-            <div style="font-size:12px;color:var(--ss-muted);">Belum ada pembayaran/DP tercatat untuk booking ini.</div>
-        <?php else: ?>
-            <div class="ss-table-wrap">
-                <table class="ss-table">
-                    <thead>
-                        <tr>
-                            <th style="width:100px;">Tahap</th>
-                            <th style="white-space:nowrap;">Tanggal</th>
-                            <th>Metode</th>
-                            <th style="width:130px;white-space:nowrap;">Jumlah</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($detailPayments as $dpIdx => $dp):
-                            $dpIsLast = $dpIdx === count($detailPayments) - 1;
-                            $dpStage = ($dpIsLast && $remainingPaymentActual <= 0) ? 'Pelunasan' : ($dpIdx === 0 ? 'DP 1' : 'DP ' . ($dpIdx + 1));
-                        ?>
-                            <tr>
-                                <td><strong><?php echo $dpStage; ?></strong></td>
-                                <td style="white-space:nowrap;"><?php echo date('d M Y', strtotime($dp['payment_date'])); ?></td>
-                                <td><?php echo htmlspecialchars(ucfirst($dp['method'] ?: '-')); ?></td>
-                                <td style="font-weight:600;color:var(--ss-success);white-space:nowrap;"><?php echo sunseaRupiah((float)$dp['amount']); ?></td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                    <tfoot>
-                        <tr style="border-top:2px solid var(--ss-gray-2);">
-                            <td colspan="3" style="text-align:right;"><strong>Total Dibayar</strong></td>
-                            <td style="font-weight:700;color:var(--ss-success);white-space:nowrap;"><?php echo sunseaRupiah($totalPaidActual); ?></td>
-                        </tr>
-                        <tr>
-                            <td colspan="3" style="text-align:right;"><strong>Sisa Tagihan</strong></td>
-                            <td style="font-weight:700;white-space:nowrap;color:<?php echo $remainingPaymentActual > 0 ? 'var(--ss-danger)' : 'var(--ss-success)'; ?>;"><?php echo $remainingPaymentActual > 0 ? sunseaRupiah($remainingPaymentActual) : '✓ Lunas'; ?></td>
-                        </tr>
-                    </tfoot>
-                </table>
+    <!-- 2. Ringkasan Keuangan: RAB item vs pengeluaran nyata di Finance, plus pembayaran tamu -->
+    <?php $bkdExpensePct = $totalRabActual > 0 ? min(100, round($totalExpenseActual / $totalRabActual * 100)) : ($totalExpenseActual > 0 ? 100 : 0); ?>
+    <div class="ss-card">
+        <div class="bkd-stats">
+            <div class="bkd-stat">
+                <div class="bkd-stat-lbl">Total RAB</div>
+                <div class="bkd-stat-val" style="color:var(--ss-ocean);"><?php echo sunseaRupiah($totalRabActual); ?></div>
             </div>
-        <?php endif; ?>
+            <div class="bkd-stat">
+                <div class="bkd-stat-lbl">Dibayar Tamu</div>
+                <div class="bkd-stat-val" style="color:var(--ss-success);"><?php echo sunseaRupiah($totalPaidActual); ?></div>
+                <div class="bkd-stat-sub"><?php echo $remainingPaymentActual > 0 ? 'Sisa ' . sunseaRupiah($remainingPaymentActual) : ($totalPaidActual > 0 ? '✓ Lunas' : 'Belum ada pembayaran'); ?></div>
+            </div>
+            <div class="bkd-stat">
+                <div class="bkd-stat-lbl">Pengeluaran</div>
+                <div class="bkd-stat-val" style="color:var(--ss-danger);"><?php echo sunseaRupiah($totalExpenseActual); ?></div>
+                <div class="bkd-stat-sub"><?php echo count($detailExpenses); ?> transaksi</div>
+            </div>
+            <div class="bkd-stat">
+                <div class="bkd-stat-lbl">Margin</div>
+                <div class="bkd-stat-val" style="color:<?php echo $marginActual < 0 ? 'var(--ss-danger)' : 'var(--ss-success)'; ?>;"><?php echo sunseaRupiah($marginActual); ?></div>
+                <div class="bkd-stat-sub"><?php echo $marginPct; ?>% dari RAB</div>
+            </div>
+        </div>
+        <div class="bkd-bar" title="Pengeluaran <?php echo $bkdExpensePct; ?>% dari RAB">
+            <div style="width:<?php echo $bkdExpensePct; ?>%;background:<?php echo $marginActual < 0 ? 'var(--ss-danger)' : '#f59e0b'; ?>;"></div>
+        </div>
+        <div class="bkd-bar-lbl">Pengeluaran terpakai <?php echo $bkdExpensePct; ?>% dari RAB<?php echo $marginActual < 0 ? ' — melebihi RAB' : ''; ?></div>
+    </div>
+
+    <div class="bkd-grid-2">
+        <!-- 2b. Pengeluaran Trip Ini (dari Finance) -->
+        <div class="ss-card">
+            <div class="bkd-card-head">
+                <div class="ss-card-title"><i data-feather="file-text"></i> Pengeluaran Trip (Finance)</div>
+                <a href="finance.php?customer_id=<?php echo (int)$detail['customer_id']; ?>" class="bkd-link">Lihat di Finance →</a>
+            </div>
+            <?php if (empty($detailExpenses)): ?>
+                <div class="bkd-empty">Belum ada pengeluaran dicatat di Finance untuk trip ini.</div>
+            <?php else: ?>
+                <div class="ss-table-wrap">
+                    <table class="ss-table">
+                        <thead>
+                            <tr>
+                                <th style="width:70px;">Tanggal</th>
+                                <th>Keterangan</th>
+                                <th style="width:110px;text-align:right;">Jumlah</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($detailExpenses as $ex): ?>
+                                <tr>
+                                    <td style="white-space:nowrap;color:var(--ss-muted);"><?php echo date('d/m', strtotime($ex['transaction_date'])); ?></td>
+                                    <td><?php echo htmlspecialchars($ex['description']); ?><?php if (!empty($ex['category'])): ?> <span class="bkd-tag"><?php echo htmlspecialchars($ex['category']); ?></span><?php endif; ?></td>
+                                    <td style="text-align:right;font-weight:600;color:var(--ss-danger);white-space:nowrap;"><?php echo sunseaRupiah((float)$ex['amount']); ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="2" style="text-align:right;"><strong>Total</strong></td>
+                                <td style="text-align:right;font-weight:700;color:var(--ss-danger);white-space:nowrap;"><?php echo sunseaRupiah($totalExpenseActual); ?></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            <?php endif; ?>
+        </div>
+
+        <!-- 2c. Riwayat Pembayaran (DP) -->
+        <div class="ss-card">
+            <div class="bkd-card-head">
+                <div class="ss-card-title"><i data-feather="credit-card"></i> Riwayat Pembayaran</div>
+            </div>
+            <?php if (empty($detailPayments)): ?>
+                <div class="bkd-empty">Belum ada pembayaran/DP tercatat untuk booking ini.</div>
+            <?php else: ?>
+                <div class="ss-table-wrap">
+                    <table class="ss-table">
+                        <thead>
+                            <tr>
+                                <th>Tahap</th>
+                                <th>Tanggal</th>
+                                <th>Metode</th>
+                                <th style="text-align:right;">Jumlah</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($detailPayments as $dpIdx => $dp):
+                                $dpIsLast = $dpIdx === count($detailPayments) - 1;
+                                $dpStage = ($dpIsLast && $remainingPaymentActual <= 0) ? 'Pelunasan' : ($dpIdx === 0 ? 'DP 1' : 'DP ' . ($dpIdx + 1));
+                            ?>
+                                <tr>
+                                    <td><strong><?php echo $dpStage; ?></strong></td>
+                                    <td style="white-space:nowrap;color:var(--ss-muted);"><?php echo date('d/m/Y', strtotime($dp['payment_date'])); ?></td>
+                                    <td><?php echo htmlspecialchars(ucfirst($dp['method'] ?: '-')); ?></td>
+                                    <td style="text-align:right;font-weight:600;color:var(--ss-success);white-space:nowrap;"><?php echo sunseaRupiah((float)$dp['amount']); ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="3" style="text-align:right;"><strong>Total Dibayar</strong></td>
+                                <td style="text-align:right;font-weight:700;color:var(--ss-success);white-space:nowrap;"><?php echo sunseaRupiah($totalPaidActual); ?></td>
+                            </tr>
+                            <tr>
+                                <td colspan="3" style="text-align:right;"><strong>Sisa Tagihan</strong></td>
+                                <td style="text-align:right;font-weight:700;white-space:nowrap;color:<?php echo $remainingPaymentActual > 0 ? 'var(--ss-danger)' : 'var(--ss-success)'; ?>;"><?php echo $remainingPaymentActual > 0 ? sunseaRupiah($remainingPaymentActual) : '✓ Lunas'; ?></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            <?php endif; ?>
+        </div>
     </div>
 
     <!-- 3. Rekap Pengeluaran: khusus biaya ke mitra, terpisah dari ringkasan keuangan -->
     <div class="ss-card" style="margin-bottom:14px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-            <div class="ss-card-title" style="margin:0;">📋 Rekap Pengeluaran (Pembayaran ke Mitra)</div>
+            <div class="ss-card-title" style="margin:0;"><i data-feather="clipboard"></i> Pembayaran ke Mitra</div>
             <?php if (!empty($mitraItems)): ?>
                 <?php if ($mitraUnpaidCount > 0): ?>
                     <span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#dc2626;font-weight:700;"><span style="width:8px;height:8px;border-radius:50%;background:#dc2626;display:inline-block;"></span> <?php echo $mitraUnpaidCount; ?> belum dibayar</span>
@@ -1380,41 +1391,201 @@ include 'layout-header.php';
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <script>
-        (function() {
-            var ctx = document.getElementById('bookingFinancePie');
-            if (!ctx || typeof Chart === 'undefined') return;
-            new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Pengeluaran', 'Margin'],
-                    datasets: [{
-                        data: [<?php echo (float)$totalExpenseActual; ?>, <?php echo (float)$marginActual; ?>],
-                        backgroundColor: ['#dc2626', '#16a34a'],
-                        borderWidth: 0
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    cutout: '65%',
-                    plugins: {
-                        legend: {
-                            display: false
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: function(c) {
-                                    return c.label + ': Rp ' + c.raw.toLocaleString('id-ID');
-                                }
-                            }
-                        }
-                    }
-                }
-            });
-        })();
-    </script>
+</div>
+
+    <style>
+        /* Detail booking: versi ringkas & rapi (khusus halaman ?view=) */
+        .bkd .ss-card {
+            padding: 14px 16px;
+            margin-bottom: 12px;
+            border-radius: 10px;
+        }
+
+        .bkd .ss-card-title {
+            font-size: 12.5px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .bkd .ss-card-title svg {
+            width: 14px;
+            height: 14px;
+            color: var(--ss-muted);
+        }
+
+        .bkd .ss-table {
+            font-size: 12px;
+        }
+
+        .bkd .ss-table th {
+            padding: 7px 10px;
+            font-size: 10px;
+        }
+
+        .bkd .ss-table td {
+            padding: 7px 10px;
+        }
+
+        .bkd .ss-label {
+            font-size: 11px;
+        }
+
+        .bkd .ss-input,
+        .bkd .ss-select {
+            font-size: 12px;
+            padding: 6px 8px;
+        }
+
+        .bkd .ss-btn {
+            font-size: 12px;
+        }
+
+        .bkd-head-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .bkd-name {
+            font-size: 16px;
+            font-weight: 800;
+            color: var(--ss-text);
+            line-height: 1.2;
+        }
+
+        .bkd-meta {
+            font-size: 11.5px;
+            color: var(--ss-muted);
+            margin-top: 2px;
+        }
+
+        .bkd-team {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px 18px;
+            margin-top: 10px;
+            padding-top: 8px;
+            border-top: 1px solid var(--ss-gray-2);
+            font-size: 11.5px;
+            font-weight: 600;
+        }
+
+        .bkd-team em {
+            font-style: normal;
+            font-weight: 400;
+            color: var(--ss-muted);
+            margin-right: 3px;
+        }
+
+        .bkd-notes {
+            font-size: 11.5px;
+            color: var(--ss-muted);
+            margin-top: 8px;
+        }
+
+        .bkd-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+
+        .bkd-stat {
+            background: var(--ss-gray-1);
+            border-radius: 8px;
+            padding: 9px 12px;
+        }
+
+        .bkd-stat-lbl {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .03em;
+            color: var(--ss-muted);
+        }
+
+        .bkd-stat-val {
+            font-size: 14.5px;
+            font-weight: 800;
+            margin-top: 2px;
+        }
+
+        .bkd-stat-sub {
+            font-size: 10.5px;
+            color: var(--ss-muted);
+            margin-top: 1px;
+        }
+
+        .bkd-bar {
+            height: 5px;
+            border-radius: 99px;
+            background: var(--ss-gray-2);
+            margin-top: 12px;
+            overflow: hidden;
+        }
+
+        .bkd-bar>div {
+            height: 100%;
+            border-radius: 99px;
+        }
+
+        .bkd-bar-lbl {
+            font-size: 10.5px;
+            color: var(--ss-muted);
+            margin-top: 4px;
+        }
+
+        .bkd-grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            align-items: start;
+        }
+
+        .bkd-card-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .bkd-link {
+            font-size: 11.5px;
+            font-weight: 600;
+            color: var(--ss-ocean);
+            text-decoration: none;
+        }
+
+        .bkd-tag {
+            display: inline-block;
+            font-size: 10px;
+            color: var(--ss-muted);
+            background: var(--ss-gray-1);
+            border-radius: 4px;
+            padding: 0 5px;
+            margin-left: 4px;
+        }
+
+        .bkd-empty {
+            font-size: 11.5px;
+            color: var(--ss-muted);
+            padding: 6px 0;
+        }
+
+        @media (max-width: 900px) {
+
+            .bkd-stats,
+            .bkd-grid-2 {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .bkd-grid-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
 
 <?php elseif ($action === 'add'): ?>
     <div style="margin-bottom:14px;"><a class="ss-btn ss-btn-outline ss-btn-sm" href="bookings.php"><i data-feather="arrow-left"></i> Kembali</a></div>
