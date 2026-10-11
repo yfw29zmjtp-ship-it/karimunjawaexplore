@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/includes/website-bootstrap.php';
 
+require_once __DIR__ . '/includes/website-spam-guard.php';
 sunseaEnsureBookingSchema($pdo);
 sunseaEnsurePackageItemsSchema($pdo);
 
@@ -18,11 +19,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email      = trim($_POST['email'] ?? '');
     $packageId  = (int)($_POST['package_id'] ?? 0);
     $startDate  = $_POST['start_date'] ?? '';
-    $pax        = max(1, (int)($_POST['pax'] ?? 1));
+    $pax        = min(100, max(1, (int)($_POST['pax'] ?? 1)));
     $message    = trim($_POST['message'] ?? '');
 
     if ($name === '' || $phone === '' || $startDate === '') {
         $errorMsg = 'Nama, No. WhatsApp, dan Tanggal Mulai wajib diisi.';
+    } elseif (!($guard = weSpamGuard($pdo, 'kontak', ['name' => $name, 'phone' => $phone, 'date' => $startDate, 'message' => $message, 'email' => $email]))['ok']) {
+        if ($guard['silent']) {
+            // Bot/spam: jawab seolah sukses (tanpa menyimpan atau menotifikasi admin)
+            $successMsg = 'Terima kasih! Permintaan booking Anda telah kami terima. Tim kami akan segera menghubungi Anda.';
+        } else {
+            $errorMsg = $guard['msg'];
+        }
     } else {
         try {
             $pkg = null;
@@ -155,14 +163,15 @@ require __DIR__ . '/includes/website-header.php';
             <?php if ($errorMsg): ?><div class="we-alert we-alert-error"><?php echo htmlspecialchars($errorMsg); ?></div><?php endif; ?>
 
             <form method="POST" id="weKontakForm">
+                    <?php echo weSpamFields(); ?>
                 <div class="we-form-row">
                     <label>Nama Lengkap *</label>
-                    <input type="text" name="name" required value="<?php echo htmlspecialchars($_POST['name'] ?? ''); ?>">
+                    <input type="text" name="name" required maxlength="60" value="<?php echo htmlspecialchars($_POST['name'] ?? ''); ?>">
                 </div>
                 <div class="we-form-cols">
                     <div class="we-form-row">
                         <label>No. WhatsApp *</label>
-                        <input type="text" name="phone" required placeholder="08xxxxxxxxxx" value="<?php echo htmlspecialchars($_POST['phone'] ?? ''); ?>">
+                        <input type="text" name="phone" required maxlength="20" inputmode="tel" placeholder="08xxxxxxxxxx" value="<?php echo htmlspecialchars($_POST['phone'] ?? ''); ?>">
                     </div>
                     <div class="we-form-row">
                         <label>Email</label>
@@ -183,17 +192,17 @@ require __DIR__ . '/includes/website-header.php';
                 <div class="we-form-cols">
                     <div class="we-form-row">
                         <label>Tanggal Mulai Trip *</label>
-                        <input type="date" name="start_date" required min="<?php echo date('Y-m-d'); ?>" value="<?php echo htmlspecialchars($_POST['start_date'] ?? ''); ?>">
+                        <input type="date" name="start_date" required min="<?php echo date('Y-m-d'); ?>" max="<?php echo date('Y-m-d', strtotime('+2 years')); ?>" value="<?php echo htmlspecialchars($_POST['start_date'] ?? ''); ?>">
                     </div>
                     <div class="we-form-row">
                         <label>Jumlah Peserta *</label>
-                        <input type="number" name="pax" id="weKontakPax" min="1" required value="<?php echo htmlspecialchars($_POST['pax'] ?? '1'); ?>">
+                        <input type="number" name="pax" id="weKontakPax" min="1" max="100" required value="<?php echo htmlspecialchars($_POST['pax'] ?? '1'); ?>">
                         <div class="we-pax-bubble" id="weKontakPaxHint"></div>
                     </div>
                 </div>
                 <div class="we-form-row">
                     <label>Pesan / Catatan Tambahan</label>
-                    <textarea name="message" rows="3" placeholder="Contoh: ingin trip 3 hari 2 malam, request kapal privat, dll."><?php echo htmlspecialchars($_POST['message'] ?? ''); ?></textarea>
+                    <textarea name="message" rows="3" maxlength="800" placeholder="Contoh: ingin trip 3 hari 2 malam, request kapal privat, dll."><?php echo htmlspecialchars($_POST['message'] ?? ''); ?></textarea>
                 </div>
                 <button type="submit" class="we-btn we-btn-primary" style="width:100%;border:none;cursor:pointer;">Kirim Permintaan Booking</button>
             </form>

@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/includes/website-bootstrap.php';
 
+require_once __DIR__ . '/includes/website-spam-guard.php';
 sunseaEnsurePackageItemsSchema($pdo);
 sunseaEnsurePackageMediaSchema($pdo);
 $featuredPackages = $pdo->query(
@@ -43,12 +44,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['we_action'] ?? '') === 'qu
     $qName = trim($_POST['q_name'] ?? '');
     $qPhone = trim($_POST['q_phone'] ?? '');
     $qDate = trim($_POST['q_trip_date'] ?? '');
-    $qPax = max(1, (int)($_POST['q_pax'] ?? 1));
+    $qPax = min(100, max(1, (int)($_POST['q_pax'] ?? 1)));
     $qPackageId = (int)($_POST['q_package_id'] ?? 0);
     $weQuoteOld = ['name' => $qName, 'phone' => $qPhone, 'trip_date' => $qDate, 'pax' => $qPax, 'package_id' => $qPackageId];
 
     if ($qName === '' || $qPhone === '' || $qDate === '' || $qPackageId <= 0) {
         $weQuoteErrorMsg = 'Nama, No. WhatsApp, Tanggal Trip, dan Pilihan Paket wajib diisi.';
+    } elseif (!($qGuard = weSpamGuard($pdo, 'quick_quote', ['name' => $qName, 'phone' => $qPhone, 'date' => $qDate, 'message' => '']))['ok']) {
+        if ($qGuard['silent']) {
+            // Bot/spam: jawab seolah sukses (tanpa menyimpan atau menotifikasi admin)
+            $weQuoteSuccessMsg = 'Terima kasih! Permintaan penawaran Anda sudah kami terima. Tim kami akan segera menghubungi Anda via WhatsApp.';
+            $weQuoteOld = ['name' => '', 'phone' => '', 'trip_date' => '', 'pax' => 2, 'package_id' => ''];
+        } else {
+            $weQuoteErrorMsg = $qGuard['msg'];
+        }
     } else {
         try {
             // Cocokkan berdasarkan HP + nama sekaligus — kalau nomor sama dipakai nama lain
@@ -142,13 +151,14 @@ require __DIR__ . '/includes/website-header.php';
     <div class="we-container">
         <form method="POST" action="home.php#weQuoteForm" class="we-quotebar" id="weQuoteForm">
             <input type="hidden" name="we_action" value="quick_quote">
+            <?php echo weSpamFields(); ?>
             <div class="we-quotebar-field we-quotebar-field-date">
                 <label>Tanggal Trip</label>
-                <input type="date" name="q_trip_date" required min="<?php echo date('Y-m-d'); ?>" value="<?php echo htmlspecialchars($weQuoteOld['trip_date']); ?>">
+                <input type="date" name="q_trip_date" required min="<?php echo date('Y-m-d'); ?>" max="<?php echo date('Y-m-d', strtotime('+2 years')); ?>" value="<?php echo htmlspecialchars($weQuoteOld['trip_date']); ?>">
             </div>
             <div class="we-quotebar-field">
                 <label>Total Pax</label>
-                <input type="number" name="q_pax" id="weQuotePax" min="1" required value="<?php echo (int)$weQuoteOld['pax']; ?>">
+                <input type="number" name="q_pax" id="weQuotePax" min="1" max="100" required value="<?php echo (int)$weQuoteOld['pax']; ?>">
                 <div class="we-pax-bubble" id="weQuotePaxHint"></div>
             </div>
             <div class="we-quotebar-field">
@@ -172,11 +182,11 @@ require __DIR__ . '/includes/website-header.php';
                     <p>Tim kami akan menghubungi Anda via WhatsApp dengan penawaran terbaik.</p>
                     <div class="we-form-row">
                         <label>Nama Lengkap *</label>
-                        <input type="text" name="q_name" required value="<?php echo htmlspecialchars($weQuoteOld['name']); ?>">
+                        <input type="text" name="q_name" required maxlength="60" value="<?php echo htmlspecialchars($weQuoteOld['name']); ?>">
                     </div>
                     <div class="we-form-row">
                         <label>No. WhatsApp *</label>
-                        <input type="text" name="q_phone" required placeholder="08xxxxxxxxxx" value="<?php echo htmlspecialchars($weQuoteOld['phone']); ?>">
+                        <input type="text" name="q_phone" required maxlength="20" inputmode="tel" placeholder="08xxxxxxxxxx" value="<?php echo htmlspecialchars($weQuoteOld['phone']); ?>">
                     </div>
                     <button type="submit" class="we-btn we-btn-primary" style="width:100%;">Kirim Permintaan Penawaran</button>
                 </div>
