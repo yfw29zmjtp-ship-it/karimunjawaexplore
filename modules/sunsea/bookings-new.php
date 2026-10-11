@@ -544,7 +544,7 @@ include 'layout-header.php';
                     </div>
                     <div>
                         <small style="display:block;color:#888;font-size:10px;margin-bottom:1px;">Total Pax</small>
-                        <input type="number" name="ticket_qty" id="ticketQty" value="1" min="1" readonly title="Otomatis mengikuti jumlah pax" style="width:100%;padding:5px 7px;border:1px solid #ccc;border-radius:4px;font-family:inherit;font-size:12.5px;box-sizing:border-box;background:#f3f4f6;">
+                        <input type="number" name="ticket_qty" id="ticketQty" value="1" min="1" title="Otomatis mengikuti jumlah pax, bisa diisi manual" oninput="ticketManual = true; calculateTotal();" style="width:100%;padding:5px 7px;border:1px solid #ccc;border-radius:4px;font-family:inherit;font-size:12.5px;box-sizing:border-box;background:#fff;">
                     </div>
                     <div style="text-align:center;">
                         <small style="display:block;color:#888;font-size:10px;margin-bottom:1px;">Harga Jual</small>
@@ -552,7 +552,7 @@ include 'layout-header.php';
                     </div>
                 </div>
                 <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:4px;">
-                    <div style="font-size:10.5px;color:#888;">* "Total Pax" otomatis = jumlah pax di atas. Pilih PP jika tiket pulang-pergi (harga dikali 2).</div>
+                    <div style="font-size:10.5px;color:#888;">* "Total Pax" tiket awalnya mengikuti jumlah pax di atas, tetapi bisa diisi manual (mis. anak/bayi tanpa tiket). <a href="#" onclick="ticketManual = false; syncTicketQty(); return false;" style="color:#C2410C;">&#8634; ikut jumlah pax</a>. Pilih PP jika tiket pulang-pergi (harga dikali 2).</div>
                     <div style="font-size:11px;white-space:nowrap;">Subtotal: <strong id="ticketSubtotal" style="color:#7C2D12;">Rp 0</strong></div>
                 </div>
             </div>
@@ -632,7 +632,7 @@ include 'layout-header.php';
                     </div>
                     <div>
                         <small style="display:block;color:#888;font-size:10px;margin-bottom:1px;">Qty/Porsi</small>
-                        <input type="number" name="catering_qty" id="cateringQty" value="1" min="1" title="Otomatis mengikuti Jumlah Pax, bisa diubah manual" onchange="calculateTotal()" style="width:100%;padding:5px 7px;border:1px solid #ccc;border-radius:4px;font-family:inherit;font-size:12.5px;box-sizing:border-box;background:#f3f4f6;">
+                        <input type="number" name="catering_qty" id="cateringQty" value="1" min="1" title="Otomatis mengikuti Jumlah Pax, bisa diubah manual" oninput="cateringManual = true; calculateTotal();" style="width:100%;padding:5px 7px;border:1px solid #ccc;border-radius:4px;font-family:inherit;font-size:12.5px;box-sizing:border-box;background:#fff;">
                     </div>
                     <div style="text-align:center;">
                         <small style="display:block;color:#888;font-size:10px;margin-bottom:1px;">Harga Jual</small>
@@ -817,15 +817,23 @@ include 'layout-header.php';
         syncStayNights();
     }
 
+    // Qty tiket & katering mengikuti Jumlah Pax, KECUALI sudah diisi manual (ticketManual / cateringManual)
+    var ticketManual = false;
+    var cateringManual = false;
+
     function syncTicketQty() {
-        const pax = parseFloat(document.getElementById('paxCount').value) || 1;
-        document.getElementById('ticketQty').value = pax;
+        if (!ticketManual) {
+            const pax = parseFloat(document.getElementById('paxCount').value) || 1;
+            document.getElementById('ticketQty').value = pax;
+        }
         calculateTotal();
     }
 
     function syncCateringQty() {
-        const pax = parseFloat(document.getElementById('paxCount').value) || 1;
-        document.getElementById('cateringQty').value = pax;
+        if (!cateringManual) {
+            const pax = parseFloat(document.getElementById('paxCount').value) || 1;
+            document.getElementById('cateringQty').value = pax;
+        }
         calculateTotal();
     }
 
@@ -1050,7 +1058,7 @@ include 'layout-header.php';
             document.getElementById('packageSelect').value = qs.get('package_id');
             selectMode('paket');
         }
-        if (qs.get('customer_id') || qs.get('package_id')) {
+        if (qs.get('customer_id') || qs.get('package_id') || qs.get('pax_count') || qs.get('start_date')) {
             syncTicketQty();
             syncCateringQty();
             calculateTotal();
