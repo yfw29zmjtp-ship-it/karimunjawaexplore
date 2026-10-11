@@ -64,7 +64,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $tripEnd    = $_POST['trip_end_date'] ?: null;
         $itinerary  = trim($_POST['itinerary'] ?? '');
         $accommodationManual = trim($_POST['accommodation_manual'] ?? '');
-        $paxCount   = max(1, (int)($_POST['pax_count'] ?? 1));
+        $paxAdult   = max(0, (int)($_POST['pax_adult'] ?? 0));
+        $paxChild   = max(0, (int)($_POST['pax_child'] ?? 0));
+        $paxCount   = isset($_POST['pax_adult']) ? max(1, min(100, $paxAdult + $paxChild)) : max(1, (int)($_POST['pax_count'] ?? 1));
         $notes      = trim($_POST['notes'] ?? '');
         $intNotes   = trim($_POST['internal_notes'] ?? '');
         $validDays  = (int)($_POST['valid_days'] ?? 7);
@@ -1334,8 +1336,21 @@ include 'layout-header.php';
                             </div>
                             <div class="ss-form-group">
                                 <label class="ss-label">Jumlah Peserta</label>
-                                <input type="number" name="pax_count" class="ss-input" min="1"
-                                    value="<?php echo $quotation['pax_count'] ?? 1; ?>" id="paxInput" max="100" oninput="syncPackageQtyFromPax(); renderPaxRows();">
+                                <?php
+                                $__pc = max(1, (int)($quotation['pax_count'] ?? 1));
+                                $__child = 0;
+                                $__brk = json_decode((string)($quotation['pax_breakdown'] ?? ''), true);
+                                if (is_array($__brk)) foreach ($__brk as $__b) if (($__b['type'] ?? '') === 'anak') $__child++;
+                                $__child = min($__child, $__pc - 1);
+                                $__child = max(0, $__child);
+                                $__adult = $__pc - $__child;
+                                ?>
+                                <div class="qe-pax-in">
+                                    <label><span>Dewasa</span><input type="number" name="pax_adult" id="paxAdult" class="ss-input" min="0" max="100" value="<?php echo $__adult; ?>" oninput="paxCountsChanged()"></label>
+                                    <label><span>Anak</span><input type="number" name="pax_child" id="paxChild" class="ss-input" min="0" max="100" value="<?php echo $__child; ?>" oninput="paxCountsChanged()"></label>
+                                    <div class="qe-pax-total"><span>Total</span><strong id="paxTotalLabel"><?php echo $__pc; ?></strong></div>
+                                </div>
+                                <input type="hidden" name="pax_count" id="paxInput" value="<?php echo $__pc; ?>">
                             </div>
                             <div class="ss-form-group">
                                 <label class="ss-label">Tanggal Trip</label>
@@ -1484,15 +1499,9 @@ include 'layout-header.php';
                             </div>
                         </div>
                         <div class="qe-bulk">
-                            <span>Samakan diskon</span>
-                            <input type="text" id="bulkDiscVal" class="ss-input" inputmode="decimal" placeholder="0">
-                            <span>%</span>
-                            <select id="bulkDiscTarget" class="ss-select">
-                                <option value="all">Semua peserta</option>
-                                <option value="dewasa">Dewasa saja</option>
-                                <option value="anak">Anak saja</option>
-                            </select>
-                            <button type="button" class="ss-btn ss-btn-outline ss-btn-sm" onclick="applyBulkDiscount()">Terapkan</button>
+                            <label><span>Diskon dewasa</span><span class="qe-pdwrap"><input type="text" id="grpAdultPct" class="ss-input" inputmode="decimal" placeholder="0" oninput="applyGroupDiscount('dewasa')"><span class="qe-pct">%</span></span></label>
+                            <label><span>Diskon anak</span><span class="qe-pdwrap"><input type="text" id="grpChildPct" class="ss-input" inputmode="decimal" placeholder="0" oninput="applyGroupDiscount('anak')"><span class="qe-pct">%</span></span></label>
+                            <em>Berlaku untuk semua peserta jenis itu. Tetap bisa diubah per orang di tabel.</em>
                         </div>
                         <div class="ss-table-wrap">
                             <table class="ss-table qe-pax-table">
@@ -1741,6 +1750,16 @@ HTML;
     .qe-pax-table td { vertical-align: middle; }
     .qe-pax-table .ss-input, .qe-pax-table .ss-select { padding: 6px 9px; font-size: 12.5px; }
     .qe-n { color: var(--ss-muted); font-weight: 700; }
+    .qe-pax-in { display: flex; gap: 10px; align-items: flex-end; }
+    .qe-pax-in label { flex: 1; display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: var(--ss-muted); font-weight: 600; }
+    .qe-pax-total { min-width: 58px; text-align: center; padding: 6px 8px; border-radius: 9px; background: var(--ss-gray-1); border: 1px solid var(--ss-gray-2); }
+    .qe-pax-total span { display: block; font-size: 10px; color: var(--ss-muted); }
+    .qe-pax-total strong { font-size: 16px; color: var(--ss-text); }
+    .qe-badge { display: inline-block; padding: 3px 10px; border-radius: 99px; font-size: 11.5px; font-weight: 700; }
+    .qe-badge-dewasa { background: #e0f2fe; color: #0369a1; }
+    .qe-badge-anak { background: #fef3c7; color: #b45309; }
+    .qe-bulk label { display: flex; align-items: center; gap: 8px; }
+    .qe-bulk em { font-size: 11px; font-style: normal; opacity: .8; }
     .qe-pdwrap { position: relative; }
     .qe-pdwrap .ss-input { padding-right: 26px; }
     .qe-pct { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 12px; color: var(--ss-muted); pointer-events: none; }
@@ -1991,47 +2010,85 @@ HTML;
         });
     }
 
-    // ---- Rincian peserta: baris per orang (jenis, nama, diskon Rp) ----
+    // ---- Rincian peserta: dewasa + anak, diskon (%) per kelompok atau per orang ----
     var paxInit = <?php echo json_encode($paxInit ?? [], JSON_UNESCAPED_UNICODE); ?>;
 
     function escAttr(s) {
         return String(s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
     }
 
-    // Membangun ulang baris sesuai Jumlah Peserta, mempertahankan isian yang sudah ada.
+    function pctNum(v) {
+        return Math.min(100, Math.max(0, parseFloat(String(v || '0').replace(',', '.')) || 0));
+    }
+
+    function pctStr(v) {
+        return v ? String(v).replace('.', ',') : '';
+    }
+
+    function paxCounts() {
+        var a = Math.max(0, parseInt(document.getElementById('paxAdult')?.value, 10) || 0);
+        var c = Math.max(0, parseInt(document.getElementById('paxChild')?.value, 10) || 0);
+        if (a + c < 1) a = 1;
+        if (a + c > 100) { a = Math.min(a, 100); c = Math.min(c, 100 - a); }
+        return { a: a, c: c };
+    }
+
+    function groupPct(type) {
+        return pctNum(document.getElementById(type === 'anak' ? 'grpChildPct' : 'grpAdultPct')?.value);
+    }
+
+    // Total peserta = dewasa + anak; baris tabel mengikuti (dewasa dulu, lalu anak).
+    function paxCountsChanged() {
+        var n = paxCounts();
+        document.getElementById('paxInput').value = n.a + n.c;
+        var lbl = document.getElementById('paxTotalLabel');
+        if (lbl) lbl.textContent = n.a + n.c;
+        syncPackageQtyFromPax();
+        renderPaxRows();
+    }
+
+    function paxRowTypeHtml(type) {
+        var label = type === 'anak' ? 'Anak' : 'Dewasa';
+        return '<span class="qe-badge qe-badge-' + type + '">' + label + '</span><input type="hidden" name="pax_type[]" class="qe-pt" value="' + type + '">';
+    }
+
     function renderPaxRows() {
         var body = document.getElementById('paxBody');
         if (!body) return;
-        var n = Math.min(100, Math.max(1, parseInt(document.getElementById('paxInput')?.value, 10) || 1));
-        var cur = body.querySelectorAll('tr');
-        for (var i = cur.length; i < n; i++) {
-            var d = paxInit[i] || {};
-            var type = d.type || 'dewasa';
-            var tr = document.createElement('tr');
-            tr.innerHTML = '<td class="qe-n">' + (i + 1) + '</td>' +
-                '<td><select name="pax_type[]" class="ss-select qe-pt">' +
-                ['dewasa', 'anak', 'lainnya'].map(function(t) {
-                    return '<option value="' + t + '"' + (t === type ? ' selected' : '') + '>' + t.charAt(0).toUpperCase() + t.slice(1) + '</option>';
-                }).join('') + '</select></td>' +
-                '<td><input type="text" name="pax_name[]" class="ss-input" maxlength="60" value="' + escAttr(d.name) + '" placeholder="Peserta ' + (i + 1) + '"></td>' +
-                '<td class="qe-r qe-price">-</td>' +
-                '<td><div class="qe-pdwrap"><input type="text" name="pax_disc[]" class="ss-input qe-pd" inputmode="decimal" value="' + (d.percent ? String(d.percent).replace('.', ',') : '') + '" placeholder="0"><span class="qe-pct">%</span></div><div class="qe-dr"></div></td>' +
-                '<td class="qe-r qe-final">-</td>';
-            body.appendChild(tr);
-            tr.querySelectorAll('input,select').forEach(function(el) {
-                el.addEventListener('input', calcTotals);
-            });
+        var n = paxCounts();
+        var total = n.a + n.c;
+        var rows = body.querySelectorAll('tr');
+        for (var i = 0; i < total; i++) {
+            var type = i < n.a ? 'dewasa' : 'anak';
+            var tr = rows[i];
+            if (!tr) {
+                var d = paxInit[i] || {};
+                tr = document.createElement('tr');
+                var pct = (d.percent !== undefined && d.percent !== null && ((d.type === 'anak') === (type === 'anak'))) ? d.percent : groupPct(type);
+                tr.innerHTML = '<td class="qe-n">' + (i + 1) + '</td>' +
+                    '<td class="qe-type"></td>' +
+                    '<td><input type="text" name="pax_name[]" class="ss-input" maxlength="60" value="' + escAttr(d.name) + '" placeholder="Peserta ' + (i + 1) + '"></td>' +
+                    '<td class="qe-r qe-price">-</td>' +
+                    '<td><div class="qe-pdwrap"><input type="text" name="pax_disc[]" class="ss-input qe-pd" inputmode="decimal" value="' + pctStr(pct) + '" placeholder="0"><span class="qe-pct">%</span></div><div class="qe-dr"></div></td>' +
+                    '<td class="qe-r qe-final">-</td>';
+                body.appendChild(tr);
+                tr.querySelectorAll('input').forEach(function(el) { el.addEventListener('input', calcTotals); });
+                tr.querySelector('.qe-type').innerHTML = paxRowTypeHtml(type);
+            } else if (tr.querySelector('.qe-pt').value !== type) {
+                // jenis berubah karena jumlah dewasa/anak diubah: ikut diskon kelompok barunya
+                tr.querySelector('.qe-type').innerHTML = paxRowTypeHtml(type);
+                tr.querySelector('.qe-pd').value = pctStr(groupPct(type));
+            }
         }
-        while (body.querySelectorAll('tr').length > n) body.lastElementChild.remove();
+        while (body.querySelectorAll('tr').length > total) body.lastElementChild.remove();
         calcTotals();
     }
 
-    // Isi kolom harga/harga akhir tiap baris; return total diskon peserta.
+    // Isi kolom harga/harga akhir tiap baris; return total diskon peserta (Rp).
     function refreshPaxRows(perPax) {
         var total = 0;
         document.querySelectorAll('#paxBody tr').forEach(function(tr) {
-            var inp = tr.querySelector('.qe-pd');
-            var pct = Math.min(100, Math.max(0, parseFloat(String(inp ? inp.value : '0').replace(',', '.')) || 0));
+            var pct = pctNum(tr.querySelector('.qe-pd')?.value);
             var dv = perPax * pct / 100;
             total += dv;
             tr.querySelector('.qe-dr').textContent = dv > 0 ? '-' + fmt(dv) : '';
@@ -2043,17 +2100,24 @@ HTML;
         return total;
     }
 
-    // "Samakan diskon": isi diskon (%) untuk semua / hanya dewasa / hanya anak.
-    function applyBulkDiscount() {
-        var val = Math.min(100, Math.max(0, parseFloat(String(document.getElementById('bulkDiscVal').value || '0').replace(',', '.')) || 0));
-        var target = document.getElementById('bulkDiscTarget').value;
+    // Diskon (%) kelompok: langsung ke semua peserta dewasa / anak.
+    function applyGroupDiscount(type) {
+        var val = groupPct(type);
         document.querySelectorAll('#paxBody tr').forEach(function(tr) {
-            if (target !== 'all' && tr.querySelector('.qe-pt').value !== target) return;
-            tr.querySelector('.qe-pd').value = val ? String(val).replace('.', ',') : '';
+            if (tr.querySelector('.qe-pt').value === type) tr.querySelector('.qe-pd').value = pctStr(val);
         });
         calcTotals();
     }
 
+    // Isi awal kolom diskon kelompok dari data tersimpan (kalau seragam).
+    (function initGroupInputs() {
+        ['dewasa', 'anak'].forEach(function(type) {
+            var vals = paxInit.filter(function(p) { return (p.type === 'anak') === (type === 'anak'); }).map(function(p) { return p.percent || 0; });
+            if (vals.length && vals.every(function(v) { return v === vals[0]; }) && vals[0]) {
+                document.getElementById(type === 'anak' ? 'grpChildPct' : 'grpAdultPct').value = pctStr(vals[0]);
+            }
+        });
+    })();
     document.querySelectorAll('#itemsBody tr').forEach(setupRowListeners);
     document.getElementById('discountInput')?.addEventListener('input', calcTotals);
     document.getElementById('taxInput')?.addEventListener('input', calcTotals);
