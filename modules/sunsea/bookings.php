@@ -220,6 +220,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updat
     exit;
 }
 
+// Edit jumlah pax + data tamu. Pax dipakai untuk tagihan bulanan (sunseaCalculateSubscriptionCharge),
+// jadi invoice booking ini ikut disamakan agar angka di cetakan invoice sama dengan booking.
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'update_guest') {
+    $bookingId = (int)($_POST['booking_id'] ?? 0);
+    $newPax = (int)($_POST['pax_count'] ?? 0);
+    $newName = trim((string)($_POST['customer_name'] ?? ''));
+    $newPhone = trim((string)($_POST['customer_phone'] ?? ''));
+
+    if ($bookingId > 0 && $newPax >= 1 && $newPax <= 1000 && $newName !== '' && mb_strlen($newName) <= 100 && mb_strlen($newPhone) <= 30) {
+        try {
+            $bk = $pdo->prepare("SELECT booking_no, customer_id, pax_count FROM booking_orders WHERE id=?");
+            $bk->execute([$bookingId]);
+            $bkRow = $bk->fetch();
+            if (!$bkRow) {
+                throw new RuntimeException('Booking tidak ditemukan.');
+            }
+
+            $pdo->beginTransaction();
+            $pdo->prepare("UPDATE booking_orders SET pax_count=?, updated_at=NOW() WHERE id=?")
+                ->execute([$newPax, $bookingId]);
+            $pdo->prepare("UPDATE customers SET name=?, phone=? WHERE id=?")
+                ->execute([$newName, $newPhone, (int)$bkRow['customer_id']]);
+
+            if ((int)$bkRow['pax_count'] !== $newPax) {
+                // Invoice yang dibuat dari booking ini (belum dibatalkan) ikut menampilkan pax yang sama.
+                $pdo->prepare("UPDATE invoices SET pax_count=? WHERE status != 'cancelled' AND (internal_notes = ? OR internal_notes = ?)")
+                    ->execute([$newPax, 'booking_id:' . $bookingId, 'Generated from Reservasi: ' . $bkRow['booking_no']]);
+            }
+            $pdo->commit();
+
+            $_SESSION['flash_message'] = 'Pax dan data tamu berhasil diperbarui.';
+            $_SESSION['flash_type'] = 'success';
+        } catch (Exception $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            $_SESSION['flash_message'] = 'Gagal update pax / data tamu: ' . $e->getMessage();
+            $_SESSION['flash_type'] = 'error';
+        }
+    } else {
+        $_SESSION['flash_message'] = 'Data tidak valid. Pax 1–1000, nama wajib diisi.';
+        $_SESSION['flash_type'] = 'error';
+    }
+
+    header('Location: bookings.php?view=' . $bookingId);
+    exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'update_item_prices') {
     $bookingId = (int)($_POST['booking_id'] ?? 0);
     $itemIds = $_POST['item_id'] ?? [];
@@ -1205,6 +1251,21 @@ include 'layout-header.php';
             <div style="font-size:11px;color:var(--ss-muted);margin-top:6px;">* Rincian modal per komponen paket (tiket kapal, penginapan, transport, dll) ada di kartu "Rekap Pengeluaran (Pembayaran ke Mitra)" di atas.</div>
 
             <div id="editItemsPanel" style="display:none;margin-top:14px;padding-top:4px;">
+                <div style="background:#F8FAFC;border:1px solid var(--ss-gray-2);border-radius:10px;padding:14px 16px;margin-bottom:14px;">
+                    <div class="ss-card-title" style="margin:0 0 10px;font-size:13px;display:flex;align-items:center;gap:6px;"><i data-feather="users" style="width:15px;height:15px;"></i> Edit Pax &amp; Data Tamu</div>
+                    <form method="POST">
+                        <input type="hidden" name="action" value="update_guest">
+                        <input type="hidden" name="booking_id" value="<?php echo (int)$detail['id']; ?>">
+                        <div class="ss-form-grid cols-2">
+                            <div class="ss-form-group"><label class="ss-label">Nama Tamu</label><input type="text" class="ss-input" name="customer_name" maxlength="100" value="<?php echo htmlspecialchars($detail['customer_name']); ?>" required></div>
+                            <div class="ss-form-group"><label class="ss-label">No. WhatsApp</label><input type="text" class="ss-input" name="customer_phone" maxlength="30" inputmode="tel" value="<?php echo htmlspecialchars((string)($detail['customer_phone'] ?? '')); ?>"></div>
+                            <div class="ss-form-group"><label class="ss-label">Jumlah Pax</label><input type="number" class="ss-input" name="pax_count" min="1" max="1000" value="<?php echo (int)$detail['pax_count']; ?>" required></div>
+                        </div>
+                        <div style="font-size:11.5px;color:var(--ss-muted);margin:2px 0 8px;">Jumlah pax dipakai untuk tagihan langganan bulanan. Qty item (tiket, katering, dll) tidak berubah otomatis.</div>
+                        <button class="ss-btn ss-btn-primary ss-btn-sm" type="submit"><i data-feather="save"></i> Simpan Pax &amp; Tamu</button>
+                    </form>
+                </div>
+
                 <div style="background:#F8FAFC;border:1px solid var(--ss-gray-2);border-radius:10px;padding:14px 16px;margin-bottom:14px;">
                     <div class="ss-card-title" style="margin:0 0 10px;font-size:13px;display:flex;align-items:center;gap:6px;"><i data-feather="calendar" style="width:15px;height:15px;"></i> Edit Tanggal Trip</div>
                     <form method="POST">
