@@ -503,6 +503,12 @@ function sunseaEnsureQuotationItinerarySchema(PDO $pdo): void
         if ((int)$check->fetchColumn() === 0) {
             $pdo->exec("ALTER TABLE quotations ADD COLUMN facilities_override TEXT NULL AFTER internal_notes");
         }
+        // Rincian peserta + diskon per pax: JSON [{"name","type":"dewasa|anak|lainnya","discount":Rp}].
+        // Total diskon per pax tetap dijumlahkan ke discount_amount supaya invoice/booking tidak berubah.
+        $check->execute(['pax_breakdown']);
+        if ((int)$check->fetchColumn() === 0) {
+            $pdo->exec("ALTER TABLE quotations ADD COLUMN pax_breakdown TEXT NULL AFTER facilities_override");
+        }
     } catch (Exception $e) {
         error_log('sunseaEnsureQuotationItinerarySchema error: ' . $e->getMessage());
     }
