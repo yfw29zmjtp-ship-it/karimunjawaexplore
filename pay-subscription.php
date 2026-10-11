@@ -8,6 +8,7 @@ require_once 'modules/sunsea/db-helper.php';
 
 $pdo = getSunseaConnection();
 sunseaEnsureSubscriptionBillingSchema($pdo);
+sunseaSyncLedger($pdo, true); // nominal terbaru dari ADF Store sebelum link bayar dibuat
 sunseaGetOrRefreshSubscriptionInvoice($pdo, date('Y-m'));
 
 $reminder = sunseaGetSubscriptionReminder($pdo);

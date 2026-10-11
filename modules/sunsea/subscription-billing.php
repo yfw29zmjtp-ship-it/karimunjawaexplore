@@ -62,6 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'sync_
 }
 
 // ---- Create Pakasir payment link for an invoice ----
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'pay') { sunseaSyncLedger($pdo, true); } // nominal terbaru dari ADF Store
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'pay') {
     $period = trim($_POST['period'] ?? '');
     $cfg = sunseaSubscriptionConfig($pdo);
@@ -181,7 +182,7 @@ include 'layout-header.php';
             <?php else: ?>
                 <table style="width:100%;font-size:14px;">
                     <?php $isTopupInv = strpos((string) $invoice['period'], 'TOPUP-') === 0; ?>
-                    <?php if ($isTopupInv): ?>
+                    <?php if ($isTopupInv || (!empty($invoice['description']) && (($invoice['type'] ?? 'recurring') !== 'manual'))): ?>
                         <tr><td colspan="2" style="padding:4px 0 8px;font-weight:600;"><?php echo htmlspecialchars($invoice['description'] ?? ''); ?></td></tr>
                     <?php endif; ?>
                     <?php if (($invoice['type'] ?? 'recurring') === 'manual' && !$isTopupInv): ?>
@@ -199,6 +200,9 @@ include 'layout-header.php';
                             <td style="padding:6px 0;text-align:right;"><?php echo sunseaRupiah((float) $invoice['guest_total']); ?></td>
                         </tr>
                     <?php endif; ?>
+                    <?php $__adj = (float) $invoice['total_amount'] - (float) $invoice['base_fee'] - (float) $invoice['guest_total']; if (($invoice['type'] ?? 'recurring') !== 'manual' || $isTopupInv) { if (abs($__adj) > 0.5): ?>
+                    <tr><td style="padding:6px 0;color:var(--ss-muted);">Penyesuaian</td><td style="padding:6px 0;text-align:right;"><?php echo ($__adj < 0 ? '-' : '') . sunseaRupiah(abs($__adj)); ?></td></tr>
+                    <?php endif; } ?>
                     <tr style="border-top:1px solid var(--ss-border);">
                         <td style="padding:10px 0;font-weight:700;">Total Tagihan</td>
                         <td style="padding:10px 0;text-align:right;font-weight:700;font-size:18px;"><?php echo sunseaRupiah((float) $invoice['total_amount']); ?></td>

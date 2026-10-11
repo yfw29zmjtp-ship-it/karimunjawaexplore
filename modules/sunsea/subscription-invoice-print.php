@@ -220,6 +220,9 @@ $logoSrc = $cfg['provider_logo'];
                     <td style="text-align:right;"><?php echo sunseaRupiah((float) $invoice['guest_total']); ?></td>
                 </tr>
             <?php endif; ?>
+            <?php $__adj = (float) $invoice['total_amount'] - (float) $invoice['base_fee'] - (float) $invoice['guest_total']; if (($invoice['type'] ?? 'recurring') !== 'manual' || strpos((string) $invoice['period'], 'TOPUP-') === 0) { if (abs($__adj) > 0.5): ?>
+            <tr class="muted"><td>Penyesuaian</td><td style="text-align:right;"><?php echo ($__adj < 0 ? '-' : '') . sunseaRupiah(abs($__adj)); ?></td></tr>
+            <?php endif; } ?>
             <tr class="total">
                 <td>Total Dibayar</td>
                 <td style="text-align:right;"><?php echo sunseaRupiah((float) $invoice['total_amount']); ?></td>

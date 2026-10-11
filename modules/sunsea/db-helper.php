@@ -1103,6 +1103,7 @@ function sunseaSyncSubscriptionConfig(PDO $pdo): array
     sunseaSetSetting($pdo, 'subscription_provider_address', (string) ($data['provider_address'] ?? ''));
     sunseaSetSetting($pdo, 'subscription_provider_email', (string) ($data['provider_email'] ?? ''));
     sunseaSetSetting($pdo, 'subscription_last_sync_at', date('c'));
+    sunseaSyncLedger($pdo, true); // tarif/tagihan dari ADF Store ikut disegarkan
     sunseaSetSetting($pdo, 'subscription_last_sync_error', '');
 
     return sunseaSubscriptionConfig($pdo);
@@ -1222,6 +1223,13 @@ function sunseaCalculateSubscriptionCharge(PDO $pdo, string $period): array
 function sunseaGetOrRefreshSubscriptionInvoice(PDO $pdo, string $period): ?array
 {
     $stmt = $pdo->prepare("SELECT * FROM subscription_invoices WHERE period = ? LIMIT 1");
+
+    // Buku tagihan ADF Store tersedia: invoice dihitung & dikelola di sana, di sini hanya dicerminkan.
+    if (sunseaSyncLedger($pdo)) {
+        $stmt->execute([$period]);
+        return $stmt->fetch() ?: null;
+    }
+
     $stmt->execute([$period]);
     $invoice = $stmt->fetch();
 
@@ -1394,6 +1402,141 @@ function sunseaSyncGuestTopups(PDO $pdo): void
 function sunseaTopupDescription(string $period): string
 {
     return 'Tagihan susulan periode ' . $period . ' (biaya bulanan & tamu)';
+}
+
+/**
+ * Sinkron tagihan dengan ADF Store (buku tagihan di sana adalah sumber kebenaran).
+ * Lapor pax per bulan (bulan lalu s/d bulan depan) + invoice lunas lokal + invoice yang link bayarnya
+ * sudah dibuat; terima daftar invoice hasil hitungan ADF dan cerminkan ke tabel lokal
+ * (batal/edit/lunas dari admin ADF ikut berlaku). Invoice lokal yang belum dibayar, belum punya link
+ * bayar, dan tidak dikenal ADF dihapus.
+ *
+ * @return bool true bila buku tagihan ADF tersedia (maka hitungan lokal tidak dipakai);
+ *              false bila belum tersambung / endpoint ADF belum ada (pakai hitungan lokal lama).
+ */
+function sunseaSyncLedger(PDO $pdo, bool $force = false): bool
+{
+    static $result = null;
+    if ($result !== null && !$force) {
+        return $result;
+    }
+    $clientKey = sunseaSetting($pdo, 'subscription_client_key', '');
+    $clientToken = sunseaSetting($pdo, 'subscription_client_token', '');
+    if ($clientKey === '' || $clientToken === '') {
+        return $result = false;
+    }
+    $last = (int) sunseaSetting($pdo, 'subscription_ledger_last_sync', '0');
+    if (!$force && $last > time() - 60) {
+        return $result = (sunseaSetting($pdo, 'subscription_ledger_available', '') === '1');
+    }
+
+    try {
+        $syncUrl = sunseaSetting($pdo, 'subscription_sync_url', 'https://adfsystem.store/api/subscription-config.php');
+        $url = str_replace('subscription-config.php', 'subscription-invoices.php', $syncUrl);
+
+        $usage = [];
+        foreach ([date('Y-m', strtotime('first day of last month')), date('Y-m'), date('Y-m', strtotime('first day of next month'))] as $p) {
+            $usage[$p] = (int) sunseaCalculateSubscriptionCharge($pdo, $p)['guest_count'];
+        }
+        $paid = $pdo->query(
+            "SELECT period AS ref, base_fee, guest_count, per_guest_fee, total_amount, paid_at FROM subscription_invoices
+             WHERE status = 'paid' AND (period REGEXP '^[0-9]{4}-[0-9]{2}$' OR period LIKE 'TOPUP-%')"
+        )->fetchAll(PDO::FETCH_ASSOC);
+        $links = $pdo->query(
+            "SELECT period FROM subscription_invoices WHERE status = 'unpaid' AND txn_id IS NOT NULL AND txn_id <> ''
+             AND (period REGEXP '^[0-9]{4}-[0-9]{2}$' OR period LIKE 'TOPUP-%')"
+        )->fetchAll(PDO::FETCH_COLUMN);
+
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => json_encode([
+                'client_key' => $clientKey,
+                'client_token' => $clientToken,
+                'usage' => $usage,
+                'local_paid' => $paid,
+                'links' => $links,
+            ]),
+            CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+            CURLOPT_USERAGENT => 'KarimunjawaExplore-Ledger/1.0',
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 10,
+            CURLOPT_SSL_VERIFYPEER => true,
+        ]);
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        $data = ($response !== false && $httpCode >= 200 && $httpCode < 300) ? json_decode($response, true) : null;
+        if (!is_array($data) || empty($data['ledger']) || !isset($data['invoices']) || !is_array($data['invoices'])) {
+            sunseaSetSetting($pdo, 'subscription_ledger_last_sync', (string) time());
+            sunseaSetSetting($pdo, 'subscription_ledger_available', '0');
+            return $result = false;
+        }
+
+        $refs = [];
+        foreach ($data['invoices'] as $inv) {
+            $ref = (string) ($inv['ref'] ?? '');
+            if ($ref === '') {
+                continue;
+            }
+            $refs[] = $ref;
+            $isTopup = ($inv['kind'] ?? '') === 'topup';
+            $status = in_array($inv['status'] ?? '', ['unpaid', 'paid', 'cancelled'], true) ? $inv['status'] : 'unpaid';
+            $note = trim((string) ($inv['note'] ?? ''));
+            $desc = $isTopup ? sunseaTopupDescription((string) $inv['period']) . ($note !== '' ? ' - ' . $note : '') : ($note !== '' ? $note : null);
+            $guestTotal = (int) $inv['guest_count'] * (float) $inv['per_guest_fee'];
+            $dueDate = !empty($inv['due_date']) ? $inv['due_date'] : null;
+            $paidAt = !empty($inv['paid_at']) ? date('Y-m-d H:i:s', strtotime($inv['paid_at'])) : null;
+
+            $q = $pdo->prepare("SELECT id, status FROM subscription_invoices WHERE period = ? LIMIT 1");
+            $q->execute([$ref]);
+            $local = $q->fetch(PDO::FETCH_ASSOC);
+
+            if (!$local) {
+                $pdo->prepare(
+                    "INSERT INTO subscription_invoices (period, type, description, base_fee, guest_count, per_guest_fee, guest_total, total_amount, status, due_date, paid_at)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                )->execute([$ref, $isTopup ? 'manual' : 'recurring', $desc, (float) $inv['base_fee'], (int) $inv['guest_count'], (float) $inv['per_guest_fee'], $guestTotal, (float) $inv['total'], $status, $dueDate, $paidAt]);
+                if ($status === 'unpaid') {
+                    $q->execute([$ref]);
+                    $newRow = $pdo->prepare("SELECT * FROM subscription_invoices WHERE period = ? LIMIT 1");
+                    $newRow->execute([$ref]);
+                    if ($row = $newRow->fetch(PDO::FETCH_ASSOC)) {
+                        sunseaNotifyAdfSystemInvoiceCreated($pdo, $row);
+                        sunseaNotifyOwnersPush(
+                            'Tagihan Baru dari ADF System',
+                            ($desc ?: 'Tagihan langganan periode ' . $inv['period']) . ' sebesar ' . sunseaRupiah((float) $inv['total']) . ', jatuh tempo ' . ($dueDate ? date('d M Y', strtotime($dueDate)) : '-') . '.',
+                            ['url' => 'subscription-billing.php']
+                        );
+                    }
+                }
+            } elseif ($local['status'] === 'unpaid') {
+                $pdo->prepare(
+                    "UPDATE subscription_invoices SET description=?, base_fee=?, guest_count=?, per_guest_fee=?, guest_total=?, total_amount=?, status=?, due_date=?, paid_at=? WHERE id=?"
+                )->execute([$desc, (float) $inv['base_fee'], (int) $inv['guest_count'], (float) $inv['per_guest_fee'], $guestTotal, (float) $inv['total'], $status, $dueDate, $paidAt, $local['id']]);
+            }
+        }
+
+        // Invoice belum dibayar yang tidak dikenal buku tagihan ADF (mis. hasil hitungan lokal lama) dibuang,
+        // kecuali yang sudah punya link bayar.
+        $stale = $pdo->query(
+            "SELECT id, period FROM subscription_invoices WHERE status = 'unpaid' AND (txn_id IS NULL OR txn_id = '')
+             AND (period REGEXP '^[0-9]{4}-[0-9]{2}$' OR period LIKE 'TOPUP-%')"
+        )->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($stale as $s) {
+            if (!in_array($s['period'], $refs, true)) {
+                $pdo->prepare("DELETE FROM subscription_invoices WHERE id = ? AND status = 'unpaid'")->execute([$s['id']]);
+            }
+        }
+
+        sunseaSetSetting($pdo, 'subscription_ledger_last_sync', (string) time());
+        sunseaSetSetting($pdo, 'subscription_ledger_available', '1');
+        return $result = true;
+    } catch (Throwable $e) {
+        error_log('sunseaSyncLedger error: ' . $e->getMessage());
+        return $result = false;
+    }
 }
 
 /**
