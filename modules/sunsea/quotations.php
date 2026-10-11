@@ -66,7 +66,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $accommodationManual = trim($_POST['accommodation_manual'] ?? '');
         $paxAdult   = max(0, (int)($_POST['pax_adult'] ?? 0));
         $paxChild   = max(0, (int)($_POST['pax_child'] ?? 0));
-        $paxCount   = isset($_POST['pax_adult']) ? max(1, min(100, $paxAdult + $paxChild)) : max(1, (int)($_POST['pax_count'] ?? 1));
+        $paxOther   = max(0, (int)($_POST['pax_other'] ?? 0));
+        $paxCount   = isset($_POST['pax_adult']) ? max(1, min(100, $paxAdult + $paxChild + $paxOther)) : max(1, (int)($_POST['pax_count'] ?? 1));
         $notes      = trim($_POST['notes'] ?? '');
         $intNotes   = trim($_POST['internal_notes'] ?? '');
         $validDays  = (int)($_POST['valid_days'] ?? 7);
@@ -100,20 +101,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ];
         }
 
-        // Rincian peserta: nama/jenis + diskon Rp per orang (jumlah baris mengikuti Jumlah Peserta).
+        // Rincian peserta per KELOMPOK (dewasa / anak / lainnya): jumlah orang + diskon (%) kelompok.
+        // Disimpan sebagai JSON; nominal diskon kelompok ikut dijumlahkan ke discount_amount.
         $paxBreakdown = [];
         $paxDiscSum = 0.0;
-        $pNames = $_POST['pax_name'] ?? [];
-        $pTypes = $_POST['pax_type'] ?? [];
-        $pDiscs = $_POST['pax_disc'] ?? [];
         $perPaxPrice = $paxCount > 0 ? $subtotal / $paxCount : 0;
-        for ($pi = 0; $pi < $paxCount && $pi < count((array)$pDiscs); $pi++) {
-            // Diskon per peserta diinput dalam PERSEN (0-100) dari harga per orang; disimpan juga nominal Rp-nya.
-            $pct = min(100, max(0, (float)str_replace(',', '.', (string)$pDiscs[$pi])));
-            $pd = round($perPaxPrice * $pct / 100, 2);
-            $pt = in_array($pTypes[$pi] ?? '', ['dewasa', 'anak', 'lainnya'], true) ? $pTypes[$pi] : 'dewasa';
-            $paxBreakdown[] = ['name' => mb_substr(trim((string)($pNames[$pi] ?? '')), 0, 60), 'type' => $pt, 'percent' => $pct, 'discount' => $pd];
-            $paxDiscSum += $pd;
+        $groupDefs = [['dewasa', 'pax_adult', 'disc_adult'], ['anak', 'pax_child', 'disc_child'], ['lainnya', 'pax_other', 'disc_other']];
+        if (isset($_POST['pax_adult'])) {
+            $leftover = $paxCount;
+            foreach ($groupDefs as [$gType, $cKey, $dKey]) {
+                $gCount = min($leftover, max(0, (int)($_POST[$cKey] ?? 0)));
+                if ($gType === 'dewasa' && $gCount + $paxChild + $paxOther === 0) $gCount = $paxCount;
+                if ($gCount <= 0) continue;
+                $leftover -= $gCount;
+                $pct = min(100, max(0, (float)str_replace(',', '.', (string)($_POST[$dKey] ?? '0'))));
+                $gDisc = round($perPaxPrice * $pct / 100 * $gCount, 2);
+                $paxBreakdown[] = ['type' => $gType, 'count' => $gCount, 'percent' => $pct, 'discount' => $gDisc];
+                $paxDiscSum += $gDisc;
+            }
         }
         $paxBreakdownJson = $paxBreakdown ? json_encode($paxBreakdown, JSON_UNESCAPED_UNICODE) : null;
         $discount = min($subtotal, $paxDiscSum + $discountExtra);
@@ -423,31 +428,47 @@ $packages  = $pdo->query("SELECT id, name, base_price, duration_days, duration_n
 
 // Master data untuk quick-add item penawaran (Tiket, Transportasi, Penginapan, Makanan, Fasilitas)
 /**
- * Rincian peserta untuk tampilan/cetak: tiap orang punya harga rata-rata (subtotal / pax) dan diskon sendiri.
- * Kosong bila penawaran belum punya rincian per peserta.
+ * Kelompok peserta (dewasa/anak/lainnya) dari pax_breakdown. Mendukung format kelompok
+ * ({type,count,percent,discount}) dan format lama per-orang ({type,discount}).
+ * Hanya kelompok dengan jumlah > 0; kosong bila belum ada rincian.
+ * discount = total Rp kelompok; price = harga per orang (subtotal / pax).
  */
-function qPaxBreakdownRows(array $quotation): array
+function qPaxGroups(array $quotation): array
 {
     $list = json_decode((string)($quotation['pax_breakdown'] ?? ''), true);
     if (!is_array($list) || !$list) return [];
-    $pax = max(1, (int)($quotation['pax_count'] ?? count($list)));
+    $pax = max(1, (int)($quotation['pax_count'] ?? 1));
     $price = (float)($quotation['subtotal'] ?? 0) / $pax;
-    $typeLabel = ['dewasa' => 'Dewasa', 'anak' => 'Anak', 'lainnya' => 'Lainnya'];
+    $labels = ['dewasa' => 'Dewasa', 'anak' => 'Anak', 'lainnya' => 'Lainnya'];
+    $g = [];
+    foreach ($labels as $k => $_) $g[$k] = ['count' => 0, 'disc' => 0.0, 'pct' => null];
+    foreach ($list as $p) {
+        $ty = isset($labels[$p['type'] ?? '']) ? $p['type'] : 'dewasa';
+        if (isset($p['count'])) {
+            $g[$ty]['count'] += (int)$p['count'];
+            $g[$ty]['disc'] += (float)($p['discount'] ?? 0);
+            if (isset($p['percent'])) $g[$ty]['pct'] = (float)$p['percent'];
+        } else {
+            $g[$ty]['count'] += 1;
+            $g[$ty]['disc'] += (float)($p['discount'] ?? 0);
+        }
+    }
     $rows = [];
-    foreach ($list as $i => $p) {
-        $disc = (float)($p['discount'] ?? 0);
-        $pct = isset($p['percent']) ? (float)$p['percent'] : ($price > 0 ? round($disc / $price * 100, 2) : 0);
+    foreach ($g as $ty => $v) {
+        if ($v['count'] <= 0) continue;
+        $pct = $v['pct'] !== null ? $v['pct'] : ($price > 0 ? round($v['disc'] / ($v['count'] * $price) * 100, 2) : 0);
         $rows[] = [
+            'type' => $ty,
+            'label' => $labels[$ty],
+            'count' => $v['count'],
             'percent' => $pct,
-            'label' => ($typeLabel[$p['type'] ?? 'dewasa'] ?? 'Peserta') . (!empty($p['name']) ? ' — ' . $p['name'] : ' ' . ($i + 1)),
             'price' => $price,
-            'discount' => $disc,
-            'final' => max(0, $price - $disc),
+            'discount' => $v['disc'],
+            'final' => max(0, $v['count'] * $price - $v['disc']),
         ];
     }
     return $rows;
 }
-
 function qSafeAll(PDO $pdo, string $sql): array
 {
     try {
@@ -989,29 +1010,30 @@ if ($action === 'print' && $quotation):
             </tbody>
         </table>
 
-        <?php $paxRowsPrint = qPaxBreakdownRows($quotation); if ($paxRowsPrint): ?>
-            <div class="section-title" style="margin-top:14px;">Rincian Harga per Peserta</div>
+        <?php $paxRowsPrint = qPaxGroups($quotation); if ($paxRowsPrint): ?>
+            <div class="section-title" style="margin-top:14px;">Rincian Harga per Kelompok Peserta</div>
             <table>
                 <thead>
                     <tr>
-                        <th>Peserta</th>
-                        <th>Harga</th>
+                        <th>Kelompok</th>
+                        <th>Jumlah</th>
+                        <th>Harga / orang</th>
                         <th>Diskon</th>
-                        <th>Harga Akhir</th>
+                        <th>Subtotal</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php foreach ($paxRowsPrint as $pr): ?>
                         <tr>
                             <td><?php echo htmlspecialchars($pr['label']); ?></td>
+                            <td><?php echo (int)$pr['count']; ?> orang</td>
                             <td><?php echo sunseaRupiah($pr['price']); ?></td>
                             <td><?php echo $pr['discount'] > 0 ? rtrim(rtrim(number_format($pr['percent'], 2, ',', ''), '0'), ',') . '% (-' . sunseaRupiah($pr['discount']) . ')' : '-'; ?></td>
                             <td style="font-weight:600;"><?php echo sunseaRupiah($pr['final']); ?></td>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>
-            </table>
-        <?php endif; ?>
+            </table>        <?php endif; ?>
 
         <div class="bottom-flex">
             <div class="bank-box">
@@ -1227,9 +1249,9 @@ include 'layout-header.php';
                         <span style="color:var(--ss-success);font-weight:600;">- <?php echo sunseaRupiah((float)$quotation['discount_amount']); ?></span>
                     </div>
                 <?php endif; ?>
-                <?php foreach (qPaxBreakdownRows($quotation) as $pr): if ($pr['discount'] <= 0) continue; ?>
+                <?php foreach (qPaxGroups($quotation) as $pr): if ($pr['discount'] <= 0) continue; ?>
                     <div style="display:flex;justify-content:space-between;padding:3px 0 3px 12px;font-size:11.5px;color:var(--ss-muted);">
-                        <span><?php echo htmlspecialchars($pr['label']); ?></span>
+                        <span><?php echo htmlspecialchars($pr['label']); ?> × <?php echo (int)$pr['count']; ?></span>
                         <span><?php echo rtrim(rtrim(number_format($pr['percent'], 2, ',', ''), '0'), ','); ?>% · -<?php echo sunseaRupiah($pr['discount']); ?></span>
                     </div>
                 <?php endforeach; ?>
@@ -1338,16 +1360,14 @@ include 'layout-header.php';
                                 <label class="ss-label">Jumlah Peserta</label>
                                 <?php
                                 $__pc = max(1, (int)($quotation['pax_count'] ?? 1));
-                                $__child = 0;
-                                $__brk = json_decode((string)($quotation['pax_breakdown'] ?? ''), true);
-                                if (is_array($__brk)) foreach ($__brk as $__b) if (($__b['type'] ?? '') === 'anak') $__child++;
-                                $__child = min($__child, $__pc - 1);
-                                $__child = max(0, $__child);
-                                $__adult = $__pc - $__child;
+                                $__cnt = ['dewasa' => 0, 'anak' => 0, 'lainnya' => 0];
+                                foreach (qPaxGroups($quotation ?? []) as $__g) $__cnt[$__g['type']] = $__g['count'];
+                                if (array_sum($__cnt) !== $__pc) { $__cnt = ['dewasa' => $__pc, 'anak' => 0, 'lainnya' => 0]; }
                                 ?>
                                 <div class="qe-pax-in">
-                                    <label><span>Dewasa</span><input type="number" name="pax_adult" id="paxAdult" class="ss-input" min="0" max="100" value="<?php echo $__adult; ?>" oninput="paxCountsChanged()"></label>
-                                    <label><span>Anak</span><input type="number" name="pax_child" id="paxChild" class="ss-input" min="0" max="100" value="<?php echo $__child; ?>" oninput="paxCountsChanged()"></label>
+                                    <label><span>Dewasa</span><input type="number" name="pax_adult" id="paxAdult" class="ss-input" min="0" max="100" value="<?php echo $__cnt['dewasa']; ?>" oninput="paxCountsChanged()"></label>
+                                    <label><span>Anak</span><input type="number" name="pax_child" id="paxChild" class="ss-input" min="0" max="100" value="<?php echo $__cnt['anak']; ?>" oninput="paxCountsChanged()"></label>
+                                    <label><span>Lainnya</span><input type="number" name="pax_other" id="paxOther" class="ss-input" min="0" max="100" value="<?php echo $__cnt['lainnya']; ?>" oninput="paxCountsChanged()"></label>
                                     <div class="qe-pax-total"><span>Total</span><strong id="paxTotalLabel"><?php echo $__pc; ?></strong></div>
                                 </div>
                                 <input type="hidden" name="pax_count" id="paxInput" value="<?php echo $__pc; ?>">
@@ -1480,44 +1500,53 @@ include 'layout-header.php';
                     </div>
 
                     <?php
-                    // Rincian peserta: diskon per orang. Diskon tambahan = sisa diskon yang bukan dari per-peserta.
-                    $paxInit = json_decode((string)($quotation['pax_breakdown'] ?? ''), true);
-                    $paxInit = is_array($paxInit) ? $paxInit : [];
+                    // Rincian peserta per kelompok. Diskon tambahan = sisa diskon yang bukan dari diskon kelompok.
+                    $grpInit = ['dewasa' => 0, 'anak' => 0, 'lainnya' => 0];
                     $paxInitSum = 0;
-                    $__perPaxInit = (float)($quotation['subtotal'] ?? 0) / max(1, (int)($quotation['pax_count'] ?? 1));
-                    foreach ($paxInit as &$__p) {
-                        $paxInitSum += (float)($__p['discount'] ?? 0);
-                        if (!isset($__p['percent'])) $__p['percent'] = $__perPaxInit > 0 ? round((float)($__p['discount'] ?? 0) / $__perPaxInit * 100, 2) : 0;
+                    foreach (qPaxGroups($quotation ?? []) as $__g) {
+                        $grpInit[$__g['type']] = $__g['percent'];
+                        $paxInitSum += $__g['discount'];
                     }
-                    unset($__p);
                     $extraDiscountInit = max(0, (float)($quotation['discount_amount'] ?? 0) - $paxInitSum);
+                    $grpFmt = static fn($v) => $v ? rtrim(rtrim(number_format((float)$v, 2, ',', ''), '0'), ',') : '';
                     ?>
                     <div class="ss-card qe-card">
                         <div class="qe-sec"><span class="qe-step">3</span>
-                            <div><div class="qe-sec-t">Rincian Peserta &amp; Diskon</div>
-                                <div class="qe-sec-s">Atur diskon per orang (mis. dewasa vs anak). Jumlah baris mengikuti Jumlah Peserta.</div>
+                            <div><div class="qe-sec-t">Diskon per Kelompok Peserta</div>
+                                <div class="qe-sec-s">Atur diskon (%) untuk dewasa, anak, dan lainnya sekaligus. Jumlah orang diisi di Jumlah Peserta di atas.</div>
                             </div>
-                        </div>
-                        <div class="qe-bulk">
-                            <label><span>Diskon dewasa</span><span class="qe-pdwrap"><input type="text" id="grpAdultPct" class="ss-input" inputmode="decimal" placeholder="0" oninput="applyGroupDiscount('dewasa')"><span class="qe-pct">%</span></span></label>
-                            <label><span>Diskon anak</span><span class="qe-pdwrap"><input type="text" id="grpChildPct" class="ss-input" inputmode="decimal" placeholder="0" oninput="applyGroupDiscount('anak')"><span class="qe-pct">%</span></span></label>
-                            <em>Berlaku untuk semua peserta jenis itu. Tetap bisa diubah per orang di tabel.</em>
                         </div>
                         <div class="ss-table-wrap">
                             <table class="ss-table qe-pax-table">
                                 <thead>
                                     <tr>
-                                        <th style="width:34px;">#</th>
-                                        <th style="width:120px;">Jenis</th>
-                                        <th>Nama (opsional)</th>
-                                        <th class="qe-r" style="width:120px;">Harga</th>
+                                        <th>Kelompok</th>
+                                        <th class="qe-r" style="width:70px;">Jumlah</th>
+                                        <th class="qe-r" style="width:120px;">Harga / orang</th>
                                         <th style="width:150px;">Diskon (%)</th>
-                                        <th class="qe-r" style="width:130px;">Harga Akhir</th>
+                                        <th class="qe-r" style="width:130px;">Harga akhir / orang</th>
+                                        <th class="qe-r" style="width:130px;">Subtotal</th>
                                     </tr>
                                 </thead>
-                                <tbody id="paxBody"></tbody>
+                                <tbody id="paxBody">
+                                    <?php foreach (['dewasa' => ['Dewasa', 'disc_adult', 'discAdult'], 'anak' => ['Anak', 'disc_child', 'discChild'], 'lainnya' => ['Lainnya', 'disc_other', 'discOther']] as $__ty => [$__lb, $__nm, $__id]): ?>
+                                        <tr data-type="<?php echo $__ty; ?>">
+                                            <td><span class="qe-badge qe-badge-<?php echo $__ty; ?>"><?php echo $__lb; ?></span></td>
+                                            <td class="qe-r qe-cnt">0</td>
+                                            <td class="qe-r qe-price">-</td>
+                                            <td>
+                                                <div class="qe-pdwrap"><input type="text" name="<?php echo $__nm; ?>" id="<?php echo $__id; ?>" class="ss-input qe-pd" inputmode="decimal" value="<?php echo $grpFmt($grpInit[$__ty]); ?>" placeholder="0" oninput="calcTotals()"><span class="qe-pct">%</span></div>
+                                                <div class="qe-dr"></div>
+                                            </td>
+                                            <td class="qe-r qe-pfinal">-</td>
+                                            <td class="qe-r qe-final">-</td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
                             </table>
                         </div>
+                        <div class="qe-pax-foot"><span>Total diskon kelompok</span><strong id="paxDiscTotal">Rp 0</strong></div>
+                    </div>
                         <div class="qe-pax-foot"><span>Total diskon peserta</span><strong id="paxDiscTotal">Rp 0</strong></div>
                     </div>
                 </div>
@@ -1751,7 +1780,7 @@ HTML;
     .qe-pax-table .ss-input, .qe-pax-table .ss-select { padding: 6px 9px; font-size: 12.5px; }
     .qe-n { color: var(--ss-muted); font-weight: 700; }
     .qe-pax-in { display: flex; gap: 10px; align-items: flex-end; }
-    .qe-pax-in label { flex: 1; display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: var(--ss-muted); font-weight: 600; }
+    .qe-pax-in label { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: var(--ss-muted); font-weight: 600; }
     .qe-pax-total { min-width: 58px; text-align: center; padding: 6px 8px; border-radius: 9px; background: var(--ss-gray-1); border: 1px solid var(--ss-gray-2); }
     .qe-pax-total span { display: block; font-size: 10px; color: var(--ss-muted); }
     .qe-pax-total strong { font-size: 16px; color: var(--ss-text); }
@@ -2010,114 +2039,63 @@ HTML;
         });
     }
 
-    // ---- Rincian peserta: dewasa + anak, diskon (%) per kelompok atau per orang ----
-    var paxInit = <?php echo json_encode($paxInit ?? [], JSON_UNESCAPED_UNICODE); ?>;
-
-    function escAttr(s) {
-        return String(s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
-    }
+    // ---- Peserta per kelompok: dewasa / anak / lainnya, diskon (%) per kelompok ----
+    var PAX_GROUPS = [
+        { t: 'dewasa', count: 'paxAdult', disc: 'discAdult' },
+        { t: 'anak', count: 'paxChild', disc: 'discChild' },
+        { t: 'lainnya', count: 'paxOther', disc: 'discOther' }
+    ];
 
     function pctNum(v) {
         return Math.min(100, Math.max(0, parseFloat(String(v || '0').replace(',', '.')) || 0));
     }
 
-    function pctStr(v) {
-        return v ? String(v).replace('.', ',') : '';
-    }
-
+    // Jumlah per kelompok (minimal 1 orang, maksimal 100 total).
     function paxCounts() {
-        var a = Math.max(0, parseInt(document.getElementById('paxAdult')?.value, 10) || 0);
-        var c = Math.max(0, parseInt(document.getElementById('paxChild')?.value, 10) || 0);
-        if (a + c < 1) a = 1;
-        if (a + c > 100) { a = Math.min(a, 100); c = Math.min(c, 100 - a); }
-        return { a: a, c: c };
+        var left = 100, total = 0, res = {};
+        PAX_GROUPS.forEach(function(g) {
+            var v = Math.max(0, parseInt(document.getElementById(g.count)?.value, 10) || 0);
+            v = Math.min(v, left);
+            left -= v;
+            total += v;
+            res[g.t] = v;
+        });
+        if (total < 1) { res.dewasa = 1; total = 1; document.getElementById('paxAdult').value = 1; }
+        res.total = total;
+        return res;
     }
 
-    function groupPct(type) {
-        return pctNum(document.getElementById(type === 'anak' ? 'grpChildPct' : 'grpAdultPct')?.value);
-    }
-
-    // Total peserta = dewasa + anak; baris tabel mengikuti (dewasa dulu, lalu anak).
     function paxCountsChanged() {
-        var n = paxCounts();
-        document.getElementById('paxInput').value = n.a + n.c;
+        var c = paxCounts();
+        document.getElementById('paxInput').value = c.total;
         var lbl = document.getElementById('paxTotalLabel');
-        if (lbl) lbl.textContent = n.a + n.c;
-        syncPackageQtyFromPax();
-        renderPaxRows();
-    }
-
-    function paxRowTypeHtml(type) {
-        var label = type === 'anak' ? 'Anak' : 'Dewasa';
-        return '<span class="qe-badge qe-badge-' + type + '">' + label + '</span><input type="hidden" name="pax_type[]" class="qe-pt" value="' + type + '">';
-    }
-
-    function renderPaxRows() {
-        var body = document.getElementById('paxBody');
-        if (!body) return;
-        var n = paxCounts();
-        var total = n.a + n.c;
-        var rows = body.querySelectorAll('tr');
-        for (var i = 0; i < total; i++) {
-            var type = i < n.a ? 'dewasa' : 'anak';
-            var tr = rows[i];
-            if (!tr) {
-                var d = paxInit[i] || {};
-                tr = document.createElement('tr');
-                var pct = (d.percent !== undefined && d.percent !== null && ((d.type === 'anak') === (type === 'anak'))) ? d.percent : groupPct(type);
-                tr.innerHTML = '<td class="qe-n">' + (i + 1) + '</td>' +
-                    '<td class="qe-type"></td>' +
-                    '<td><input type="text" name="pax_name[]" class="ss-input" maxlength="60" value="' + escAttr(d.name) + '" placeholder="Peserta ' + (i + 1) + '"></td>' +
-                    '<td class="qe-r qe-price">-</td>' +
-                    '<td><div class="qe-pdwrap"><input type="text" name="pax_disc[]" class="ss-input qe-pd" inputmode="decimal" value="' + pctStr(pct) + '" placeholder="0"><span class="qe-pct">%</span></div><div class="qe-dr"></div></td>' +
-                    '<td class="qe-r qe-final">-</td>';
-                body.appendChild(tr);
-                tr.querySelectorAll('input').forEach(function(el) { el.addEventListener('input', calcTotals); });
-                tr.querySelector('.qe-type').innerHTML = paxRowTypeHtml(type);
-            } else if (tr.querySelector('.qe-pt').value !== type) {
-                // jenis berubah karena jumlah dewasa/anak diubah: ikut diskon kelompok barunya
-                tr.querySelector('.qe-type').innerHTML = paxRowTypeHtml(type);
-                tr.querySelector('.qe-pd').value = pctStr(groupPct(type));
-            }
-        }
-        while (body.querySelectorAll('tr').length > total) body.lastElementChild.remove();
+        if (lbl) lbl.textContent = c.total;
+        syncPackageQtyFromPax(); // memanggil calcTotals()
         calcTotals();
     }
 
-    // Isi kolom harga/harga akhir tiap baris; return total diskon peserta (Rp).
+    // Isi tabel kelompok; return total diskon (Rp) semua kelompok.
     function refreshPaxRows(perPax) {
+        var c = paxCounts();
         var total = 0;
-        document.querySelectorAll('#paxBody tr').forEach(function(tr) {
-            var pct = pctNum(tr.querySelector('.qe-pd')?.value);
-            var dv = perPax * pct / 100;
-            total += dv;
-            tr.querySelector('.qe-dr').textContent = dv > 0 ? '-' + fmt(dv) : '';
+        PAX_GROUPS.forEach(function(g) {
+            var tr = document.querySelector('#paxBody tr[data-type="' + g.t + '"]');
+            if (!tr) return;
+            var n = c[g.t];
+            tr.style.display = n > 0 ? '' : 'none';
+            var pct = n > 0 ? pctNum(document.getElementById(g.disc)?.value) : 0;
+            var per = perPax * pct / 100;
+            total += per * n;
+            tr.querySelector('.qe-cnt').textContent = n;
             tr.querySelector('.qe-price').textContent = fmt(perPax);
-            tr.querySelector('.qe-final').textContent = fmt(perPax - dv);
+            tr.querySelector('.qe-pfinal').textContent = fmt(perPax - per);
+            tr.querySelector('.qe-final').textContent = fmt((perPax - per) * n);
+            tr.querySelector('.qe-dr').textContent = per > 0 ? '-' + fmt(per * n) + ' (' + n + ' org)' : '';
         });
         var t = document.getElementById('paxDiscTotal');
         if (t) t.textContent = fmt(total);
         return total;
     }
-
-    // Diskon (%) kelompok: langsung ke semua peserta dewasa / anak.
-    function applyGroupDiscount(type) {
-        var val = groupPct(type);
-        document.querySelectorAll('#paxBody tr').forEach(function(tr) {
-            if (tr.querySelector('.qe-pt').value === type) tr.querySelector('.qe-pd').value = pctStr(val);
-        });
-        calcTotals();
-    }
-
-    // Isi awal kolom diskon kelompok dari data tersimpan (kalau seragam).
-    (function initGroupInputs() {
-        ['dewasa', 'anak'].forEach(function(type) {
-            var vals = paxInit.filter(function(p) { return (p.type === 'anak') === (type === 'anak'); }).map(function(p) { return p.percent || 0; });
-            if (vals.length && vals.every(function(v) { return v === vals[0]; }) && vals[0]) {
-                document.getElementById(type === 'anak' ? 'grpChildPct' : 'grpAdultPct').value = pctStr(vals[0]);
-            }
-        });
-    })();
     document.querySelectorAll('#itemsBody tr').forEach(setupRowListeners);
     document.getElementById('discountInput')?.addEventListener('input', calcTotals);
     document.getElementById('taxInput')?.addEventListener('input', calcTotals);
@@ -2128,7 +2106,7 @@ HTML;
     if (!hasSavedItems && document.getElementById('pkgSelect')?.value) {
         applyPackageMode();
     }
-    renderPaxRows(); // juga memanggil calcTotals()
+    paxCountsChanged(); // juga memanggil calcTotals()
 </script>
 
 <?php include 'layout-footer.php'; ?>
