@@ -82,7 +82,26 @@ $lapBulananSaldoRiil = $lapBulananTotalIn - $lapBulananTotalOut;
 
 // ---- PER CUSTOMER: rekap keuangan semua booking milik 1 tamu ----
 $lapCustomerId = (int)($_GET['customer_id'] ?? 0);
-$lapCustomerList = lapFetchAll($pdo, "SELECT id, name FROM customers WHERE is_active=1 ORDER BY name");
+// Hanya tamu yang trip-nya sudah selesai: booking berstatus completed, atau confirmed/ongoing dengan tanggal selesai sudah lewat.
+// Tamu yang sedang dipilih (mis. dari link lama) tetap ikut agar laporannya tidak hilang.
+$lapCustomerList = lapFetchAll($pdo, "
+    SELECT c.id, c.name, c.phone, COUNT(b.id) AS trips, MAX(b.end_date) AS last_end
+    FROM customers c
+    JOIN booking_orders b ON b.customer_id = c.id
+        AND (b.status = 'completed' OR (b.status IN ('confirmed','ongoing') AND b.end_date < CURDATE()))
+    WHERE c.is_active = 1
+    GROUP BY c.id, c.name, c.phone
+    ORDER BY last_end DESC, c.name
+");
+if ($lapCustomerId > 0 && !in_array($lapCustomerId, array_map('intval', array_column($lapCustomerList, 'id')), true)) {
+    $extraC = $pdo->prepare("SELECT id, name, phone, 0 AS trips, NULL AS last_end FROM customers WHERE id = ?");
+    $extraC->execute([$lapCustomerId]);
+    if ($ec = $extraC->fetch(PDO::FETCH_ASSOC)) array_unshift($lapCustomerList, $ec);
+}
+$lapCustomerSelected = null;
+foreach ($lapCustomerList as $__c) {
+    if ((int)$__c['id'] === $lapCustomerId) { $lapCustomerSelected = $__c; break; }
+}
 $lapCustomerRows = [];
 $lapCustomerInfo = null;
 if ($lapCustomerId > 0) {
@@ -632,24 +651,105 @@ function lapPrintUrl(string $tab, array $extra = []): string
     </div>
 
 <?php elseif ($tab === 'customer'): ?>
+    <style>
+        .lc-field { min-width: 300px; max-width: 420px; flex: 1; }
+        .lc-combo { position: relative; }
+        .lc-trigger { width: 100%; display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: #fff; border: 1px solid var(--ss-gray-2, #e2e8f0); border-radius: 12px; cursor: pointer; text-align: left; font: inherit; transition: border-color .15s, box-shadow .15s; }
+        .lc-trigger:hover { border-color: #cbd5e1; }
+        .lc-trigger[aria-expanded="true"], .lc-trigger:focus-visible { outline: none; border-color: #f59e0b; box-shadow: 0 0 0 3px rgba(245, 158, 11, .18); }
+        .lc-avatar { flex: none; width: 30px; height: 30px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; color: #fff; background: linear-gradient(135deg, #38bdf8, #0369a1); }
+        .lc-trigger-text, .lc-item-text { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
+        .lc-trigger-text strong, .lc-item-text strong { font-size: 13px; font-weight: 700; color: var(--ss-text, #0f172a); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .lc-trigger-text small, .lc-item-text small { font-size: 11px; color: var(--ss-muted, #64748b); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .lc-placeholder { color: var(--ss-muted, #64748b); font-size: 13px; }
+        .lc-chev { flex: none; width: 16px; height: 16px; color: var(--ss-muted, #64748b); transition: transform .15s; }
+        .lc-trigger[aria-expanded="true"] .lc-chev { transform: rotate(180deg); }
+        .lc-panel { position: absolute; z-index: 30; left: 0; right: 0; top: calc(100% + 6px); background: #fff; border: 1px solid var(--ss-gray-2, #e2e8f0); border-radius: 14px; box-shadow: 0 18px 40px rgba(15, 23, 42, .16); overflow: hidden; }
+        .lc-search { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--ss-gray-2, #e2e8f0); }
+        .lc-search svg { width: 15px; height: 15px; color: var(--ss-muted, #64748b); flex: none; }
+        .lc-search input { flex: 1; border: 0; outline: 0; font: inherit; font-size: 13px; background: transparent; color: var(--ss-text, #0f172a); }
+        .lc-list { max-height: 300px; overflow-y: auto; padding: 6px; }
+        .lc-item { width: 100%; display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 0; background: transparent; border-radius: 10px; cursor: pointer; text-align: left; font: inherit; }
+        .lc-item:hover, .lc-item:focus-visible { background: #f1f5f9; outline: none; }
+        .lc-item.is-active { background: #fff7ed; box-shadow: inset 0 0 0 1px #fed7aa; }
+        .lc-empty { padding: 18px; text-align: center; font-size: 12.5px; color: var(--ss-muted, #64748b); }
+    </style>
     <div class="ss-card" style="margin-bottom:14px;">
         <form method="GET" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
             <input type="hidden" name="tab" value="customer">
-            <div class="ss-form-group" style="margin:0;min-width:220px;">
-                <label class="ss-label" style="font-size:11px;">Pilih Tamu</label>
-                <select name="customer_id" class="ss-select" style="font-size:12px;padding:6px 8px;">
-                    <option value="0">-- Pilih Tamu --</option>
-                    <?php foreach ($lapCustomerList as $c): ?>
-                        <option value="<?php echo $c['id']; ?>" <?php echo $lapCustomerId === (int)$c['id'] ? 'selected' : ''; ?>><?php echo htmlspecialchars($c['name']); ?></option>
-                    <?php endforeach; ?>
-                </select>
+            <div class="lc-field">
+                <label class="ss-label" style="font-size:11px;">Pilih Tamu <span style="font-weight:400;color:var(--ss-muted);">(trip sudah selesai)</span></label>
+                <input type="hidden" name="customer_id" id="lcValue" value="<?php echo (int)$lapCustomerId; ?>">
+                <div class="lc-combo" id="lcCombo">
+                    <button type="button" class="lc-trigger" id="lcTrigger" aria-haspopup="listbox" aria-expanded="false">
+                        <span class="lc-avatar"><?php echo $lapCustomerSelected ? htmlspecialchars(mb_strtoupper(mb_substr($lapCustomerSelected['name'], 0, 1))) : '?'; ?></span>
+                        <span class="lc-trigger-text">
+                            <?php if ($lapCustomerSelected): ?>
+                                <strong><?php echo htmlspecialchars($lapCustomerSelected['name']); ?></strong>
+                                <small><?php echo (int)$lapCustomerSelected['trips']; ?> trip<?php echo $lapCustomerSelected['last_end'] ? ' · selesai ' . date('d M Y', strtotime($lapCustomerSelected['last_end'])) : ''; ?></small>
+                            <?php else: ?>
+                                <span class="lc-placeholder">Pilih tamu...</span>
+                            <?php endif; ?>
+                        </span>
+                        <i data-feather="chevron-down" class="lc-chev"></i>
+                    </button>
+                    <div class="lc-panel" id="lcPanel" hidden>
+                        <div class="lc-search"><i data-feather="search"></i><input type="text" id="lcSearch" placeholder="Cari nama atau nomor tamu..." autocomplete="off"></div>
+                        <div class="lc-list" id="lcList" role="listbox">
+                            <?php foreach ($lapCustomerList as $c): ?>
+                                <button type="button" class="lc-item<?php echo $lapCustomerId === (int)$c['id'] ? ' is-active' : ''; ?>" role="option" data-id="<?php echo (int)$c['id']; ?>" data-search="<?php echo htmlspecialchars(mb_strtolower($c['name'] . ' ' . ($c['phone'] ?? ''))); ?>">
+                                    <span class="lc-avatar"><?php echo htmlspecialchars(mb_strtoupper(mb_substr($c['name'], 0, 1))); ?></span>
+                                    <span class="lc-item-text">
+                                        <strong><?php echo htmlspecialchars($c['name']); ?></strong>
+                                        <small><?php echo (int)$c['trips']; ?> trip<?php echo $c['last_end'] ? ' · selesai ' . date('d M Y', strtotime($c['last_end'])) : ''; ?><?php echo !empty($c['phone']) ? ' · ' . htmlspecialchars($c['phone']) : ''; ?></small>
+                                    </span>
+                                </button>
+                            <?php endforeach; ?>
+                            <div class="lc-empty" id="lcEmpty" hidden>Tidak ada tamu yang cocok.</div>
+                            <?php if (empty($lapCustomerList)): ?><div class="lc-empty">Belum ada tamu dengan trip yang sudah selesai.</div><?php endif; ?>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <button type="submit" class="ss-btn ss-btn-outline ss-btn-sm"><i data-feather="filter"></i> Tampilkan</button>
             <?php if ($lapCustomerId > 0): ?>
                 <a href="<?php echo lapPrintUrl('customer', ['customer_id' => $lapCustomerId]); ?>" target="_blank" class="ss-btn ss-btn-primary ss-btn-sm"><i data-feather="printer"></i> Cetak / Simpan PDF</a>
             <?php endif; ?>
         </form>
     </div>
+
+    <script>
+        (function () {
+            var combo = document.getElementById('lcCombo');
+            if (!combo) return;
+            var trigger = document.getElementById('lcTrigger'), panel = document.getElementById('lcPanel');
+            var search = document.getElementById('lcSearch'), list = document.getElementById('lcList');
+            var empty = document.getElementById('lcEmpty'), value = document.getElementById('lcValue');
+            function setOpen(open) {
+                panel.hidden = !open;
+                trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+                if (open) { search.value = ''; filter(); search.focus(); var a = list.querySelector('.is-active'); if (a) a.scrollIntoView({ block: 'nearest' }); }
+            }
+            function filter() {
+                var q = search.value.trim().toLowerCase(), shown = 0;
+                list.querySelectorAll('.lc-item').forEach(function (it) {
+                    var ok = !q || it.getAttribute('data-search').indexOf(q) !== -1;
+                    it.style.display = ok ? '' : 'none';
+                    if (ok) shown++;
+                });
+                if (empty) empty.hidden = shown !== 0 || !list.querySelector('.lc-item');
+            }
+            trigger.addEventListener('click', function () { setOpen(panel.hidden); });
+            search.addEventListener('input', filter);
+            list.addEventListener('click', function (e) {
+                var it = e.target.closest('.lc-item');
+                if (!it) return;
+                value.value = it.getAttribute('data-id');
+                combo.closest('form').submit(); // langsung tampilkan laporan tamu terpilih
+            });
+            document.addEventListener('click', function (e) { if (!combo.contains(e.target)) setOpen(false); });
+            document.addEventListener('keydown', function (e) { if (e.key === 'Escape') setOpen(false); });
+        })();
+    </script>
 
     <?php if (!$lapCustomerInfo): ?>
         <div class="ss-card">
