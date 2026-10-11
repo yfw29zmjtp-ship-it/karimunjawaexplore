@@ -1354,52 +1354,6 @@ include 'layout-header.php';
                         </div>
                     </div>
 
-                    <?php
-                    // Rincian peserta: diskon per orang. Diskon tambahan = sisa diskon yang bukan dari per-peserta.
-                    $paxInit = json_decode((string)($quotation['pax_breakdown'] ?? ''), true);
-                    $paxInit = is_array($paxInit) ? $paxInit : [];
-                    $paxInitSum = 0;
-                    foreach ($paxInit as $__p) $paxInitSum += (float)($__p['discount'] ?? 0);
-                    $extraDiscountInit = max(0, (float)($quotation['discount_amount'] ?? 0) - $paxInitSum);
-                    ?>
-                    <div class="ss-card qe-card">
-                        <div class="qe-sec"><span class="qe-step">2</span>
-                            <div><div class="qe-sec-t">Rincian Peserta &amp; Diskon</div>
-                                <div class="qe-sec-s">Atur diskon per orang (mis. dewasa vs anak). Jumlah baris mengikuti Jumlah Peserta.</div>
-                            </div>
-                        </div>
-                        <div class="qe-bulk">
-                            <span>Samakan diskon</span>
-                            <input type="text" id="bulkDiscVal" class="ss-input" inputmode="numeric" placeholder="0">
-                            <select id="bulkDiscMode" class="ss-select">
-                                <option value="rp">Rp</option>
-                                <option value="pct">%</option>
-                            </select>
-                            <select id="bulkDiscTarget" class="ss-select">
-                                <option value="all">Semua peserta</option>
-                                <option value="dewasa">Dewasa saja</option>
-                                <option value="anak">Anak saja</option>
-                            </select>
-                            <button type="button" class="ss-btn ss-btn-outline ss-btn-sm" onclick="applyBulkDiscount()">Terapkan</button>
-                        </div>
-                        <div class="ss-table-wrap">
-                            <table class="ss-table qe-pax-table">
-                                <thead>
-                                    <tr>
-                                        <th style="width:34px;">#</th>
-                                        <th style="width:120px;">Jenis</th>
-                                        <th>Nama (opsional)</th>
-                                        <th class="qe-r" style="width:120px;">Harga</th>
-                                        <th style="width:140px;">Diskon (Rp)</th>
-                                        <th class="qe-r" style="width:130px;">Harga Akhir</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="paxBody"></tbody>
-                            </table>
-                        </div>
-                        <div class="qe-pax-foot"><span>Total diskon peserta</span><strong id="paxDiscTotal">Rp 0</strong></div>
-                    </div>
-
                     <!-- Info: paket dipilih, item otomatis dari harga paket x jumlah peserta -->
                     <div class="ss-card" id="packageModeNote" style="margin-bottom:16px;display:none;background:var(--ss-gray-1);">
                         <div style="font-size:13px;color:var(--ss-text);">
@@ -1410,7 +1364,7 @@ include 'layout-header.php';
                     <!-- Items -->
                     <div class="ss-card qe-card" id="itemsCard">
                         <div class="ss-card-header" style="align-items:center;">
-                            <div class="qe-sec" style="margin:0;"><span class="qe-step">3</span>
+                            <div class="qe-sec" style="margin:0;"><span class="qe-step">2</span>
                                 <div><div class="qe-sec-t">Item Penawaran</div>
                                     <div class="qe-sec-s">Harga paket dan layanan tambahan</div>
                                 </div>
@@ -1505,6 +1459,52 @@ include 'layout-header.php';
                                 </tbody>
                             </table>
                         </div>
+                    </div>
+
+                    <?php
+                    // Rincian peserta: diskon per orang. Diskon tambahan = sisa diskon yang bukan dari per-peserta.
+                    $paxInit = json_decode((string)($quotation['pax_breakdown'] ?? ''), true);
+                    $paxInit = is_array($paxInit) ? $paxInit : [];
+                    $paxInitSum = 0;
+                    foreach ($paxInit as $__p) $paxInitSum += (float)($__p['discount'] ?? 0);
+                    $extraDiscountInit = max(0, (float)($quotation['discount_amount'] ?? 0) - $paxInitSum);
+                    ?>
+                    <div class="ss-card qe-card">
+                        <div class="qe-sec"><span class="qe-step">3</span>
+                            <div><div class="qe-sec-t">Rincian Peserta &amp; Diskon</div>
+                                <div class="qe-sec-s">Atur diskon per orang (mis. dewasa vs anak). Jumlah baris mengikuti Jumlah Peserta.</div>
+                            </div>
+                        </div>
+                        <div class="qe-bulk">
+                            <span>Samakan diskon</span>
+                            <input type="text" id="bulkDiscVal" class="ss-input" inputmode="numeric" placeholder="0">
+                            <select id="bulkDiscMode" class="ss-select">
+                                <option value="rp">Rp</option>
+                                <option value="pct">%</option>
+                            </select>
+                            <select id="bulkDiscTarget" class="ss-select">
+                                <option value="all">Semua peserta</option>
+                                <option value="dewasa">Dewasa saja</option>
+                                <option value="anak">Anak saja</option>
+                            </select>
+                            <button type="button" class="ss-btn ss-btn-outline ss-btn-sm" onclick="applyBulkDiscount()">Terapkan</button>
+                        </div>
+                        <div class="ss-table-wrap">
+                            <table class="ss-table qe-pax-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width:34px;">#</th>
+                                        <th style="width:120px;">Jenis</th>
+                                        <th>Nama (opsional)</th>
+                                        <th class="qe-r" style="width:120px;">Harga</th>
+                                        <th style="width:140px;">Diskon (Rp)</th>
+                                        <th class="qe-r" style="width:130px;">Harga Akhir</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="paxBody"></tbody>
+                            </table>
+                        </div>
+                        <div class="qe-pax-foot"><span>Total diskon peserta</span><strong id="paxDiscTotal">Rp 0</strong></div>
                     </div>
                 </div>
 
