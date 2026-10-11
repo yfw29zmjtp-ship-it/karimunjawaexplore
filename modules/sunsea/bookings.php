@@ -911,6 +911,17 @@ $guidesLaut = [];
 $coordinators = [];
 $facilities = [];
 
+// Filter bulan daftar pemesanan (?month=YYYY-MM, ?month=all untuk semua). Default: bulan ini.
+// Booking tampil bila rentang tanggal tripnya menyentuh bulan itu.
+$monthParam = (string)($_GET['month'] ?? date('Y-m'));
+$filterMonth = preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $monthParam) ? $monthParam : ($monthParam === 'all' ? '' : date('Y-m'));
+$listWhere = '';
+$listParams = [];
+if ($filterMonth !== '') {
+    $listWhere = 'WHERE b.start_date <= ? AND b.end_date >= ?';
+    $listParams = [date('Y-m-t', strtotime($filterMonth . '-01')), $filterMonth . '-01'];
+}
+
 $list = safeFetchAll(
     $pdo,
     "SELECT b.*, c.name as customer_name, c.phone as customer_phone, p.name as package_name,
@@ -922,9 +933,10 @@ $list = safeFetchAll(
     FROM booking_orders b
     JOIN customers c ON c.id=b.customer_id
     LEFT JOIN trip_packages p ON p.id=b.package_id
-    ORDER BY b.created_at DESC
+    {$listWhere}
+    ORDER BY b.start_date DESC, b.created_at DESC
     LIMIT 200",
-    [],
+    $listParams,
     'list booking'
 );
 
@@ -1772,7 +1784,20 @@ include 'layout-header.php';
             <h3 style="margin:0;font-size:18px;">Daftar Pemesanan</h3>
             <div style="color:var(--ss-muted);font-size:12px;">Paket / Ecer dengan rentang tanggal</div>
         </div>
-        <div style="display:flex;gap:8px;">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <?php
+            $__mBase = $filterMonth !== '' ? $filterMonth : date('Y-m');
+            $__mPrev = date('Y-m', strtotime($__mBase . '-01 -1 month'));
+            $__mNext = date('Y-m', strtotime($__mBase . '-01 +1 month'));
+            ?>
+            <div style="display:flex;align-items:center;gap:4px;">
+                <a class="ss-btn ss-btn-outline ss-btn-sm" href="bookings.php?month=<?php echo $__mPrev; ?>" title="Bulan sebelumnya">&lsaquo;</a>
+                <form method="GET" style="margin:0;">
+                    <input type="month" name="month" value="<?php echo htmlspecialchars($filterMonth); ?>" onchange="this.form.submit()" class="ss-input" style="padding:5px 8px;height:auto;width:auto;" title="Filter bulan trip">
+                </form>
+                <a class="ss-btn ss-btn-outline ss-btn-sm" href="bookings.php?month=<?php echo $__mNext; ?>" title="Bulan berikutnya">&rsaquo;</a>
+                <a class="ss-btn <?php echo $filterMonth === '' ? 'ss-btn-primary' : 'ss-btn-outline'; ?> ss-btn-sm" href="bookings.php?month=all">Semua</a>
+            </div>
             <button type="button" id="bulkDeleteBookingBtn" class="ss-btn ss-btn-outline" style="display:none;color:#dc2626;border-color:#dc2626;" onclick="submitBulkDeleteBooking()">
                 <i data-feather="trash-2"></i> Hapus Terpilih (<span id="bulkDeleteBookingCount">0</span>)
             </button>
