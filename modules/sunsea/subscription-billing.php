@@ -167,14 +167,18 @@ include 'layout-header.php';
                 <p style="color:var(--ss-muted);">Belum ada tagihan untuk periode ini.</p>
             <?php else: ?>
                 <table style="width:100%;font-size:14px;">
-                    <?php if (($invoice['type'] ?? 'recurring') === 'manual'): ?>
+                    <?php $isTopupInv = strpos((string) $invoice['period'], 'TOPUP-') === 0; ?>
+                    <?php if ($isTopupInv): ?>
+                        <tr><td colspan="2" style="padding:4px 0 8px;font-weight:600;"><?php echo htmlspecialchars($invoice['description'] ?? ''); ?></td></tr>
+                    <?php endif; ?>
+                    <?php if (($invoice['type'] ?? 'recurring') === 'manual' && !$isTopupInv): ?>
                         <tr>
                             <td style="padding:6px 0;color:var(--ss-muted);"><?php echo htmlspecialchars($invoice['description'] ?? 'Tagihan Manual'); ?></td>
                             <td style="padding:6px 0;text-align:right;"><?php echo sunseaRupiah((float) $invoice['total_amount']); ?></td>
                         </tr>
                     <?php else: ?>
                         <tr>
-                            <td style="padding:6px 0;color:var(--ss-muted);">Biaya Dasar Bulanan</td>
+                            <td style="padding:6px 0;color:var(--ss-muted);">Biaya Dasar Bulanan<?php echo $isTopupInv ? ' (kekurangan dari yang sudah dibayar)' : ''; ?></td>
                             <td style="padding:6px 0;text-align:right;"><?php echo sunseaRupiah((float) $invoice['base_fee']); ?></td>
                         </tr>
                         <tr>

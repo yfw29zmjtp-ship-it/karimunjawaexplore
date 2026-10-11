@@ -1305,7 +1305,7 @@ function sunseaSyncGuestTopups(PDO $pdo): void
         $toPeriod = date('Y-m', strtotime('first day of next month'));
 
         $paidStmt = $pdo->prepare(
-            "SELECT period, guest_count FROM subscription_invoices
+            "SELECT period, guest_count, base_fee FROM subscription_invoices
              WHERE status = 'paid' AND (type = 'recurring' OR type IS NULL) AND period BETWEEN ? AND ?
              ORDER BY period"
         );
@@ -1319,51 +1319,54 @@ function sunseaSyncGuestTopups(PDO $pdo): void
             $guestsNow = (int) sunseaCalculateSubscriptionCharge($pdo, $period)['guest_count'];
 
             $topStmt = $pdo->prepare(
-                "SELECT id, period, status, guest_count, txn_id FROM subscription_invoices
+                "SELECT id, period, status, guest_count, base_fee, txn_id FROM subscription_invoices
                  WHERE period LIKE ? AND status != 'cancelled' ORDER BY id"
             );
             $topStmt->execute(['TOPUP-' . $period . '-%']);
             $topups = $topStmt->fetchAll(PDO::FETCH_ASSOC);
 
             $billed = (int) $inv['guest_count'];
+            $baseBilled = (float) $inv['base_fee'];
             $pending = null; // tagihan susulan belum dibayar
             foreach ($topups as $t) {
                 if ($t['status'] === 'paid') {
                     $billed += (int) $t['guest_count'];
+                    $baseBilled += (float) $t['base_fee'];
                 } else {
                     $pending = $t;
                 }
             }
+            // Selisih yang harus ditagih: tamu baru + kekurangan biaya dasar (invoice lunas dengan tarif lama/lebih kecil).
+            $delta = max(0, $guestsNow - $billed);
+            $baseDelta = max(0.0, (float) $cfg['base_fee'] - $baseBilled);
+            $total = $baseDelta + $delta * $fee;
 
             if ($pending !== null) {
                 if (!empty($pending['txn_id'])) {
                     continue; // link bayar sudah dibuat: nominal dikunci
                 }
-                $delta = $guestsNow - $billed;
-                if ($delta <= 0) {
+                if ($delta <= 0 && $baseDelta <= 0) {
                     $pdo->prepare("DELETE FROM subscription_invoices WHERE id = ? AND status = 'unpaid'")->execute([$pending['id']]);
-                } elseif ($delta !== (int) $pending['guest_count']) {
+                } elseif ($delta !== (int) $pending['guest_count'] || abs($baseDelta - (float) $pending['base_fee']) > 0.001) {
                     $pdo->prepare(
-                        "UPDATE subscription_invoices SET description=?, guest_count=?, per_guest_fee=?, guest_total=?, total_amount=? WHERE id=? AND status='unpaid'"
-                    )->execute([sunseaTopupDescription($period, $delta, $fee), $delta, $fee, $delta * $fee, $delta * $fee, $pending['id']]);
+                        "UPDATE subscription_invoices SET description=?, base_fee=?, guest_count=?, per_guest_fee=?, guest_total=?, total_amount=? WHERE id=? AND status='unpaid'"
+                    )->execute([sunseaTopupDescription($period), $baseDelta, $delta, $fee, $delta * $fee, $total, $pending['id']]);
                 }
                 continue;
             }
 
-            $delta = $guestsNow - $billed;
-            if ($delta <= 0) {
+            if ($delta <= 0 && $baseDelta <= 0) {
                 continue;
             }
 
             $dueDate = date('Y-m-d', strtotime('+' . SUNSEA_TOPUP_GRACE_DAYS . ' days'));
-            $total = $delta * $fee;
             $created = null;
             for ($n = count($topups) + 1; $n <= count($topups) + 3 && !$created; $n++) {
                 try {
                     $pdo->prepare(
                         "INSERT INTO subscription_invoices (period, type, description, base_fee, guest_count, per_guest_fee, guest_total, total_amount, status, due_date)
-                         VALUES (?, 'manual', ?, 0, ?, ?, ?, ?, 'unpaid', ?)"
-                    )->execute(['TOPUP-' . $period . '-' . $n, sunseaTopupDescription($period, $delta, $fee), $delta, $fee, $total, $total, $dueDate]);
+                         VALUES (?, 'manual', ?, ?, ?, ?, ?, ?, 'unpaid', ?)"
+                    )->execute(['TOPUP-' . $period . '-' . $n, sunseaTopupDescription($period), $baseDelta, $delta, $fee, $delta * $fee, $total, $dueDate]);
                     $created = 'TOPUP-' . $period . '-' . $n;
                 } catch (PDOException $e) {
                     // period sudah ada (request paralel / nomor terpakai): coba nomor berikutnya
@@ -1388,9 +1391,9 @@ function sunseaSyncGuestTopups(PDO $pdo): void
     }
 }
 
-function sunseaTopupDescription(string $period, int $guests, float $fee): string
+function sunseaTopupDescription(string $period): string
 {
-    return 'Tamu tambahan periode ' . $period . ' (' . $guests . ' tamu × ' . sunseaRupiah($fee) . ')';
+    return 'Tagihan susulan periode ' . $period . ' (biaya bulanan & tamu)';
 }
 
 /**

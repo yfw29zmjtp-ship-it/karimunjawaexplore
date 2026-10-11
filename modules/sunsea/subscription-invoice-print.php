@@ -205,7 +205,7 @@ $logoSrc = $cfg['provider_logo'];
         <span class="paid-badge">✓ LUNAS</span>
 
         <table>
-            <?php if (($invoice['type'] ?? 'recurring') === 'manual'): ?>
+            <?php if (($invoice['type'] ?? 'recurring') === 'manual' && strpos((string) $invoice['period'], 'TOPUP-') !== 0): ?>
                 <tr class="muted">
                     <td><?php echo htmlspecialchars($invoice['description'] ?: 'Tagihan Manual'); ?></td>
                     <td style="text-align:right;"><?php echo sunseaRupiah((float) $invoice['total_amount']); ?></td>
