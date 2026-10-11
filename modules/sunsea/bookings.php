@@ -861,6 +861,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updat
 
 $action = $_GET['action'] ?? 'list';
 $viewId = (int)($_GET['view'] ?? 0);
+$openEdit = $viewId > 0 && !empty($_GET['edit']); // ?view=ID&edit=1 (menu Aksi → Edit Booking) langsung membuka panel Edit
 $pageError = '';
 
 if ($action === 'print_invoice' || $action === 'pay_invoice') {
@@ -1217,7 +1218,7 @@ include 'layout-header.php';
         <div class="ss-card">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
                 <div class="ss-card-title" style="margin:0;">Rincian Layanan (Harga Jual)</div>
-                <button type="button" class="ss-btn ss-btn-outline ss-btn-sm" onclick="var p=document.getElementById('editItemsPanel');p.style.display=(p.style.display==='none'?'block':'none');this.querySelector('span').textContent=(p.style.display==='none'?'Edit':'Tutup Edit');"><i data-feather="edit-2"></i> <span>Edit</span></button>
+                <button type="button" class="ss-btn ss-btn-outline ss-btn-sm" onclick="var p=document.getElementById('editItemsPanel');p.style.display=(p.style.display==='none'?'block':'none');this.querySelector('span').textContent=(p.style.display==='none'?'Edit':'Tutup Edit');"><i data-feather="edit-2"></i> <span><?php echo $openEdit ? 'Tutup Edit' : 'Edit'; ?></span></button>
             </div>
             <div class="ss-table-wrap">
                 <table class="ss-table">
@@ -1250,7 +1251,10 @@ include 'layout-header.php';
             </div>
             <div style="font-size:11px;color:var(--ss-muted);margin-top:6px;">* Rincian modal per komponen paket (tiket kapal, penginapan, transport, dll) ada di kartu "Rekap Pengeluaran (Pembayaran ke Mitra)" di atas.</div>
 
-            <div id="editItemsPanel" style="display:none;margin-top:14px;padding-top:4px;">
+            <div id="editItemsPanel" style="display:<?php echo $openEdit ? 'block' : 'none'; ?>;margin-top:14px;padding-top:4px;">
+                <?php if ($openEdit): ?>
+                    <script>window.addEventListener('load', function () { var p = document.getElementById('editItemsPanel'); if (p) p.scrollIntoView({ block: 'start' }); });</script>
+                <?php endif; ?>
                 <div style="background:#F8FAFC;border:1px solid var(--ss-gray-2);border-radius:10px;padding:14px 16px;margin-bottom:14px;">
                     <div class="ss-card-title" style="margin:0 0 10px;font-size:13px;display:flex;align-items:center;gap:6px;"><i data-feather="users" style="width:15px;height:15px;"></i> Edit Pax &amp; Data Tamu</div>
                     <form method="POST">
@@ -1919,6 +1923,7 @@ include 'layout-header.php';
                                         <summary class="ss-btn ss-btn-outline ss-btn-sm">Aksi <i data-feather="chevron-down"></i></summary>
                                         <div class="ss-actions-menu">
                                             <a href="bookings.php?view=<?php echo $r['id']; ?>">Lihat Detail</a>
+                                            <a href="bookings.php?view=<?php echo $r['id']; ?>&edit=1">Edit Booking</a>
                                             <a href="bookings.php?action=print_invoice&id=<?php echo $r['id']; ?>">Cetak Invoice</a>
                                             <a href="bookings.php?action=pay_invoice&id=<?php echo $r['id']; ?>&pay_mode=dp">Bayar DP</a>
                                             <a href="bookings.php?action=pay_invoice&id=<?php echo $r['id']; ?>&pay_mode=full">Pelunasan</a>
