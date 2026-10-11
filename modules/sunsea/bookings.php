@@ -1782,7 +1782,16 @@ include 'layout-header.php';
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
         <div>
             <h3 style="margin:0;font-size:18px;">Daftar Pemesanan</h3>
-            <div style="color:var(--ss-muted);font-size:12px;">Paket / Ecer dengan rentang tanggal</div>
+            <?php
+            $__listPax = 0;
+            $__listCount = 0;
+            foreach ($list as $__r) {
+                if ($__r['status'] === 'cancelled') continue; // booking batal tidak dihitung
+                $__listCount++;
+                $__listPax += (int)$__r['pax_count'];
+            }
+            ?>
+            <div style="color:var(--ss-muted);font-size:12px;">Paket / Ecer dengan rentang tanggal &middot; <strong><?php echo $__listCount; ?> booking &middot; <?php echo $__listPax; ?> pax</strong> (tanpa yang dibatalkan)</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
             <?php
@@ -1873,6 +1882,7 @@ include 'layout-header.php';
                         <th>Customer</th>
                         <th>Mode</th>
                         <th>Tanggal</th>
+                        <th>Pax</th>
                         <th>Paket</th>
                         <th>Penginapan</th>
                         <th>Status</th>
@@ -1899,6 +1909,7 @@ include 'layout-header.php';
                             </td>
                             <td><?php echo strpos((string)$r['notes'], '✍️ Booking Manual') === 0 ? 'MANUAL' : strtoupper($r['booking_mode']); ?></td>
                             <td><?php echo date('d M Y', strtotime($r['start_date'])); ?> - <?php echo date('d M Y', strtotime($r['end_date'])); ?></td>
+                            <td style="white-space:nowrap;"><?php echo (int)$r['pax_count']; ?> pax</td>
                             <td>
                                 <?php
                                 $nightsRow = max(0, (int)round((strtotime($r['end_date']) - strtotime($r['start_date'])) / 86400));
