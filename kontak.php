@@ -3,6 +3,7 @@ require_once __DIR__ . '/includes/website-bootstrap.php';
 
 require_once __DIR__ . '/includes/website-spam-guard.php';
 sunseaEnsureBookingSchema($pdo);
+sunseaEnsureQuotationItinerarySchema($pdo); // kolom pax_breakdown (dewasa/anak)
 sunseaEnsurePackageItemsSchema($pdo);
 
 $packages = $pdo->query(
@@ -19,7 +20,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email      = trim($_POST['email'] ?? '');
     $packageId  = (int)($_POST['package_id'] ?? 0);
     $startDate  = $_POST['start_date'] ?? '';
-    $pax        = min(100, max(1, (int)($_POST['pax'] ?? 1)));
+    // Jumlah peserta = dewasa + anak (form lama yang hanya mengirim 'pax' tetap didukung).
+    $paxAdult   = min(100, max(0, (int)($_POST['pax_adult'] ?? 0)));
+    $paxChild   = min(100, max(0, (int)($_POST['pax_child'] ?? 0)));
+    if (isset($_POST['pax_adult'])) {
+        if ($paxAdult + $paxChild < 1) $paxAdult = 1;
+        $pax = min(100, $paxAdult + $paxChild);
+    } else {
+        $pax = min(100, max(1, (int)($_POST['pax'] ?? 1)));
+        $paxAdult = $pax;
+        $paxChild = 0;
+    }
     $message    = trim($_POST['message'] ?? '');
 
     if ($name === '' || $phone === '' || $startDate === '') {
@@ -46,7 +57,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $fixedPax = $pkg ? sunseaPackageFixedPax($pkg) : 0;
             if ($fixedPax > 0) {
                 $pax = $fixedPax;
+                if ($paxAdult + $paxChild !== $fixedPax) {
+                    $paxAdult = $fixedPax;
+                    $paxChild = 0;
+                }
             }
+            // Rincian dewasa/anak (diskon 0%) supaya form penawaran admin langsung sinkron.
+            $paxBreakdownJson = json_encode(array_values(array_filter([
+                $paxAdult > 0 ? ['type' => 'dewasa', 'count' => $paxAdult, 'percent' => 0, 'discount' => 0] : null,
+                $paxChild > 0 ? ['type' => 'anak', 'count' => $paxChild, 'percent' => 0, 'discount' => 0] : null,
+            ])));
 
             $durationDays = $pkg ? max(1, (int)$pkg['duration_days']) : 3;
             $endDate = date('Y-m-d', strtotime($startDate . ' + ' . ($durationDays - 1) . ' days'));
@@ -76,8 +96,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $subtotal = $pkg ? ($fixedPax > 0 ? (float)$pkg['base_price'] : (float)$pkg['base_price'] * $pax) : 0;
 
             $pdo->prepare("INSERT INTO quotations
-                (quotation_no, customer_id, package_id, trip_date, trip_end_date, itinerary, pax_count, status, subtotal, total_amount, notes, created_by)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?)")
+                (quotation_no, customer_id, package_id, trip_date, trip_end_date, itinerary, pax_count, pax_breakdown, status, subtotal, total_amount, notes, created_by)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)")
                 ->execute([
                     $quotationNo,
                     $customerId,
@@ -86,6 +106,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $endDate,
                     $pkg['itinerary'] ?? '',
                     $pax,
+                    $paxBreakdownJson,
                     'draft',
                     $subtotal,
                     $subtotal,
@@ -189,16 +210,27 @@ require __DIR__ . '/includes/website-header.php';
                         <?php endforeach; ?>
                     </select>
                 </div>
-                <div class="we-form-cols">
-                    <div class="we-form-row">
-                        <label>Tanggal Mulai Trip *</label>
-                        <input type="date" name="start_date" required min="<?php echo date('Y-m-d'); ?>" max="<?php echo date('Y-m-d', strtotime('+2 years')); ?>" value="<?php echo htmlspecialchars($_POST['start_date'] ?? ''); ?>">
+                <div class="we-form-row">
+                    <label>Tanggal Mulai Trip *</label>
+                    <input type="date" name="start_date" required min="<?php echo date('Y-m-d'); ?>" max="<?php echo date('Y-m-d', strtotime('+2 years')); ?>" value="<?php echo htmlspecialchars($_POST['start_date'] ?? ''); ?>">
+                </div>
+                <div class="we-form-row">
+                    <label>Jumlah Peserta *</label>
+                    <div class="we-pax-split">
+                        <div class="we-pax-box">
+                            <span>Dewasa</span>
+                            <input type="number" name="pax_adult" id="weKontakAdult" inputmode="numeric" min="0" max="100" value="<?php echo htmlspecialchars($_POST['pax_adult'] ?? '1'); ?>">
+                        </div>
+                        <div class="we-pax-box">
+                            <span>Anak</span>
+                            <input type="number" name="pax_child" id="weKontakChild" inputmode="numeric" min="0" max="100" value="<?php echo htmlspecialchars($_POST['pax_child'] ?? '0'); ?>">
+                        </div>
+                        <div class="we-pax-box we-pax-total">
+                            <span>Total</span>
+                            <strong id="weKontakTotal">1</strong>
+                        </div>
                     </div>
-                    <div class="we-form-row">
-                        <label>Jumlah Peserta *</label>
-                        <input type="number" name="pax" id="weKontakPax" min="1" max="100" required value="<?php echo htmlspecialchars($_POST['pax'] ?? '1'); ?>">
-                        <div class="we-pax-bubble" id="weKontakPaxHint"></div>
-                    </div>
+                    <div class="we-pax-bubble" id="weKontakPaxHint"></div>
                 </div>
                 <div class="we-form-row">
                     <label>Pesan / Catatan Tambahan</label>
@@ -215,12 +247,14 @@ require __DIR__ . '/includes/website-header.php';
     // sudah dihargai per-paket, bukan per-orang - kunci Jumlah Peserta agar tidak salah dikali.
     function weKontakApplyFixedPax() {
         var select = document.getElementById('weKontakPackage');
-        var paxInput = document.getElementById('weKontakPax');
+        var adultInput = document.getElementById('weKontakAdult');
+        var childInput = document.getElementById('weKontakChild');
         var hint = document.getElementById('weKontakPaxHint');
         var opt = select.options[select.selectedIndex];
         if (!opt || !opt.value || opt.value === '0') {
-            paxInput.readOnly = false;
+            adultInput.readOnly = childInput.readOnly = false;
             hint.classList.remove('show');
+            weKontakUpdateTotal();
             return;
         }
         var minPax = parseInt(opt.getAttribute('data-min-pax') || '0', 10);
@@ -229,15 +263,28 @@ require __DIR__ . '/includes/website-header.php';
         var fixedPax = fixedMatch ? parseInt(fixedMatch[1], 10) : (minPax > 0 && minPax === maxPax ? minPax : 0);
 
         if (fixedPax > 0) {
-            paxInput.value = fixedPax;
-            paxInput.readOnly = true;
+            // Total tetap: dewasa + anak harus = fixedPax; kalau belum, semuanya dewasa.
+            if ((parseInt(adultInput.value, 10) || 0) + (parseInt(childInput.value, 10) || 0) !== fixedPax) {
+                adultInput.value = fixedPax;
+                childInput.value = 0;
+            }
+            adultInput.readOnly = childInput.readOnly = true;
             hint.textContent = 'Paket ini untuk grup tetap ' + fixedPax + ' orang, jumlah peserta otomatis mengikuti paket.';
             hint.classList.add('show');
         } else {
-            paxInput.readOnly = false;
+            adultInput.readOnly = childInput.readOnly = false;
             hint.classList.remove('show');
         }
+        weKontakUpdateTotal();
     }
+    function weKontakUpdateTotal() {
+        var a = Math.max(0, parseInt(document.getElementById('weKontakAdult').value, 10) || 0);
+        var c = Math.max(0, parseInt(document.getElementById('weKontakChild').value, 10) || 0);
+        document.getElementById('weKontakTotal').textContent = Math.max(1, a + c);
+    }
+    ['weKontakAdult', 'weKontakChild'].forEach(function(id) {
+        document.getElementById(id).addEventListener('input', weKontakUpdateTotal);
+    });
     document.getElementById('weKontakPackage').addEventListener('change', weKontakApplyFixedPax);
     document.addEventListener('DOMContentLoaded', weKontakApplyFixedPax);
 

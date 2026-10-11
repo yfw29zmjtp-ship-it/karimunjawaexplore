@@ -1674,3 +1674,245 @@ input.we-flatpickr-alt {
   cursor: pointer;
   background: #fff;
 }
+
+/* ========================================================================
+   Dewasa / Anak (form booking & quote bar)
+   ======================================================================== */
+.we-pax-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr 0.8fr;
+  gap: 10px;
+}
+.we-pax-box {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.we-pax-box > span {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--we-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.we-pax-box input {
+  text-align: center;
+  font-weight: 700;
+}
+.we-pax-total {
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  background: var(--we-bg);
+  border: 1px dashed var(--we-border);
+  border-radius: 8px;
+  padding: 6px 8px;
+}
+.we-pax-total strong {
+  font-size: 20px;
+  color: var(--we-brand-dark);
+  line-height: 1.1;
+}
+.we-quotebar {
+  grid-template-columns: 0.75fr 0.8fr 1.3fr auto;
+}
+.we-quotebar-pax {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.we-quotebar-pax input {
+  text-align: center;
+  font-weight: 700;
+}
+
+/* ========================================================================
+   Mobile polish (HP & tablet kecil)
+   - Input & select minimal 16px supaya iOS tidak zoom saat form difokus
+   - Tap target >= 44px, jarak & radius konsisten
+   ======================================================================== */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+@media (max-width: 860px) {
+  input,
+  select,
+  textarea,
+  .we-quotebar-field input,
+  .we-quotebar-field select,
+  .we-quotebar-field-date input,
+  .we-form-row input,
+  .we-form-row select,
+  .we-form-row textarea,
+  .we-chat-input {
+    font-size: 16px !important;
+  }
+  input[type="date"] {
+    min-height: 46px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: #fff;
+  }
+  .we-container {
+    padding: 0 16px;
+  }
+  .we-nav-inner {
+    padding: 10px 0;
+  }
+  .we-logo {
+    font-size: 16px;
+    gap: 8px;
+    min-width: 0;
+  }
+  .we-logo img {
+    height: 34px;
+    width: 34px;
+  }
+  .we-btn,
+  .we-card-btn,
+  .we-form-box button[type="submit"] {
+    min-height: 46px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .we-section {
+    padding-top: 40px;
+    padding-bottom: 40px;
+  }
+  .we-section-title {
+    font-size: 24px;
+  }
+
+  /* Quote bar: kartu rapi, satu kolom, field besar & mudah disentuh */
+  .we-quotebar-wrap {
+    margin: -22px auto 28px;
+    padding: 0 14px;
+  }
+  .we-quotebar {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 16px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.96);
+  }
+  .we-quotebar-field label {
+    font-size: 11px;
+    margin-bottom: 5px;
+  }
+  .we-quotebar-field input,
+  .we-quotebar-field select,
+  .we-quotebar-field-date input {
+    padding: 12px 12px;
+    min-height: 46px;
+    border-radius: 10px;
+  }
+  .we-quotebar-btn {
+    width: 100%;
+    min-height: 48px;
+    font-size: 15px;
+  }
+
+  /* Form kontak */
+  .we-form-box {
+    padding: 20px 16px;
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+  }
+  .we-form-row input,
+  .we-form-row select,
+  .we-form-row textarea {
+    padding: 12px 12px;
+    min-height: 46px;
+    border-radius: 10px;
+  }
+  .we-form-row textarea {
+    min-height: 96px;
+  }
+  .we-form-row label {
+    font-size: 12.5px;
+  }
+  .we-pax-box input {
+    padding: 10px 6px;
+  }
+  .we-pax-bubble {
+    left: 0;
+    right: 0;
+    transform: translateY(4px);
+    max-width: none;
+    min-width: 0;
+  }
+
+  /* Modal kontak: muat di layar kecil, bisa di-scroll */
+  .we-quote-modal {
+    max-height: calc(100vh - 32px);
+    max-height: calc(100dvh - 32px);
+    overflow-y: auto;
+    padding: 22px 18px;
+  }
+
+  /* Menu navigasi mobile */
+  .we-nav-toggle {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    font-size: 22px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .we-nav-links {
+    box-shadow: 0 14px 24px rgba(15, 23, 42, 0.1);
+    padding: 8px 16px 14px;
+    gap: 0;
+  }
+  .we-nav-links a {
+    display: block;
+    width: 100%;
+    padding: 13px 4px;
+    font-size: 15px;
+    border-bottom: 1px solid var(--we-border);
+  }
+  .we-nav-links .we-nav-cta {
+    margin-top: 10px;
+    border-bottom: 0;
+    text-align: center;
+    padding: 13px 18px;
+    border-radius: 10px;
+  }
+  .we-nav-links .we-nav-admin {
+    border-bottom: 0;
+    font-size: 13px;
+  }
+
+  /* Hero */
+  .we-hero {
+    padding: 44px 0 52px;
+  }
+  .we-hero p {
+    font-size: 15px;
+  }
+  .we-hero-actions {
+    flex-direction: column;
+    gap: 10px;
+    padding: 0 6px;
+  }
+  .we-hero-actions .we-btn {
+    width: 100%;
+  }
+
+  /* Tombol chat tidak menutupi konten & aman dari poni/bar bawah */
+  .we-chat-widget {
+    right: 14px;
+    bottom: calc(14px + env(safe-area-inset-bottom));
+  }
+}
+@media (max-width: 380px) {
+  .we-pax-split {
+    grid-template-columns: 1fr 1fr;
+  }
+  .we-pax-total {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    gap: 8px;
+  }
+}

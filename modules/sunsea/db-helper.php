@@ -1170,7 +1170,7 @@ function sunseaSyncManualInvoices(PDO $pdo): void
             sunseaNotifyOwnersPush(
                 'Tagihan Baru dari ADF System',
                 ($item['description'] ?: 'Tagihan tambahan') . ' - ' . sunseaRupiah((float) $item['amount']) . ' (jatuh tempo ' . date('d M Y', strtotime($item['due_date'])) . ')',
-                ['url' => 'subscription-billing.php']
+                ['url' => 'owner-subscription.php']
             );
         }
 
@@ -1256,7 +1256,7 @@ function sunseaGetOrRefreshSubscriptionInvoice(PDO $pdo, string $period): ?array
             sunseaNotifyOwnersPush(
                 'Tagihan Baru dari ADF System',
                 'Tagihan langganan periode ' . $period . ' sebesar ' . sunseaRupiah((float) $newInvoice['total_amount']) . ' jatuh tempo ' . date('d M Y', strtotime($newInvoice['due_date'])) . '.',
-                ['url' => 'subscription-billing.php']
+                ['url' => 'owner-subscription.php']
             );
         }
         return $newInvoice;
@@ -1395,7 +1395,7 @@ function sunseaSyncGuestTopups(PDO $pdo): void
                     sunseaNotifyOwnersPush(
                         'Tagihan Tamu Tambahan',
                         $row['description'] . ' sebesar ' . sunseaRupiah((float) $row['total_amount']) . ', jatuh tempo ' . date('d M Y', strtotime($row['due_date'])) . '.',
-                        ['url' => 'subscription-billing.php']
+                        ['url' => 'owner-subscription.php']
                     );
                 }
             }
@@ -1535,7 +1535,7 @@ function sunseaSyncLedger(PDO $pdo, bool $force = false): bool
                         sunseaNotifyOwnersPush(
                             'Tagihan Baru dari ADF System',
                             ($desc ?: 'Tagihan langganan periode ' . $inv['period']) . ' sebesar ' . sunseaRupiah((float) $inv['total']) . ', jatuh tempo ' . ($dueDate ? date('d M Y', strtotime($dueDate)) : '-') . '.',
-                            ['url' => 'subscription-billing.php']
+                            ['url' => 'owner-subscription.php']
                         );
                     }
                 }
@@ -1609,7 +1609,7 @@ function sunseaReconcilePendingSubscriptionPayment(PDO $pdo, array $invoice): vo
         sunseaNotifyOwnersPush(
             '✅ Pembayaran Berhasil',
             'Tagihan ADF System (' . $label . ') sebesar ' . sunseaRupiah((float) $invoice['total_amount']) . ' sudah lunas.',
-            ['url' => 'subscription-billing.php']
+            ['url' => 'owner-subscription.php']
         );
     }
 }
@@ -1672,7 +1672,7 @@ function sunseaGetSubscriptionReminder(PDO $pdo): ?array
         sunseaNotifyOwnersPush(
             'Tagihan Langganan Terlambat',
             'Tagihan ADF System periode ' . $invoice['period'] . ' (' . sunseaRupiah((float) $invoice['total_amount']) . ') sudah melewati jatuh tempo. Segera bayar ya.',
-            ['url' => 'subscription-billing.php']
+            ['url' => 'owner-subscription.php']
         );
         $pdo->prepare("UPDATE subscription_invoices SET overdue_notified_at = ? WHERE id = ?")
             ->execute([date('Y-m-d'), $invoice['id']]);

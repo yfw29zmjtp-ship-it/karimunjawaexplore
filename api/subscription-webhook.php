@@ -64,7 +64,7 @@ try {
             sunseaNotifyOwnersPush(
                 '✅ Pembayaran Berhasil',
                 'Tagihan ADF System (' . $label . ') sebesar ' . sunseaRupiah((float) $paidInvoice['total_amount']) . ' sudah lunas.',
-                ['url' => 'subscription-billing.php']
+                ['url' => 'owner-subscription.php']
             );
         }
     }

@@ -923,7 +923,7 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
                     </p>
                 <?php endif; ?>
                 <p style="font-size:12px;color:#6b7280;margin-top:10px;">
-                    <a href="<?php echo BASE_URL; ?>/modules/sunsea/subscription-billing.php">Lihat riwayat tagihan lengkap</a>
+                    <a href="<?php echo BASE_URL; ?>/modules/sunsea/owner-subscription.php">Lihat riwayat tagihan lengkap</a>
                 </p>
             </div>
         </div>
@@ -942,8 +942,10 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
                     ⏰ Tagihan langganan <strong><?php echo htmlspecialchars($__label); ?></strong> jatuh tempo dalam <strong><?php echo $__days; ?> hari</strong>
                     — total <strong><?php echo sunseaRupiah((float) $__inv['total_amount']); ?></strong>.
                 </span>
-                <?php if ($__configured): ?>
-                    <form method="POST" action="<?php echo BASE_URL; ?>/modules/sunsea/subscription-billing.php" style="margin:0;">
+                <?php if ($__configured && !sunseaPayWindowOpen($__inv)): ?>
+                    <a href="<?php echo BASE_URL; ?>/modules/sunsea/owner-subscription.php" style="background:#0369A1;color:#fff;border-radius:8px;padding:7px 14px;font-size:12.5px;font-weight:700;text-decoration:none;">Lihat Tagihan</a>
+                <?php elseif ($__configured): ?>
+                    <form method="POST" action="<?php echo BASE_URL; ?>/modules/sunsea/owner-subscription.php" style="margin:0;">
                         <input type="hidden" name="action" value="pay">
                         <input type="hidden" name="period" value="<?php echo htmlspecialchars($__inv['period']); ?>">
                         <button type="submit" style="background:#0369A1;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12.5px;font-weight:700;cursor:pointer;">Bayar Sekarang</button>
@@ -958,7 +960,7 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
                     <p style="font-size:12.5px;color:#6b7280;">Tagihan <strong><?php echo htmlspecialchars($__label); ?></strong> sudah lewat jatuh tempo dan belum dibayar.</p>
                     <div style="font-weight:700;font-size:18px;margin:12px 0;color:#111827;"><?php echo sunseaRupiah((float) $__inv['total_amount']); ?></div>
                     <?php if ($__configured): ?>
-                        <form method="POST" action="<?php echo BASE_URL; ?>/modules/sunsea/subscription-billing.php">
+                        <form method="POST" action="<?php echo BASE_URL; ?>/modules/sunsea/owner-subscription.php">
                             <input type="hidden" name="action" value="pay">
                             <input type="hidden" name="period" value="<?php echo htmlspecialchars($__inv['period']); ?>">
                             <button type="submit" style="background:#0369A1;color:#fff;border:none;border-radius:8px;padding:10px 18px;font-size:13px;font-weight:700;cursor:pointer;width:100%;">💳 Bayar via Pakasir Sekarang</button>

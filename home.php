@@ -4,6 +4,7 @@ require_once __DIR__ . '/includes/website-bootstrap.php';
 require_once __DIR__ . '/includes/website-spam-guard.php';
 sunseaEnsurePackageItemsSchema($pdo);
 sunseaEnsurePackageMediaSchema($pdo);
+sunseaEnsureQuotationItinerarySchema($pdo); // kolom pax_breakdown (dewasa/anak)
 $featuredPackages = $pdo->query(
     "SELECT id, code, name, category, duration_days, duration_nights, base_price, cover_image
      FROM trip_packages WHERE is_active = 1 ORDER BY display_order, id DESC"
@@ -44,9 +45,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['we_action'] ?? '') === 'qu
     $qName = trim($_POST['q_name'] ?? '');
     $qPhone = trim($_POST['q_phone'] ?? '');
     $qDate = trim($_POST['q_trip_date'] ?? '');
-    $qPax = min(100, max(1, (int)($_POST['q_pax'] ?? 1)));
+    // Jumlah peserta = dewasa + anak (form lama yang hanya mengirim 'q_pax' tetap didukung).
+    $qAdult = min(100, max(0, (int)($_POST['q_adult'] ?? 0)));
+    $qChild = min(100, max(0, (int)($_POST['q_child'] ?? 0)));
+    if (isset($_POST['q_adult'])) {
+        if ($qAdult + $qChild < 1) $qAdult = 1;
+        $qPax = min(100, $qAdult + $qChild);
+    } else {
+        $qPax = min(100, max(1, (int)($_POST['q_pax'] ?? 1)));
+        $qAdult = $qPax;
+        $qChild = 0;
+    }
     $qPackageId = (int)($_POST['q_package_id'] ?? 0);
-    $weQuoteOld = ['name' => $qName, 'phone' => $qPhone, 'trip_date' => $qDate, 'pax' => $qPax, 'package_id' => $qPackageId];
+    $weQuoteOld = ['name' => $qName, 'phone' => $qPhone, 'trip_date' => $qDate, 'pax' => $qPax, 'adult' => $qAdult, 'child' => $qChild, 'package_id' => $qPackageId];
 
     if ($qName === '' || $qPhone === '' || $qDate === '' || $qPackageId <= 0) {
         $weQuoteErrorMsg = 'Nama, No. WhatsApp, Tanggal Trip, dan Pilihan Paket wajib diisi.';
@@ -91,7 +102,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['we_action'] ?? '') === 'qu
             if ($qFixedPax > 0) {
                 $qPax = $qFixedPax;
                 $weQuoteOld['pax'] = $qPax;
+                if ($qAdult + $qChild !== $qFixedPax) {
+                    $qAdult = $qFixedPax;
+                    $qChild = 0;
+                }
             }
+            // Rincian dewasa/anak (diskon 0%) supaya form penawaran admin langsung sinkron.
+            $qBreakdownJson = json_encode(array_values(array_filter([
+                $qAdult > 0 ? ['type' => 'dewasa', 'count' => $qAdult, 'percent' => 0, 'discount' => 0] : null,
+                $qChild > 0 ? ['type' => 'anak', 'count' => $qChild, 'percent' => 0, 'discount' => 0] : null,
+            ])));
 
             // Tanggal selesai dihitung otomatis dari durasi paket (mis. 3H2M -> +2 hari) agar
             // admin tidak perlu isi manual di menu Penawaran dan nominal langsung terhitung.
@@ -111,8 +131,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['we_action'] ?? '') === 'qu
             $qNo = sunseaNextNumber($pdo, 'quotation');
             $qNotes = "[Website] Permintaan penawaran cepat.\nPaket: " . $qPackageName;
             $qItinerary = $qPackageRow['itinerary'] ?? '';
-            $pdo->prepare("INSERT INTO quotations (quotation_no, customer_id, package_id, trip_date, trip_end_date, itinerary, pax_count, subtotal, total_amount, notes, valid_until, created_by) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)")
-                ->execute([$qNo, $qCustomerId, $qPackageId, $qDate, $qEndDate, $qItinerary, $qPax, $qSubtotal, $qSubtotal, $qNotes, date('Y-m-d', strtotime('+7 days')), 'website']);
+            $pdo->prepare("INSERT INTO quotations (quotation_no, customer_id, package_id, trip_date, trip_end_date, itinerary, pax_count, pax_breakdown, subtotal, total_amount, notes, valid_until, created_by) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)")
+                ->execute([$qNo, $qCustomerId, $qPackageId, $qDate, $qEndDate, $qItinerary, $qPax, $qBreakdownJson, $qSubtotal, $qSubtotal, $qNotes, date('Y-m-d', strtotime('+7 days')), 'website']);
             $qId = (int)$pdo->lastInsertId();
 
             // Simpan baris item paketnya juga, supaya detail penawaran langsung tampil
@@ -156,9 +176,15 @@ require __DIR__ . '/includes/website-header.php';
                 <label>Tanggal Trip</label>
                 <input type="date" name="q_trip_date" required min="<?php echo date('Y-m-d'); ?>" max="<?php echo date('Y-m-d', strtotime('+2 years')); ?>" value="<?php echo htmlspecialchars($weQuoteOld['trip_date']); ?>">
             </div>
-            <div class="we-quotebar-field">
-                <label>Total Pax</label>
-                <input type="number" name="q_pax" id="weQuotePax" min="1" max="100" required value="<?php echo (int)$weQuoteOld['pax']; ?>">
+            <div class="we-quotebar-field we-quotebar-pax">
+                <div>
+                    <label>Dewasa</label>
+                    <input type="number" name="q_adult" id="weQuoteAdult" inputmode="numeric" min="0" max="100" value="<?php echo (int)($weQuoteOld['adult'] ?? $weQuoteOld['pax']); ?>">
+                </div>
+                <div>
+                    <label>Anak</label>
+                    <input type="number" name="q_child" id="weQuoteChild" inputmode="numeric" min="0" max="100" value="<?php echo (int)($weQuoteOld['child'] ?? 0); ?>">
+                </div>
                 <div class="we-pax-bubble" id="weQuotePaxHint"></div>
             </div>
             <div class="we-quotebar-field">
@@ -212,11 +238,12 @@ require __DIR__ . '/includes/website-header.php';
     // (mis. 4x lipat). Kuncikan Total Pax ke min_pax/max_pax paket saat keduanya sama.
     function weApplyFixedPax() {
         var select = document.getElementById('weQuotePackage');
-        var paxInput = document.getElementById('weQuotePax');
+        var adultInput = document.getElementById('weQuoteAdult');
+        var childInput = document.getElementById('weQuoteChild');
         var hint = document.getElementById('weQuotePaxHint');
         var opt = select.options[select.selectedIndex];
         if (!opt || !opt.value) {
-            paxInput.readOnly = false;
+            adultInput.readOnly = childInput.readOnly = false;
             hint.classList.remove('show');
             return;
         }
@@ -226,12 +253,16 @@ require __DIR__ . '/includes/website-header.php';
         var fixedPax = fixedMatch ? parseInt(fixedMatch[1], 10) : (minPax > 0 && minPax === maxPax ? minPax : 0);
 
         if (fixedPax > 0) {
-            paxInput.value = fixedPax;
-            paxInput.readOnly = true;
+            // Total tetap: dewasa + anak harus = fixedPax; kalau belum, semuanya dewasa.
+            if ((parseInt(adultInput.value, 10) || 0) + (parseInt(childInput.value, 10) || 0) !== fixedPax) {
+                adultInput.value = fixedPax;
+                childInput.value = 0;
+            }
+            adultInput.readOnly = childInput.readOnly = true;
             hint.textContent = 'Paket ini untuk grup tetap ' + fixedPax + ' orang, jumlah pax otomatis mengikuti paket.';
             hint.classList.add('show');
         } else {
-            paxInput.readOnly = false;
+            adultInput.readOnly = childInput.readOnly = false;
             hint.classList.remove('show');
         }
     }
