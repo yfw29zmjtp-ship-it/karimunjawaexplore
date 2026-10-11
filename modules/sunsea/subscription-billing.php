@@ -121,7 +121,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'check
 }
 
 $period = $_GET['period'] ?? date('Y-m');
-if (!preg_match('/^(\d{4}-\d{2}|MANUAL-.+)$/', $period)) {
+if (!preg_match('/^(\d{4}-\d{2}|MANUAL-.+|TOPUP-.+)$/', $period)) {
     $period = date('Y-m');
 }
 
@@ -244,7 +244,7 @@ include 'layout-header.php';
                         <?php foreach ($history as $row): ?>
                             <tr>
                                 <td><?php echo ($row['type'] ?? 'recurring') === 'manual' ? htmlspecialchars($row['description'] ?? 'Tagihan Manual') : htmlspecialchars($row['period']); ?></td>
-                                <td><?php echo ($row['type'] ?? 'recurring') === 'manual' ? '-' : (int) $row['guest_count']; ?></td>
+                                <td><?php echo (($row['type'] ?? 'recurring') === 'manual' && strpos($row['period'], 'TOPUP-') !== 0) ? '-' : (int) $row['guest_count']; ?></td>
                                 <td><?php echo sunseaRupiah((float) $row['total_amount']); ?></td>
                                 <td>
                                     <?php if ($row['status'] === 'paid'): ?>

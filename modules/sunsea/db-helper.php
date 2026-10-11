@@ -1169,12 +1169,13 @@ function sunseaSyncManualInvoices(PDO $pdo): void
 
         // Remove local manual invoices that were deleted on ADF System's side.
         // Only unpaid ones are pruned so paid history stays intact.
-        $stmt = $pdo->query("SELECT period FROM subscription_invoices WHERE type = 'manual' AND status = 'unpaid'");
+        // Hanya tagihan yang berasal dari ADF (MANUAL-<id>); tagihan susulan lokal (TOPUP-...) jangan ikut terhapus.
+        $stmt = $pdo->query("SELECT period FROM subscription_invoices WHERE type = 'manual' AND status = 'unpaid' AND period LIKE 'MANUAL-%'");
         $localPeriods = $stmt->fetchAll(PDO::FETCH_COLUMN);
         $stalePeriods = array_diff($localPeriods, $seenPeriods);
         if (!empty($stalePeriods)) {
             $placeholders = implode(',', array_fill(0, count($stalePeriods), '?'));
-            $pdo->prepare("DELETE FROM subscription_invoices WHERE type = 'manual' AND status = 'unpaid' AND period IN ({$placeholders})")
+            $pdo->prepare("DELETE FROM subscription_invoices WHERE type = 'manual' AND status = 'unpaid' AND period LIKE 'MANUAL-%' AND period IN ({$placeholders})")
                 ->execute(array_values($stalePeriods));
         }
     } catch (Exception $e) {
@@ -1251,8 +1252,145 @@ function sunseaGetOrRefreshSubscriptionInvoice(PDO $pdo, string $period): ?array
         )->execute([$charge['base_fee'], $charge['guest_count'], $charge['per_guest_fee'], $charge['guest_total'], $charge['total_amount'], $dueDate, $period]);
     }
 
+    // Tamu yang masuk setelah invoice periode dibayar (dibekukan) ditagih lewat tagihan susulan.
+    sunseaSyncGuestTopups($pdo);
+
     $stmt->execute([$period]);
     return $stmt->fetch() ?: null;
+}
+
+/** Jatuh tempo tagihan susulan = hari dibuat + sekian hari (lewat jatuh tempo login non-developer diblokir). */
+const SUNSEA_TOPUP_GRACE_DAYS = 14;
+
+/**
+ * Tagihan susulan untuk tamu yang terdaftar SETELAH invoice periodenya lunas.
+ *
+ * Invoice bulanan dibayar di muka lalu dibekukan, jadi booking/pax yang masuk sesudahnya tidak
+ * pernah ditagih. Di sini selisihnya dihitung otomatis: tamu periode itu sekarang (booking
+ * confirmed/ongoing/completed yang mulai di bulan itu) dikurangi tamu yang sudah tertagih
+ * (invoice bulanan + tagihan susulan sebelumnya yang tidak dibatalkan).
+ *   - belum ada selisih            -> tidak ada tindakan
+ *   - selisih > 0, tidak ada yang menunggu bayar -> buat tagihan susulan baru (+ notifikasi)
+ *   - ada tagihan susulan belum dibayar tanpa link bayar -> jumlahnya disesuaikan / dihapus
+ *   - ada tagihan susulan belum dibayar dengan link bayar -> dibiarkan (nominal link sudah tetap);
+ *     sisa selisih ditagih di tagihan susulan berikutnya setelah itu lunas
+ * Tarif per tamu memakai tarif ADF System saat ini. Hanya periode mulai setting
+ * `subscription_topup_from_period` (default: bulan saat fitur pertama jalan) sampai bulan depan.
+ * Tersimpan sebagai type 'manual' dengan period TOPUP-YYYY-MM-N supaya tampil/cetak/dibayar
+ * seperti tagihan manual dan tidak ikut terhapus oleh sinkron tagihan manual ADF.
+ */
+function sunseaSyncGuestTopups(PDO $pdo): void
+{
+    static $ran = false; // cukup sekali per request; fungsi ini dipanggil dari beberapa jalur
+    if ($ran) {
+        return;
+    }
+    $ran = true;
+
+    try {
+        if (sunseaSetting($pdo, 'subscription_client_key', '') === '') {
+            return; // belum tersambung ke ADF System: tarif belum pasti
+        }
+        $cfg = sunseaSubscriptionConfig($pdo);
+        $fee = (float) $cfg['per_guest_fee'];
+        if ($fee <= 0) {
+            return;
+        }
+
+        $fromPeriod = sunseaSetting($pdo, 'subscription_topup_from_period', '');
+        if (!preg_match('/^\d{4}-\d{2}$/', $fromPeriod)) {
+            $fromPeriod = date('Y-m');
+            sunseaSetSetting($pdo, 'subscription_topup_from_period', $fromPeriod);
+        }
+        $toPeriod = date('Y-m', strtotime('first day of next month'));
+
+        $paidStmt = $pdo->prepare(
+            "SELECT period, guest_count FROM subscription_invoices
+             WHERE status = 'paid' AND (type = 'recurring' OR type IS NULL) AND period BETWEEN ? AND ?
+             ORDER BY period"
+        );
+        $paidStmt->execute([$fromPeriod, $toPeriod]);
+
+        foreach ($paidStmt->fetchAll(PDO::FETCH_ASSOC) as $inv) {
+            $period = $inv['period'];
+            if (!preg_match('/^\d{4}-\d{2}$/', $period)) {
+                continue;
+            }
+            $guestsNow = (int) sunseaCalculateSubscriptionCharge($pdo, $period)['guest_count'];
+
+            $topStmt = $pdo->prepare(
+                "SELECT id, period, status, guest_count, txn_id FROM subscription_invoices
+                 WHERE period LIKE ? AND status != 'cancelled' ORDER BY id"
+            );
+            $topStmt->execute(['TOPUP-' . $period . '-%']);
+            $topups = $topStmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $billed = (int) $inv['guest_count'];
+            $pending = null; // tagihan susulan belum dibayar
+            foreach ($topups as $t) {
+                if ($t['status'] === 'paid') {
+                    $billed += (int) $t['guest_count'];
+                } else {
+                    $pending = $t;
+                }
+            }
+
+            if ($pending !== null) {
+                if (!empty($pending['txn_id'])) {
+                    continue; // link bayar sudah dibuat: nominal dikunci
+                }
+                $delta = $guestsNow - $billed;
+                if ($delta <= 0) {
+                    $pdo->prepare("DELETE FROM subscription_invoices WHERE id = ? AND status = 'unpaid'")->execute([$pending['id']]);
+                } elseif ($delta !== (int) $pending['guest_count']) {
+                    $pdo->prepare(
+                        "UPDATE subscription_invoices SET description=?, guest_count=?, per_guest_fee=?, guest_total=?, total_amount=? WHERE id=? AND status='unpaid'"
+                    )->execute([sunseaTopupDescription($period, $delta, $fee), $delta, $fee, $delta * $fee, $delta * $fee, $pending['id']]);
+                }
+                continue;
+            }
+
+            $delta = $guestsNow - $billed;
+            if ($delta <= 0) {
+                continue;
+            }
+
+            $dueDate = date('Y-m-d', strtotime('+' . SUNSEA_TOPUP_GRACE_DAYS . ' days'));
+            $total = $delta * $fee;
+            $created = null;
+            for ($n = count($topups) + 1; $n <= count($topups) + 3 && !$created; $n++) {
+                try {
+                    $pdo->prepare(
+                        "INSERT INTO subscription_invoices (period, type, description, base_fee, guest_count, per_guest_fee, guest_total, total_amount, status, due_date)
+                         VALUES (?, 'manual', ?, 0, ?, ?, ?, ?, 'unpaid', ?)"
+                    )->execute(['TOPUP-' . $period . '-' . $n, sunseaTopupDescription($period, $delta, $fee), $delta, $fee, $total, $total, $dueDate]);
+                    $created = 'TOPUP-' . $period . '-' . $n;
+                } catch (PDOException $e) {
+                    // period sudah ada (request paralel / nomor terpakai): coba nomor berikutnya
+                }
+            }
+            if ($created) {
+                $q = $pdo->prepare("SELECT * FROM subscription_invoices WHERE period = ? LIMIT 1");
+                $q->execute([$created]);
+                $row = $q->fetch(PDO::FETCH_ASSOC);
+                if ($row) {
+                    sunseaNotifyAdfSystemInvoiceCreated($pdo, $row);
+                    sunseaNotifyOwnersPush(
+                        'Tagihan Tamu Tambahan',
+                        $row['description'] . ' sebesar ' . sunseaRupiah((float) $row['total_amount']) . ', jatuh tempo ' . date('d M Y', strtotime($row['due_date'])) . '.',
+                        ['url' => 'subscription-billing.php']
+                    );
+                }
+            }
+        }
+    } catch (Exception $e) {
+        error_log('sunseaSyncGuestTopups error: ' . $e->getMessage());
+    }
+}
+
+function sunseaTopupDescription(string $period, int $guests, float $fee): string
+{
+    return 'Tamu tambahan periode ' . $period . ' (' . $guests . ' tamu × ' . sunseaRupiah($fee) . ')';
 }
 
 /**
