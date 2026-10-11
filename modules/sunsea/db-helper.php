@@ -1420,6 +1420,23 @@ function sunseaTopupDescription(string $period): string
  * @return bool true bila buku tagihan ADF tersedia (maka hitungan lokal tidak dipakai);
  *              false bila belum tersambung / endpoint ADF belum ada (pakai hitungan lokal lama).
  */
+/** Tombol/proses bayar baru dibuka mulai H-3 sebelum jatuh tempo (dan tetap terbuka bila sudah lewat). */
+const SUNSEA_PAY_OPEN_DAYS_BEFORE = 3;
+
+function sunseaPayOpenDate(array $invoice): ?string
+{
+    if (empty($invoice['due_date'])) {
+        return null;
+    }
+    return date('Y-m-d', strtotime($invoice['due_date'] . ' -' . SUNSEA_PAY_OPEN_DAYS_BEFORE . ' days'));
+}
+
+function sunseaPayWindowOpen(array $invoice): bool
+{
+    $open = sunseaPayOpenDate($invoice);
+    return $open === null || date('Y-m-d') >= $open;
+}
+
 function sunseaSyncLedger(PDO $pdo, bool $force = false): bool
 {
     static $result = null;
@@ -1490,7 +1507,12 @@ function sunseaSyncLedger(PDO $pdo, bool $force = false): bool
             $isTopup = ($inv['kind'] ?? '') === 'topup';
             $status = in_array($inv['status'] ?? '', ['unpaid', 'paid', 'cancelled'], true) ? $inv['status'] : 'unpaid';
             $note = trim((string) ($inv['note'] ?? ''));
-            $desc = $isTopup ? sunseaTopupDescription((string) $inv['period']) . ($note !== '' ? ' - ' . $note : '') : ($note !== '' ? $note : null);
+            // Tamu susulan periode sebelumnya (terdaftar setelah invoice bulan itu dibayar) digabung ke jumlah tamu.
+            $carry = (int) ($inv['carry_guests'] ?? 0);
+            $inv['guest_count'] = (int) $inv['guest_count'] + $carry;
+            $carryNote = $carry > 0 ? 'Termasuk ' . $carry . ' tamu susulan periode ' . ($inv['carry_from'] ?? '') : '';
+            $noteAll = trim($carryNote . ($carryNote !== '' && $note !== '' ? ' - ' : '') . $note);
+            $desc = $isTopup ? sunseaTopupDescription((string) $inv['period']) . ($noteAll !== '' ? ' - ' . $noteAll : '') : ($noteAll !== '' ? $noteAll : null);
             $guestTotal = (int) $inv['guest_count'] * (float) $inv['per_guest_fee'];
             $dueDate = !empty($inv['due_date']) ? $inv['due_date'] : null;
             $paidAt = !empty($inv['paid_at']) ? date('Y-m-d H:i:s', strtotime($inv['paid_at'])) : null;

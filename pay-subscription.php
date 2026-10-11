@@ -21,6 +21,12 @@ if (!$reminder || empty($reminder['invoice']) || $reminder['invoice']['status'] 
 
 $invoice = $reminder['invoice'];
 
+// Tombol/link bayar baru dibuka mulai H-3 jatuh tempo.
+if (!sunseaPayWindowOpen($invoice)) {
+    header('Location: login.php');
+    exit;
+}
+
 if (!sunseaSubscriptionIsConfigured($cfg)) {
     header('Location: login.php?pay_error=1');
     exit;

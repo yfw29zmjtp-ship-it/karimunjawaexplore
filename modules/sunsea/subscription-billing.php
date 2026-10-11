@@ -73,6 +73,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'pay')
     if (!$invoice || $invoice['status'] !== 'unpaid') {
         $_SESSION['flash_message'] = 'Tagihan tidak ditemukan atau sudah tidak berstatus unpaid.';
         $_SESSION['flash_type'] = 'error';
+    } elseif (!sunseaPayWindowOpen($invoice)) {
+        $_SESSION['flash_message'] = 'Pembayaran dibuka mulai ' . date('d M Y', strtotime(sunseaPayOpenDate($invoice))) . ' (H-' . SUNSEA_PAY_OPEN_DAYS_BEFORE . ' jatuh tempo).';
+        $_SESSION['flash_type'] = 'error';
     } elseif (!sunseaSubscriptionIsConfigured($cfg)) {
         $_SESSION['flash_message'] = 'Pengaturan Pakasir belum diisi. Lengkapi dulu di bagian Pengaturan di bawah.';
         $_SESSION['flash_type'] = 'error';
@@ -234,7 +237,11 @@ include 'layout-header.php';
                 <?php endif; ?>
                 <?php if ($invoice['status'] === 'unpaid'): ?>
                     <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;">
-                        <?php if (!$configured): ?>
+                        <?php if (!sunseaPayWindowOpen($invoice)): ?>
+                            <div style="font-size:13px;color:var(--ss-muted);background:var(--ss-gray-1);border:1px dashed var(--ss-gray-2);border-radius:10px;padding:10px 14px;">
+                                Tombol bayar muncul mulai <strong><?php echo htmlspecialchars(date('d M Y', strtotime(sunseaPayOpenDate($invoice)))); ?></strong> (H-<?php echo SUNSEA_PAY_OPEN_DAYS_BEFORE; ?> jatuh tempo). Tamu yang terdaftar setelah tagihan ini dibayar otomatis ditagihkan di bulan berikutnya.
+                            </div>
+                        <?php elseif (!$configured): ?>
                             <p style="color:#dc2626;font-size:13px;">Pengaturan Pakasir belum lengkap — isi dulu di panel Pengaturan.</p>
                         <?php else: ?>
                             <form method="POST">
