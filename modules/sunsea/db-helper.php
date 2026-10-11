@@ -1320,7 +1320,7 @@ function sunseaSyncGuestTopups(PDO $pdo): void
 
             $topStmt = $pdo->prepare(
                 "SELECT id, period, status, guest_count, base_fee, txn_id FROM subscription_invoices
-                 WHERE period LIKE ? AND status != 'cancelled' ORDER BY id"
+                 WHERE period LIKE ? ORDER BY id"
             );
             $topStmt->execute(['TOPUP-' . $period . '-%']);
             $topups = $topStmt->fetchAll(PDO::FETCH_ASSOC);
@@ -1329,7 +1329,7 @@ function sunseaSyncGuestTopups(PDO $pdo): void
             $baseBilled = (float) $inv['base_fee'];
             $pending = null; // tagihan susulan belum dibayar
             foreach ($topups as $t) {
-                if ($t['status'] === 'paid') {
+                if ($t['status'] === 'paid' || $t['status'] === 'cancelled') { // dibatalkan = dibebaskan, tidak ditagih ulang
                     $billed += (int) $t['guest_count'];
                     $baseBilled += (float) $t['base_fee'];
                 } else {

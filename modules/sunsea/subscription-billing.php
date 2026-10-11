@@ -120,6 +120,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'check
     exit;
 }
 
+// ---- Batalkan tagihan susulan (TOPUP-...) yang belum dibayar: dianggap dibebaskan, tidak dibuat ulang ----
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'cancel_topup') {
+    $cancelPeriod = trim($_POST['period'] ?? '');
+    if (strpos($cancelPeriod, 'TOPUP-') === 0) {
+        $upd = $pdo->prepare("UPDATE subscription_invoices SET status='cancelled' WHERE period = ? AND status = 'unpaid'");
+        $upd->execute([$cancelPeriod]);
+        $_SESSION['flash_message'] = $upd->rowCount() ? 'Tagihan susulan dibatalkan.' : 'Tagihan tidak ditemukan atau sudah tidak berstatus belum dibayar.';
+        $_SESSION['flash_type'] = $upd->rowCount() ? 'success' : 'error';
+    }
+    header('Location: subscription-billing.php?period=' . urlencode($cancelPeriod));
+    exit;
+}
+
 $period = $_GET['period'] ?? date('Y-m');
 if (!preg_match('/^(\d{4}-\d{2}|MANUAL-.+|TOPUP-.+)$/', $period)) {
     $period = date('Y-m');
@@ -208,6 +221,13 @@ include 'layout-header.php';
                     <?php endif; ?>
                 </div>
 
+                <?php if ($invoice['status'] === 'unpaid' && strpos((string) $invoice['period'], 'TOPUP-') === 0): ?>
+                    <form method="POST" style="margin-top:12px;" onsubmit="return confirm('Batalkan tagihan susulan ini? Tamu & biaya di dalamnya dianggap dibebaskan dan tidak akan ditagih ulang.');">
+                        <input type="hidden" name="action" value="cancel_topup">
+                        <input type="hidden" name="period" value="<?php echo htmlspecialchars($invoice['period']); ?>">
+                        <button type="submit" class="ss-btn ss-btn-outline ss-btn-sm" style="color:#dc2626;border-color:#dc2626;"><i data-feather="x-circle"></i> Batalkan Tagihan Susulan</button>
+                    </form>
+                <?php endif; ?>
                 <?php if ($invoice['status'] === 'unpaid'): ?>
                     <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;">
                         <?php if (!$configured): ?>
