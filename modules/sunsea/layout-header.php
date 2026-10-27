@@ -1559,26 +1559,69 @@ if (empty($sunseaNavItemsVisible)) {
             ?>
             <div class="ss-topbar-actions">
                 <span class="ss-badge ss-badge-ocean" id="ssLiveClock">🕒 --:--:--</span>
-                <?php if ($subscriptionStatusInvoice && !($subscriptionReminder['overdue'] ?? false)):
-                    $__daysLeft = $subscriptionReminder['days_left'] ?? 99;
-                    if ($__daysLeft <= 1) {
-                        $__subState = 'red';
-                        $__subText = 'Tagihan jatuh tempo, segera bayar';
-                    } elseif ($__daysLeft <= 7) {
-                        $__subState = 'yellow';
-                        $__subText = 'Tagihan bisa dibayar';
-                    } else {
-                        $__subState = 'green';
-                        $__subText = '';
+                <?php
+                // Chip langganan (sama dengan sistem ADF lain): hijau "Subscribe Pro s/d …" → mulai H-7 kuning
+                // "Tagihan belum dibayar · Rp … · Bayar" → hari H / lewat jatuh tempo merah. Tagihan manual selalu dihitung.
+                $__dueBills = [];
+                if (isset($pdo) && ($subscriptionStatusInvoice !== null || !empty($subscriptionReminder))) {
+                    try {
+                        $__q = $pdo->prepare("SELECT * FROM subscription_invoices WHERE status = 'unpaid' AND due_date IS NOT NULL AND (type = 'manual' OR due_date <= ?) ORDER BY due_date");
+                        $__q->execute([date('Y-m-d', strtotime('+7 days'))]);
+                        $__dueBills = $__q->fetchAll(PDO::FETCH_ASSOC);
+                    } catch (Exception $e) {
                     }
+                }
                 ?>
-                    <button type="button" class="ss-sub-status" onclick="document.getElementById('ssSubStatusModal').style.display='flex'" title="Aktif sampai <?php echo htmlspecialchars(date('d M Y', strtotime($subscriptionStatusInvoice['due_date']))); ?>">
-                        <span class="ss-sub-status-dot ss-sub-status-dot-<?php echo $__subState; ?>"></span>
-                        <?php if ($__subText): ?>
-                            <span class="ss-sub-status-text ss-sub-status-text-<?php echo $__subState; ?>"><?php echo htmlspecialchars($__subText); ?></span>
+                <?php if ($__dueBills):
+                    $__first = $__dueBills[0];
+                    $__dDays = (int) ceil((strtotime($__first['due_date']) - strtotime(date('Y-m-d'))) / 86400);
+                    $__red = $__dDays <= 0;
+                    $__canPay = $subscriptionCfg && sunseaSubscriptionIsConfigured($subscriptionCfg) && sunseaPayWindowOpen($__first);
+                ?>
+                    <form method="POST" action="<?php echo BASE_URL; ?>/modules/sunsea/subscription-billing.php" class="ss-subpill <?php echo $__red ? 'ss-subpill-red' : 'ss-subpill-amber'; ?>" title="Tagihan langganan ADF System belum dibayar">
+                        <input type="hidden" name="action" value="pay">
+                        <input type="hidden" name="period" value="<?php echo htmlspecialchars($__first['period']); ?>">
+                        <span class="ss-subpill-dot"></span>
+                        <span class="ss-subpill-text">
+                            <small><?php echo $__dDays < 0 ? 'Tagihan lewat jatuh tempo' : ($__dDays === 0 ? 'Jatuh tempo hari ini' : 'Tagihan belum dibayar · ' . date('d M', strtotime($__first['due_date']))); ?></small>
+                            <strong><?php echo sunseaRupiah(array_sum(array_map(static fn ($b) => (float) $b['total_amount'], $__dueBills))); ?></strong>
+                        </span>
+                        <?php if ($__canPay): ?>
+                            <button type="submit" class="ss-subpill-cta">Bayar</button>
+                        <?php else: ?>
+                            <a class="ss-subpill-cta" href="<?php echo BASE_URL; ?>/modules/sunsea/subscription-billing.php">Lihat</a>
                         <?php endif; ?>
+                    </form>
+                <?php elseif ($subscriptionStatusInvoice): ?>
+                    <button type="button" class="ss-subpill ss-subpill-green" onclick="document.getElementById('ssSubStatusModal').style.display='flex'" title="Langganan ADF System aktif">
+                        <span class="ss-subpill-dot"></span>
+                        <span class="ss-subpill-text">
+                            <small>Subscribe Pro</small>
+                            <strong>s/d <?php echo htmlspecialchars(date('d M Y', strtotime($subscriptionStatusInvoice['due_date']))); ?></strong>
+                        </span>
                     </button>
                 <?php endif; ?>
+                <style>
+                    .ss-subpill { display: inline-flex; align-items: center; gap: 8px; margin: 0; padding: 5px 6px 5px 10px; border-radius: 10px; border: 1px solid; white-space: nowrap; font-family: inherit; cursor: pointer; text-align: left; }
+                    .ss-subpill-green { background: #f0fdf4; border-color: #86efac; padding-right: 10px; }
+                    .ss-subpill-amber { background: #fffbeb; border-color: #fcd34d; }
+                    .ss-subpill-red { background: #fef2f2; border-color: #fca5a5; }
+                    .ss-subpill-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+                    .ss-subpill-green .ss-subpill-dot { background: #16a34a; }
+                    .ss-subpill-amber .ss-subpill-dot { background: #f59e0b; animation: ssSubPulse 1.6s infinite; }
+                    .ss-subpill-red .ss-subpill-dot { background: #dc2626; animation: ssSubPulse 1.2s infinite; }
+                    .ss-subpill-text { display: flex; flex-direction: column; line-height: 1.15; }
+                    .ss-subpill-text small { font-size: 10px; font-weight: 600; }
+                    .ss-subpill-text strong { font-size: 12.5px; }
+                    .ss-subpill-green small { color: #16a34a; } .ss-subpill-green strong { color: #15803d; }
+                    .ss-subpill-amber small { color: #b45309; } .ss-subpill-amber strong { color: #92400e; }
+                    .ss-subpill-red small { color: #dc2626; } .ss-subpill-red strong { color: #991b1b; }
+                    .ss-subpill-cta { border: 0; border-radius: 7px; padding: 5px 10px; font-size: 11.5px; font-weight: 700; color: #fff; text-decoration: none; cursor: pointer; font-family: inherit; }
+                    .ss-subpill-amber .ss-subpill-cta { background: #f59e0b; }
+                    .ss-subpill-red .ss-subpill-cta { background: #dc2626; }
+                    @keyframes ssSubPulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+                    @media (max-width: 640px) { .ss-subpill-text small { display: none; } }
+                </style>
                 <span class="ss-badge ss-badge-ocean">🌊 Karimunjawa Explore</span>
                 <a href="<?php echo BASE_URL; ?>/logout.php" style="color:var(--ss-muted);text-decoration:none;font-size:12px;">
                     <i data-feather="log-out" style="width:15px;height:15px;vertical-align:middle;"></i>
