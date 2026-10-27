@@ -81,9 +81,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'pay')
         $_SESSION['flash_type'] = 'error';
     } else {
         $orderId = 'SUB' . str_replace('-', '', $period) . strtoupper(bin2hex(random_bytes(3)));
-        $result = sunseaPakasirCreatePaymentLink($cfg, $orderId, (int) round((float) $invoice['total_amount']));
+        $result = sunseaCreatePaymentLink($pdo, $cfg, $invoice, $orderId);
         if ($result === null) {
-            $_SESSION['flash_message'] = 'Gagal membuat link pembayaran ke Pakasir. Cek slug/API Key.';
+            $_SESSION['flash_message'] = 'Gagal membuat link pembayaran. Coba lagi sebentar atau hubungi ADF System.';
             $_SESSION['flash_type'] = 'error';
         } else {
             $pdo->prepare("UPDATE subscription_invoices SET order_id=?, txn_id=?, payment_link=? WHERE period=?")

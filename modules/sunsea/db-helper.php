@@ -1046,12 +1046,72 @@ function sunseaSubscriptionConfig(PDO $pdo): array
         'provider_email' => sunseaSetting($pdo, 'subscription_provider_email', ''),
         'last_sync_at' => sunseaSetting($pdo, 'subscription_last_sync_at', ''),
         'last_sync_error' => sunseaSetting($pdo, 'subscription_last_sync_error', ''),
+        // 'console' = bayar lewat ADF Console (Mayar), dikirim oleh subscription-config Console; selain itu Pakasir lama
+        'payment_gateway' => sunseaSetting($pdo, 'subscription_payment_gateway', 'pakasir'),
     ];
 }
 
 function sunseaSubscriptionIsConfigured(array $cfg): bool
 {
+    if (($cfg['payment_gateway'] ?? '') === 'console') {
+        return true;
+    }
     return $cfg['pakasir_slug'] !== '' && $cfg['pakasir_api_key'] !== '';
+}
+
+/**
+ * Link bayar untuk satu tagihan: lewat ADF Console (Mayar, jumlah ditentukan Console) bila payment_gateway = console,
+ * selain itu Pakasir lama. Return ['txn_id' => ?string, 'payment_link' => string] atau null.
+ * Pembayaran lewat Console ikut lunas di sini lewat paid_periods saat sinkron (sunseaSyncSubscriptionConfig).
+ */
+function sunseaCreatePaymentLink(PDO $pdo, array $cfg, array $invoice, string $orderId): ?array
+{
+    if (($cfg['payment_gateway'] ?? '') !== 'console') {
+        return sunseaPakasirCreatePaymentLink($cfg, $orderId, (int) round((float) $invoice['total_amount']));
+    }
+    $syncUrl = sunseaSetting($pdo, 'subscription_sync_url', 'https://adfsystem.store/api/subscription-config.php');
+    $ch = curl_init(str_replace('subscription-config.php', 'subscription-pay.php', $syncUrl));
+    curl_setopt_array($ch, [
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => json_encode([
+            'client_key' => sunseaSetting($pdo, 'subscription_client_key', ''),
+            'client_token' => sunseaSetting($pdo, 'subscription_client_token', ''),
+            'period' => (string) $invoice['period'],
+            'description' => (string) ($invoice['description'] ?: 'Langganan ' . $invoice['period']),
+        ]),
+        CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT => 30,
+        CURLOPT_SSL_VERIFYPEER => true,
+    ]);
+    $response = curl_exec($ch);
+    curl_close($ch);
+    $data = json_decode((string) $response, true);
+    if (empty($data['payment_url'])) {
+        error_log('sunseaCreatePaymentLink (console): ' . ($data['error'] ?? 'tidak ada respons'));
+        return null;
+    }
+    return ['txn_id' => null, 'payment_link' => (string) $data['payment_url']];
+}
+
+/** Tagihan yang sudah lunas di ADF Console (dibayar online / ditandai lunas admin) → ikut lunas di sini. */
+function sunseaApplyPaidPeriods(PDO $pdo, array $periods): void
+{
+    $find = $pdo->prepare("SELECT * FROM subscription_invoices WHERE period = ? AND status = 'unpaid' LIMIT 1");
+    $upd = $pdo->prepare("UPDATE subscription_invoices SET status = 'paid', paid_at = NOW() WHERE id = ? AND status = 'unpaid'");
+    foreach ($periods as $period) {
+        $find->execute([(string) $period]);
+        $inv = $find->fetch(PDO::FETCH_ASSOC);
+        if (!$inv) {
+            continue;
+        }
+        $upd->execute([$inv['id']]);
+        sunseaNotifyOwnersPush(
+            'Pembayaran Berhasil',
+            'Tagihan ADF System (' . ($inv['description'] ?: $inv['period']) . ') sebesar ' . sunseaRupiah((float) $inv['total_amount']) . ' sudah lunas.',
+            ['url' => 'owner-subscription.php']
+        );
+    }
 }
 
 /**
@@ -1108,8 +1168,12 @@ function sunseaSyncSubscriptionConfig(PDO $pdo): array
     sunseaSetSetting($pdo, 'subscription_provider_logo', (string) ($data['provider_logo'] ?? ''));
     sunseaSetSetting($pdo, 'subscription_provider_address', (string) ($data['provider_address'] ?? ''));
     sunseaSetSetting($pdo, 'subscription_provider_email', (string) ($data['provider_email'] ?? ''));
+    sunseaSetSetting($pdo, 'subscription_payment_gateway', (string) ($data['payment_gateway'] ?? 'pakasir'));
     sunseaSetSetting($pdo, 'subscription_last_sync_at', date('c'));
     sunseaSyncLedger($pdo, true); // tarif/tagihan dari ADF Store ikut disegarkan
+    if (!empty($data['paid_periods']) && is_array($data['paid_periods'])) {
+        sunseaApplyPaidPeriods($pdo, $data['paid_periods']); // sebelum sinkron tagihan manual, supaya yang lunas tidak dihapus
+    }
     sunseaSetSetting($pdo, 'subscription_last_sync_error', '');
 
     return sunseaSubscriptionConfig($pdo);
@@ -1433,6 +1497,10 @@ function sunseaPayOpenDate(array $invoice): ?string
 
 function sunseaPayWindowOpen(array $invoice): bool
 {
+    // Tagihan manual dari ADF Console boleh langsung dibayar, tidak menunggu H-3
+    if (($invoice['type'] ?? 'recurring') === 'manual') {
+        return true;
+    }
     $open = sunseaPayOpenDate($invoice);
     return $open === null || date('Y-m-d') >= $open;
 }
@@ -1653,17 +1721,26 @@ function sunseaGetNearestUnpaidSubscriptionInvoice(PDO $pdo, bool $recurringOnly
 /**
  * Find the nearest unpaid invoice whose due date is within 7 days (or already
  * passed) so the topbar can show a "pay now" reminder banner. Returns null
- * when nothing is due soon.
+ * when nothing is due soon. Tagihan manual dari ADF Console yang belum lunas
+ * selalu didahulukan & ditampilkan berapa pun sisa harinya (bisa langsung dibayar).
  */
 function sunseaGetSubscriptionReminder(PDO $pdo): ?array
 {
-    $invoice = sunseaGetNearestUnpaidSubscriptionInvoice($pdo);
+    $invoice = null;
+    try {
+        $invoice = $pdo->query("SELECT * FROM subscription_invoices WHERE status = 'unpaid' AND type = 'manual' AND due_date IS NOT NULL ORDER BY due_date ASC LIMIT 1")->fetch() ?: null;
+    } catch (Exception $e) {
+    }
+    $isManual = $invoice !== null;
+    if (!$invoice) {
+        $invoice = sunseaGetNearestUnpaidSubscriptionInvoice($pdo);
+    }
     if (!$invoice) {
         return null;
     }
 
     $daysLeft = (int) ceil((strtotime($invoice['due_date']) - strtotime(date('Y-m-d'))) / 86400);
-    if ($daysLeft > 7) {
+    if ($daysLeft > 7 && !$isManual) {
         return null;
     }
 
