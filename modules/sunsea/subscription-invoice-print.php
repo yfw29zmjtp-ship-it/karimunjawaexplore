@@ -1,6 +1,6 @@
 <?php
 
-/** Printable receipt for a paid subscription invoice (system billing from ADF System). */
+/** Invoice tagihan langganan ADF System: lunas = kuitansi (cetak otomatis), belum dibayar = invoice tagihan (bisa dilihat kapan saja). */
 define('APP_ACCESS', true);
 require_once '../../config/config.php';
 require_once '../../config/database.php';
@@ -20,7 +20,7 @@ $pdo = getSunseaConnection();
 sunseaEnsureSubscriptionBillingSchema($pdo);
 
 $period = trim($_GET['period'] ?? '');
-$stmt = $pdo->prepare("SELECT * FROM subscription_invoices WHERE period = ? AND status = 'paid' LIMIT 1");
+$stmt = $pdo->prepare("SELECT * FROM subscription_invoices WHERE period = ? AND status IN ('paid', 'unpaid') LIMIT 1");
 $stmt->execute([$period]);
 $invoice = $stmt->fetch();
 
@@ -32,7 +32,7 @@ if (!$invoice) {
 $cfg = sunseaSubscriptionConfig($pdo);
 $companyName = $cfg['provider_name'] !== '' ? $cfg['provider_name'] : 'ADF System';
 $companyAddress = $cfg['provider_address'];
-$logoSrc = $cfg['provider_logo'];
+$logoSrc = $cfg['provider_logo']; $isPaid = $invoice['status'] === 'paid';
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -97,6 +97,17 @@ $logoSrc = $cfg['provider_logo'];
         .sub {
             font-size: 12px;
             color: #64748B;
+            margin-bottom: 20px;
+        }
+
+        .unpaid-badge {
+            display: inline-block;
+            background: #FEF3C7;
+            color: #92400E;
+            font-weight: 700;
+            font-size: 11px;
+            padding: 3px 10px;
+            border-radius: 20px;
             margin-bottom: 20px;
         }
 
@@ -182,7 +193,7 @@ $logoSrc = $cfg['provider_logo'];
     </style>
 </head>
 
-<body onload="window.print()">
+<body<?php echo $isPaid ? ' onload="window.print()"' : ''; ?>>
     <div class="print-bar">
         <button onclick="window.print()">Cetak / Simpan PDF</button>
     </div>
@@ -195,14 +206,14 @@ $logoSrc = $cfg['provider_logo'];
             </div>
         </div>
 
-        <h1>Invoice Pembayaran Langganan System</h1>
+        <h1><?php echo $isPaid ? 'Invoice Pembayaran Langganan System' : 'Invoice Tagihan Langganan System'; ?></h1>
         <?php if (($invoice['type'] ?? 'recurring') === 'manual'): ?>
             <div class="sub"><?php echo htmlspecialchars($invoice['description'] ?: 'Tagihan Manual'); ?></div>
         <?php else: ?>
             <div class="sub">Periode <?php echo htmlspecialchars($invoice['period']); ?></div>
         <?php endif; ?>
         <div class="sub">Ditagihkan kepada: <strong><?php echo htmlspecialchars($cfg['client_name'] !== '' ? $cfg['client_name'] : sunseaSetting($pdo, 'company_name', 'Klien')); ?></strong></div>
-        <span class="paid-badge">✓ LUNAS</span>
+        <?php if ($isPaid): ?><span class="paid-badge">✓ LUNAS</span><?php else: ?><span class="unpaid-badge">BELUM DIBAYAR</span><?php endif; ?>
 
         <table>
             <?php if (($invoice['type'] ?? 'recurring') === 'manual' && strpos((string) $invoice['period'], 'TOPUP-') !== 0): ?>
@@ -224,7 +235,7 @@ $logoSrc = $cfg['provider_logo'];
             <tr class="muted"><td>Penyesuaian</td><td style="text-align:right;"><?php echo ($__adj < 0 ? '-' : '') . sunseaRupiah(abs($__adj)); ?></td></tr>
             <?php endif; } ?>
             <tr class="total">
-                <td>Total Dibayar</td>
+                <td><?php echo $isPaid ? 'Total Dibayar' : 'Total Tagihan'; ?></td>
                 <td style="text-align:right;"><?php echo sunseaRupiah((float) $invoice['total_amount']); ?></td>
             </tr>
         </table>
@@ -236,7 +247,7 @@ $logoSrc = $cfg['provider_logo'];
 <?php if (!empty($invoice['txn_id'])): ?>No. Transaksi Pakasir: <?php echo htmlspecialchars($invoice['txn_id']); ?><?php endif; ?>
         </div>
 
-        <div class="thanks">Terima kasih atas pembayaran tepat waktu.</div>
+        <div class="thanks"><?php echo $isPaid ? 'Terima kasih atas pembayaran tepat waktu.' : 'Mohon lakukan pembayaran sebelum jatuh tempo.' . (sunseaPayWindowOpen($invoice) ? '' : ' Tombol bayar dibuka mulai ' . date('d M Y', strtotime(sunseaPayOpenDate($invoice))) . '.'); ?></div>
     </div>
 </body>
 

@@ -241,6 +241,7 @@ include 'layout-header.php';
                             <div style="font-size:13px;color:var(--ss-muted);background:var(--ss-gray-1);border:1px dashed var(--ss-gray-2);border-radius:10px;padding:10px 14px;">
                                 Tombol bayar muncul mulai <strong><?php echo htmlspecialchars(date('d M Y', strtotime(sunseaPayOpenDate($invoice)))); ?></strong> (H-<?php echo SUNSEA_PAY_OPEN_DAYS_BEFORE; ?> jatuh tempo). Tamu yang terdaftar setelah tagihan ini dibayar otomatis ditagihkan di bulan berikutnya.
                             </div>
+                            <a href="subscription-invoice-print.php?period=<?php echo urlencode($invoice['period']); ?>" target="_blank" class="ss-btn ss-btn-outline"><i data-feather="file-text"></i> Lihat Invoice</a>
                         <?php elseif (!$configured): ?>
                             <p style="color:#dc2626;font-size:13px;">Pengaturan Pakasir belum lengkap — isi dulu di panel Pengaturan.</p>
                         <?php else: ?>
@@ -290,7 +291,14 @@ include 'layout-header.php';
                                         <span class="ss-status ss-status-partial">Belum Dibayar</span>
                                     <?php endif; ?>
                                 </td>
-                                <td><a href="subscription-billing.php?period=<?php echo urlencode($row['period']); ?>" class="ss-btn ss-btn-outline ss-btn-sm">Lihat</a></td>
+                                <td>
+                                    <?php if (in_array($row['status'], ['paid', 'unpaid'], true)): ?>
+                                        <!-- Invoice bisa dilihat kapan saja (belum dibayar = invoice tagihan, lunas = kuitansi) -->
+                                        <a href="subscription-invoice-print.php?period=<?php echo urlencode($row['period']); ?>" target="_blank" class="ss-btn ss-btn-outline ss-btn-sm">Lihat</a>
+                                    <?php else: ?>
+                                        <a href="subscription-billing.php?period=<?php echo urlencode($row['period']); ?>" class="ss-btn ss-btn-outline ss-btn-sm">Lihat</a>
+                                    <?php endif; ?>
+                                </td>
                             </tr>
                         <?php endforeach; ?>
                         <?php if (empty($history)): ?>
