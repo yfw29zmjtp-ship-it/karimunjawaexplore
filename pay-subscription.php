@@ -33,7 +33,7 @@ if (!sunseaSubscriptionIsConfigured($cfg)) {
 }
 
 $orderId = 'SUB' . str_replace('-', '', $invoice['period']) . strtoupper(bin2hex(random_bytes(3)));
-$result = sunseaCreatePaymentLink($pdo, $cfg, $invoice, $orderId);
+$result = sunseaCreatePaymentLink($pdo, $cfg, $invoice, $orderId, sunseaPaidReturnUrl('dashboard.php', $invoice['period']));
 
 if ($result === null) {
     header('Location: login.php?pay_error=1');

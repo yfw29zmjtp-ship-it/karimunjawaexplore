@@ -1064,7 +1064,7 @@ function sunseaSubscriptionIsConfigured(array $cfg): bool
  * selain itu Pakasir lama. Return ['txn_id' => ?string, 'payment_link' => string] atau null.
  * Pembayaran lewat Console ikut lunas di sini lewat paid_periods saat sinkron (sunseaSyncSubscriptionConfig).
  */
-function sunseaCreatePaymentLink(PDO $pdo, array $cfg, array $invoice, string $orderId): ?array
+function sunseaCreatePaymentLink(PDO $pdo, array $cfg, array $invoice, string $orderId, string $backUrl = ''): ?array
 {
     if (($cfg['payment_gateway'] ?? '') !== 'console') {
         return sunseaPakasirCreatePaymentLink($cfg, $orderId, (int) round((float) $invoice['total_amount']));
@@ -1091,7 +1091,12 @@ function sunseaCreatePaymentLink(PDO $pdo, array $cfg, array $invoice, string $o
         error_log('sunseaCreatePaymentLink (console): ' . ($data['error'] ?? 'tidak ada respons'));
         return null;
     }
-    return ['txn_id' => null, 'payment_link' => (string) $data['payment_url']];
+    $url = (string) $data['payment_url'];
+    // Halaman bayar ADF: tombol "Kembali" setelah lunas menuju dashboard sistem ini (popup berhasil)
+    if ($backUrl !== '' && strpos($url, '/bayar.php?t=') !== false) {
+        $url .= '&back=' . rawurlencode($backUrl);
+    }
+    return ['txn_id' => null, 'payment_link' => $url];
 }
 
 /** Tagihan yang sudah lunas di ADF Console (dibayar online / ditandai lunas admin) → ikut lunas di sini. */
@@ -2245,4 +2250,108 @@ function sunseaNotifyOwnersPush(string $title, string $body, array $data = []): 
     } catch (Throwable $e) {
         error_log('sunseaNotifyOwnersPush error: ' . $e->getMessage());
     }
+}
+
+/**
+ * Alamat kembali setelah bayar di halaman ADF Console (&back=…): dashboard sistem ini + ?sub_paid=<tagihan>,
+ * supaya dashboard langsung sinkron & menampilkan popup "Pembayaran berhasil".
+ */
+function sunseaPaidReturnUrl(string $page, string $period): string
+{
+    return BASE_URL . '/modules/sunsea/' . $page . '?sub_paid=' . rawurlencode($period);
+}
+
+/**
+ * Popup tagihan langganan (sama dengan sistem ADF lain): ikon, judul sesuai sisa hari, rincian, "Bayar Sekarang"
+ * dan "Nanti saja" (disembunyikan sampai browser ditutup). $payAction = halaman yang menerima POST action=pay.
+ */
+function sunseaRenderBillPopup(array $reminder, bool $configured, string $payAction): void
+{
+    $inv = $reminder['invoice'];
+    $days = (int) $reminder['days_left'];
+    $isManual = ($inv['type'] ?? 'recurring') === 'manual';
+    $label = $isManual ? ($inv['description'] ?: 'Tagihan Manual') : ('Langganan periode ' . $inv['period']);
+    $title = $isManual && $days > 7 ? 'Tagihan Baru dari ADF System'
+        : ($days === 0 ? 'Tagihan Jatuh Tempo Hari Ini' : ($days > 0 ? 'Tagihan Jatuh Tempo ' . $days . ' Hari Lagi' : 'Tagihan Lewat Jatuh Tempo'));
+    $canPay = $configured && sunseaPayWindowOpen($inv);
+    $key = 'ssBillLater_' . preg_replace('/[^A-Za-z0-9_-]/', '', (string) $inv['period']);
+    ?>
+    <div class="ss-billpop" id="ssBillPop" style="display:none">
+        <div class="ss-billpop-box">
+            <div class="ss-billpop-ico">🧾</div>
+            <h3><?php echo htmlspecialchars($title); ?></h3>
+            <p>Segera selesaikan pembayaran langganan agar sistem tetap bisa digunakan tanpa gangguan.</p>
+            <div class="ss-billpop-bill">
+                <?php echo htmlspecialchars($label); ?> · <strong><?php echo sunseaRupiah((float) $inv['total_amount']); ?></strong>
+                <?php if (!empty($inv['due_date'])): ?> · jatuh tempo <?php echo htmlspecialchars(date('d M Y', strtotime($inv['due_date']))); ?><?php endif; ?>
+            </div>
+            <?php if ($canPay): ?>
+                <form method="POST" action="<?php echo htmlspecialchars($payAction); ?>" style="margin:0">
+                    <input type="hidden" name="action" value="pay">
+                    <input type="hidden" name="period" value="<?php echo htmlspecialchars($inv['period']); ?>">
+                    <button type="submit" class="ss-billpop-btn">Bayar Sekarang</button>
+                </form>
+            <?php elseif ($configured): ?>
+                <p class="ss-billpop-note">Pembayaran dibuka mulai <strong><?php echo date('d M Y', strtotime(sunseaPayOpenDate($inv))); ?></strong>.</p>
+            <?php else: ?>
+                <p class="ss-billpop-note" style="color:#dc2626">Koneksi pembayaran belum aktif. Hubungi ADF System.</p>
+            <?php endif; ?>
+            <button type="button" class="ss-billpop-later" onclick="try{sessionStorage.setItem('<?php echo $key; ?>','1')}catch(e){}document.getElementById('ssBillPop').style.display='none'">Nanti saja</button>
+        </div>
+    </div>
+    <script>try { if (!sessionStorage.getItem('<?php echo $key; ?>')) document.getElementById('ssBillPop').style.display = 'flex'; } catch (e) { document.getElementById('ssBillPop').style.display = 'flex'; }</script>
+    <?php
+    sunseaBillPopupCss();
+}
+
+/** Popup setelah kembali dari halaman bayar (?sub_paid=<tagihan>): lunas → berhasil; belum tercatat → sedang diproses. */
+function sunseaRenderPaidPopup(PDO $pdo): void
+{
+    $period = (string) ($_GET['sub_paid'] ?? '');
+    if ($period === '') {
+        return;
+    }
+    $st = $pdo->prepare("SELECT * FROM subscription_invoices WHERE period = ? LIMIT 1");
+    $st->execute([$period]);
+    $inv = $st->fetch(PDO::FETCH_ASSOC);
+    if (!$inv) {
+        return;
+    }
+    $paid = $inv['status'] === 'paid';
+    $label = ($inv['type'] ?? 'recurring') === 'manual' ? ($inv['description'] ?: 'Tagihan Manual') : ('Langganan periode ' . $inv['period']);
+    ?>
+    <div class="ss-billpop" id="ssPaidPop" style="display:flex">
+        <div class="ss-billpop-box">
+            <div class="ss-billpop-ico ss-billpop-ok"><?php echo $paid ? '✓' : '⏳'; ?></div>
+            <h3><?php echo $paid ? (($inv['type'] ?? '') === 'manual' ? 'Pembayaran Tagihan Manual Berhasil' : 'Pembayaran Berhasil') : 'Pembayaran Sedang Diproses'; ?></h3>
+            <p><?php echo $paid ? 'Terima kasih! Tagihan sudah lunas dan bukti pembayaran dikirim ke email / WhatsApp.' : 'Pembayaran Anda sedang dicek. Status tagihan diperbarui otomatis dalam beberapa menit.'; ?></p>
+            <div class="ss-billpop-bill"><?php echo htmlspecialchars($label); ?> · <strong><?php echo sunseaRupiah((float) $inv['total_amount']); ?></strong></div>
+            <button type="button" class="ss-billpop-btn" onclick="document.getElementById('ssPaidPop').style.display='none';history.replaceState(null,'',location.pathname)">OK</button>
+        </div>
+    </div>
+    <?php
+    sunseaBillPopupCss();
+}
+
+function sunseaBillPopupCss(): void
+{
+    static $done = false;
+    if ($done) {
+        return;
+    }
+    $done = true;
+    ?>
+    <style>
+        .ss-billpop { position: fixed; inset: 0; z-index: 100000; background: rgba(15, 23, 42, .78); backdrop-filter: blur(6px); align-items: center; justify-content: center; padding: 20px; }
+        .ss-billpop-box { max-width: 380px; width: 100%; background: #fff; color: #1e293b; border-radius: 16px; padding: 26px 22px; text-align: center; box-shadow: 0 24px 60px rgba(0, 0, 0, .35); font-family: inherit; }
+        .ss-billpop-ico { font-size: 34px; margin-bottom: 6px; }
+        .ss-billpop-ok { width: 56px; height: 56px; margin: 0 auto 10px; border-radius: 50%; background: #dcfce7; color: #16a34a; display: grid; place-items: center; font-size: 28px; font-weight: 800; }
+        .ss-billpop-box h3 { margin: 0 0 8px; font-size: 17px; font-weight: 800; color: #0f172a; }
+        .ss-billpop-box p { margin: 0 0 14px; font-size: 13px; line-height: 1.5; color: #64748b; }
+        .ss-billpop-bill { margin: 0 0 16px; padding: 10px 12px; border-radius: 10px; background: #f1f5f9; font-size: 12.5px; color: #334155; }
+        .ss-billpop-btn { display: block; width: 100%; padding: 11px; border: 0; border-radius: 10px; background: linear-gradient(135deg, #f97316, #ea580c); color: #fff; font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit; }
+        .ss-billpop-later { margin-top: 10px; background: none; border: 0; color: #64748b; font-size: 12.5px; cursor: pointer; font-family: inherit; }
+        .ss-billpop-note { font-size: 12px !important; }
+    </style>
+    <?php
 }

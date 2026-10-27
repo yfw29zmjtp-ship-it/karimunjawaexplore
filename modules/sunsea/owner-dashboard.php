@@ -156,7 +156,8 @@ $subscriptionLastPaid = null;
 try {
     sunseaEnsureSubscriptionBillingSchema($pdo);
     $lastSyncAt = sunseaSetting($pdo, 'subscription_last_sync_at', '');
-    if ($lastSyncAt === '' || (time() - strtotime($lastSyncAt)) > 300) {
+    // Baru kembali dari halaman bayar (?sub_paid=…) → sinkron sekarang supaya tagihan yang lunas langsung hilang
+    if ($lastSyncAt === '' || (time() - strtotime($lastSyncAt)) > 300 || !empty($_GET['sub_paid'])) {
         sunseaSyncSubscriptionConfig($pdo);
         sunseaSyncManualInvoices($pdo);
     }
@@ -937,21 +938,7 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
         $__label = ($__inv['type'] ?? 'recurring') === 'manual' ? ($__inv['description'] ?: 'Tagihan Manual') : ('periode ' . $__inv['period']);
     ?>
         <?php if (!$__overdue): ?>
-            <div style="display:flex;align-items:center;gap:10px;padding:12px 18px;background:#FEF3C7;color:#92400E;font-size:12.5px;font-weight:500;flex-wrap:wrap;">
-                <span style="flex:1;min-width:200px;">
-                    ⏰ Tagihan langganan <strong><?php echo htmlspecialchars($__label); ?></strong> jatuh tempo dalam <strong><?php echo $__days; ?> hari</strong>
-                    — total <strong><?php echo sunseaRupiah((float) $__inv['total_amount']); ?></strong>.
-                </span>
-                <?php if ($__configured && !sunseaPayWindowOpen($__inv)): ?>
-                    <a href="<?php echo BASE_URL; ?>/modules/sunsea/owner-subscription.php" style="background:#0369A1;color:#fff;border-radius:8px;padding:7px 14px;font-size:12.5px;font-weight:700;text-decoration:none;">Lihat Tagihan</a>
-                <?php elseif ($__configured): ?>
-                    <form method="POST" action="<?php echo BASE_URL; ?>/modules/sunsea/owner-subscription.php" style="margin:0;">
-                        <input type="hidden" name="action" value="pay">
-                        <input type="hidden" name="period" value="<?php echo htmlspecialchars($__inv['period']); ?>">
-                        <button type="submit" style="background:#0369A1;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12.5px;font-weight:700;cursor:pointer;">Bayar Sekarang</button>
-                    </form>
-                <?php endif; ?>
-            </div>
+            <?php sunseaRenderBillPopup($subscriptionReminder, $__configured, BASE_URL . '/modules/sunsea/owner-subscription.php'); ?>
         <?php else: ?>
             <div style="position:fixed;inset:0;background:rgba(15,23,42,.85);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;">
                 <div style="background:#fff;border-radius:14px;width:100%;max-width:420px;padding:26px 22px;text-align:center;box-shadow:0 20px 50px rgba(0,0,0,.35);">
@@ -963,15 +950,16 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
                         <form method="POST" action="<?php echo BASE_URL; ?>/modules/sunsea/owner-subscription.php">
                             <input type="hidden" name="action" value="pay">
                             <input type="hidden" name="period" value="<?php echo htmlspecialchars($__inv['period']); ?>">
-                            <button type="submit" style="background:#0369A1;color:#fff;border:none;border-radius:8px;padding:10px 18px;font-size:13px;font-weight:700;cursor:pointer;width:100%;">💳 Bayar via Pakasir Sekarang</button>
+                            <button type="submit" style="background:#0369A1;color:#fff;border:none;border-radius:8px;padding:10px 18px;font-size:13px;font-weight:700;cursor:pointer;width:100%;">💳 Bayar Sekarang</button>
                         </form>
                     <?php else: ?>
-                        <p style="font-size:12px;color:#dc2626;">Pengaturan Pakasir belum lengkap. Hubungi ADF System.</p>
+                        <p style="font-size:12px;color:#dc2626;">Koneksi pembayaran belum aktif. Hubungi ADF System.</p>
                     <?php endif; ?>
                 </div>
             </div>
         <?php endif; ?>
     <?php endif; ?>
+    <?php if (!empty($_GET['sub_paid'])) { try { sunseaRenderPaidPopup($pdo); } catch (Throwable $e) { } } ?>
 
     <div class="ob-container">
 

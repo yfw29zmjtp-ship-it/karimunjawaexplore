@@ -47,7 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'pay')
         $err = 'Pengaturan pembayaran belum lengkap. Hubungi ADF System.';
     } else {
         $orderId = 'SUB' . str_replace('-', '', $ref) . strtoupper(bin2hex(random_bytes(3)));
-        $result = sunseaCreatePaymentLink($pdo, $cfg, $inv, $orderId);
+        $result = sunseaCreatePaymentLink($pdo, $cfg, $inv, $orderId, sunseaPaidReturnUrl('owner-dashboard.php', $inv['period']));
         if ($result === null) {
             $err = 'Gagal membuat link pembayaran. Coba lagi sebentar.';
         } else {
