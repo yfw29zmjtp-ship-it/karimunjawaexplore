@@ -845,7 +845,7 @@ $paxDayTotalsJson = json_encode($paxDayTotals);
                     if ($__daysLeft <= 1) {
                         $__subState = 'red';
                         $__subText = 'Tagihan jatuh tempo, segera bayar';
-                    } elseif ($__daysLeft <= 7) {
+                    } elseif ($__daysLeft <= SUNSEA_PAY_OPEN_DAYS_BEFORE) {
                         $__subState = 'yellow';
                         $__subText = 'Tagihan bisa dibayar';
                     } else {

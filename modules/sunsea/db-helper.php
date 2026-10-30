@@ -1745,7 +1745,8 @@ function sunseaGetSubscriptionReminder(PDO $pdo): ?array
     }
 
     $daysLeft = (int) ceil((strtotime($invoice['due_date']) - strtotime(date('Y-m-d'))) / 86400);
-    if ($daysLeft > 7 && !$isManual) {
+    // Tagihan rutin baru muncul saat sudah bisa dibayar (mulai H-3 sebelum jatuh tempo); sebelum itu cukup status hijau "Subscribe s/d …"
+    if (!$isManual && !sunseaPayWindowOpen($invoice)) {
         return null;
     }
 
