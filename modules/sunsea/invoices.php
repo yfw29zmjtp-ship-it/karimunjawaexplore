@@ -1069,11 +1069,9 @@ if ($action === 'print' && $invoice):
                 }
             }
 
+            /* Bilah tombol ikut tergulung (tidak melayang) supaya kepala invoice tidak pernah tertutup */
             .print-toolbar {
-                position: fixed;
-                top: 0;
-                left: 0;
-                right: 0;
+                position: relative;
                 z-index: 999;
                 display: flex;
                 align-items: center;
@@ -1109,9 +1107,6 @@ if ($action === 'print' && $invoice):
                 color: #fff;
             }
 
-            body {
-                padding-top: 46px;
-            }
         </style>
     </head>
 
