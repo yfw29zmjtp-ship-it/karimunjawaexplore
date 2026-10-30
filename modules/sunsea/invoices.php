@@ -1065,7 +1065,7 @@ if ($action === 'print' && $invoice):
                 }
 
                 .print-toolbar {
-                    display: none;
+                    display: none !important;
                 }
             }
 

@@ -890,7 +890,7 @@ if ($action === 'print' && $quotation):
                 }
 
                 .print-toolbar {
-                    display: none;
+                    display: none !important;
                 }
             }
 
