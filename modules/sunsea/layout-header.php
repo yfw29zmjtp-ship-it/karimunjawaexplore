@@ -1560,14 +1560,13 @@ if (empty($sunseaNavItemsVisible)) {
             <div class="ss-topbar-actions">
                 <span class="ss-badge ss-badge-ocean" id="ssLiveClock">🕒 --:--:--</span>
                 <?php
-                // Chip langganan: hijau "Subscribe Pro s/d …" → mulai tagihan bisa dibayar (H-3) kuning
+                // Chip langganan: hijau "Subscribe Pro s/d …" → kuning mulai tagihan bisa dibayar (sunseaPayOpenDate)
                 // "Tagihan belum dibayar · Rp … · Bayar" → hari H / lewat jatuh tempo merah. Tagihan manual selalu dihitung.
                 $__dueBills = [];
                 if (isset($pdo) && ($subscriptionStatusInvoice !== null || !empty($subscriptionReminder))) {
                     try {
-                        $__q = $pdo->prepare("SELECT * FROM subscription_invoices WHERE status = 'unpaid' AND due_date IS NOT NULL AND (type = 'manual' OR due_date <= ?) ORDER BY due_date");
-                        $__q->execute([date('Y-m-d', strtotime('+' . SUNSEA_PAY_OPEN_DAYS_BEFORE . ' days'))]);
-                        $__dueBills = $__q->fetchAll(PDO::FETCH_ASSOC);
+                        $__q = $pdo->query("SELECT * FROM subscription_invoices WHERE status = 'unpaid' AND due_date IS NOT NULL ORDER BY due_date");
+                        $__dueBills = array_values(array_filter($__q->fetchAll(PDO::FETCH_ASSOC), 'sunseaPayWindowOpen'));
                     } catch (Exception $e) {
                     }
                 }

@@ -1489,7 +1489,11 @@ function sunseaTopupDescription(string $period): string
  * @return bool true bila buku tagihan ADF tersedia (maka hitungan lokal tidak dipakai);
  *              false bila belum tersambung / endpoint ADF belum ada (pakai hitungan lokal lama).
  */
-/** Tombol/proses bayar baru dibuka mulai H-3 sebelum jatuh tempo (dan tetap terbuka bila sudah lewat). */
+/**
+ * Tombol/proses bayar dibuka mulai H-3 sebelum jatuh tempo (dan tetap terbuka bila sudah lewat).
+ * Langganan dibayar di AKHIR bulan berjalan: jatuh tempo = tanggal terakhir bulan → bayar dibuka mulai tanggal 29
+ * (bulan pendek: 2 hari sebelum akhir bulan).
+ */
 const SUNSEA_PAY_OPEN_DAYS_BEFORE = 3;
 
 function sunseaPayOpenDate(array $invoice): ?string
@@ -1497,7 +1501,12 @@ function sunseaPayOpenDate(array $invoice): ?string
     if (empty($invoice['due_date'])) {
         return null;
     }
-    return date('Y-m-d', strtotime($invoice['due_date'] . ' -' . SUNSEA_PAY_OPEN_DAYS_BEFORE . ' days'));
+    $due = (string)$invoice['due_date'];
+    if ($due === date('Y-m-t', strtotime($due))) {
+        $dim = (int)date('t', strtotime($due));
+        return date('Y-m-', strtotime($due)) . sprintf('%02d', $dim >= 30 ? 29 : $dim - 2);
+    }
+    return date('Y-m-d', strtotime($due . ' -' . SUNSEA_PAY_OPEN_DAYS_BEFORE . ' days'));
 }
 
 function sunseaPayWindowOpen(array $invoice): bool
@@ -1648,12 +1657,8 @@ function sunseaSyncLedger(PDO $pdo, bool $force = false): bool
  */
 function sunseaSubscriptionDueDate(string $period, string $startDate): string
 {
-    $daysInMonth = (int) date('t', strtotime($period . '-01'));
-    if ($startDate === '' || !strtotime($startDate)) {
-        return date('Y-m-t', strtotime($period . '-01'));
-    }
-    $day = min((int) date('j', strtotime($startDate)), $daysInMonth);
-    return sprintf('%s-%02d', $period, $day);
+    // Dibayar di akhir bulan berjalan (sama dengan buku tagihan ADF Console)
+    return date('Y-m-t', strtotime($period . '-01'));
 }
 
 /**
@@ -1745,7 +1750,7 @@ function sunseaGetSubscriptionReminder(PDO $pdo): ?array
     }
 
     $daysLeft = (int) ceil((strtotime($invoice['due_date']) - strtotime(date('Y-m-d'))) / 86400);
-    // Tagihan rutin baru muncul saat sudah bisa dibayar (mulai H-3 sebelum jatuh tempo); sebelum itu cukup status hijau "Subscribe s/d …"
+    // Tagihan rutin baru muncul saat sudah bisa dibayar (sunseaPayOpenDate); sebelum itu cukup status hijau "Subscribe s/d …"
     if (!$isManual && !sunseaPayWindowOpen($invoice)) {
         return null;
     }
