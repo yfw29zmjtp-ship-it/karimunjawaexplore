@@ -757,10 +757,10 @@ include 'layout-header.php';
                 html += '<div class="rd-big">';
                 html += '<div><div class="rd-k">Total Tagihan</div><div class="rd-v">' + fmt(billed) + '</div></div>';
                 html += '<div style="background:#ECFDF5;"><div class="rd-k">Sudah Dibayar</div><div class="rd-v" style="color:var(--ss-success);">' + fmt(paid) + '</div></div>';
-                html += '<div style="background:' + (remaining > 0 ? '#FFFBEB' : '#ECFDF5') + ';"><div class="rd-k">Sisa Tagihan</div><div class="rd-v" style="color:' + (remaining > 0 ? '#B45309' : 'var(--ss-success)') + ';">' + fmt(remaining) + '</div></div>';
+                html += '<div style="background:' + (remaining > 0 ? '#FFFBEB' : '#ECFDF5') + ';"><div class="rd-k">Tamu Kurang Bayar</div><div class="rd-v" style="color:' + (remaining > 0 ? '#B45309' : 'var(--ss-success)') + ';">' + fmt(remaining) + '</div></div>';
                 html += '</div>';
                 html += '<div class="rd-bar"><span style="width:' + paidPct.toFixed(1) + '%;background:var(--ss-success);"></span></div>';
-                html += '<div class="rd-note">' + Math.round(paidPct) + '% sudah dibayar' + (remaining > 0 ? ' · sisa ' + fmt(remaining) + ' masih harus ditagih ke tamu' : '') + '</div>';
+                html += '<div class="rd-note">' + Math.round(paidPct) + '% sudah dibayar' + (remaining > 0 ? ' · tamu masih kurang bayar ' + fmt(remaining) : ' · tamu sudah lunas') + '</div>';
 
                 html += '<div class="rd-sec">Riwayat pembayaran</div>';
                 if (!data.payments || data.payments.length === 0) {
