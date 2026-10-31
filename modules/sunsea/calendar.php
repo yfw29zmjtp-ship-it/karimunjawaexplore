@@ -185,7 +185,7 @@ function calBarColor(string $durationLabel, ?string $packageName, array $duratio
     }
     return $durationColors[$durationLabel] ?? $defaultColor;
 }
-$pageTitle = 'Kalender Booking';
+$pageTitle = 'Kalender';
 $activePage = 'calendar';
 include 'layout-header.php';
 ?>

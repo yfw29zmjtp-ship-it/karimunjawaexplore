@@ -50,7 +50,7 @@ $stats['facilities'] = safeCountTable($pdo, 'facilities', 'is_active=1');
 $stats['transport'] = safeCountTable($pdo, 'transport_items', 'is_active=1');
 $stats['coordinators'] = safeCountTable($pdo, 'coordinators', 'is_active=1');
 
-$pageTitle = 'Database';
+$pageTitle = 'Data Mitra';
 $activePage = 'database';
 include 'layout-header.php';
 ?>

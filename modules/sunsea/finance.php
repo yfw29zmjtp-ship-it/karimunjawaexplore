@@ -304,7 +304,7 @@ foreach ($outstandingInvoices as &$_oi) {
 unset($_oi);
 $outstandingInvoices = array_values(array_filter($outstandingInvoices, fn($oi) => $oi['remaining_amount'] > 0));
 
-$pageTitle  = 'Finance - Buku Kas Operasional';
+$pageTitle  = 'Kas & Biaya';
 $activePage = 'finance';
 include 'layout-header.php';
 ?>

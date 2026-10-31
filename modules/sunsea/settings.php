@@ -61,21 +61,21 @@ $flashMsg = '';
 $flashType = '';
 
 $sidebarMenuOptions = [
-    'dashboard'    => 'Dashboard',
-    'owner_dashboard' => 'Owner Dashboard',
-    'subscription_billing' => 'Tagihan Langganan',
-    'database'     => 'Database',
-    'bookings'     => 'Booking',
-    'calendar'     => 'Kalender Booking',
-    'coordinators' => 'Koordinator',
-    'packages'     => 'Paket Wisata',
+    'dashboard'    => 'Beranda',
     'quotations'   => 'Penawaran',
+    'bookings'     => 'Pemesanan',
+    'calendar'     => 'Kalender',
     'invoices'     => 'Invoice',
-    'finance'      => 'Finance (Kas Operasional)',
+    'finance'      => 'Kas & Biaya',
     'laporan'      => 'Laporan',
+    'packages'     => 'Paket Wisata',
+    'database'     => 'Data Mitra (hotel, guide, tiket, catering, transport, pelanggan)',
+    'coordinators' => 'Koordinator',
     'email'        => 'Email Kantor',
+    'website_settings' => 'Website',
     'settings'     => 'Pengaturan',
-    'website_settings' => 'Setting Website',
+    'owner_dashboard' => 'Aplikasi Owner (HP)',
+    'subscription_billing' => 'Langganan Sistem',
 ];
 
 // Handle POST

@@ -165,7 +165,7 @@ $cfg = sunseaSubscriptionConfig($pdo);
 $configured = sunseaSubscriptionIsConfigured($cfg);
 $history = $pdo->query("SELECT * FROM subscription_invoices ORDER BY period DESC LIMIT 24")->fetchAll();
 
-$pageTitle = 'Tagihan Langganan';
+$pageTitle = 'Langganan Sistem';
 $activePage = 'subscription_billing';
 include 'layout-header.php';
 ?>

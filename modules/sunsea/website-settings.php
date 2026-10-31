@@ -248,7 +248,7 @@ if (($_GET['edit'] ?? '') !== '' && $tab === 'blog') {
     $editBlog = $stmt->fetch();
 }
 
-$pageTitle = 'Setting Website';
+$pageTitle = 'Website';
 $activePage = 'website_settings';
 include 'layout-header.php';
 ?>

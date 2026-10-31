@@ -14,7 +14,7 @@ require_once 'db-helper.php';
 $auth = new Auth();
 $auth->requireLogin();
 
-$pageTitle  = 'Dashboard';
+$pageTitle  = 'Beranda';
 $activePage = 'dashboard';
 
 try {

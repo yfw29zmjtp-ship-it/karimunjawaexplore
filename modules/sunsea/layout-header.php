@@ -13,27 +13,33 @@ if (!defined('APP_ACCESS')) define('APP_ACCESS', true);
 
 // Absolute (BASE_URL-prefixed) so the nav still works from other module folders (e.g. modules/email/).
 $sunseaNavItems = [
-    'dashboard'     => ['icon' => 'home',       'label' => 'Dashboard',         'url' => BASE_URL . '/modules/sunsea/dashboard.php'],
-    'owner_dashboard' => ['icon' => 'smartphone', 'label' => 'Owner Dashboard', 'url' => BASE_URL . '/modules/sunsea/owner-dashboard.php'],
-    'subscription_billing' => ['icon' => 'credit-card', 'label' => 'Tagihan Langganan', 'url' => BASE_URL . '/modules/sunsea/subscription-billing.php'],
-    'database'      => ['icon' => 'database',   'label' => 'Database',          'url' => BASE_URL . '/modules/sunsea/database.php'],
-    'bookings'      => ['icon' => 'briefcase',  'label' => 'Booking',           'url' => BASE_URL . '/modules/sunsea/bookings.php'],
-    'calendar'      => ['icon' => 'calendar',   'label' => 'Kalender Booking',  'url' => BASE_URL . '/modules/sunsea/calendar.php'],
-    'coordinators'  => ['icon' => 'user-check', 'label' => 'Koordinator',       'url' => BASE_URL . '/modules/sunsea/coordinators.php'],
-    'packages'      => ['icon' => 'package',    'label' => 'Paket Wisata',      'url' => BASE_URL . '/modules/sunsea/packages.php'],
-    'quotations'    => ['icon' => 'file-text',  'label' => 'Penawaran',         'url' => BASE_URL . '/modules/sunsea/quotations.php'],
-    'invoices'      => ['icon' => 'credit-card', 'label' => 'Invoice',          'url' => BASE_URL . '/modules/sunsea/invoices.php'],
-    'finance'       => ['icon' => 'dollar-sign', 'label' => 'Finance',          'url' => BASE_URL . '/modules/sunsea/finance.php'],
-    'laporan'       => ['icon' => 'bar-chart-2', 'label' => 'Laporan',          'url' => BASE_URL . '/modules/sunsea/laporan.php'],
-    'email'         => ['icon' => 'mail',        'label' => 'Email Kantor',     'url' => BASE_URL . '/modules/email/index.php'],
-    'settings'      => ['icon' => 'settings',   'label' => 'Pengaturan',        'url' => BASE_URL . '/modules/sunsea/settings.php'],
-    'website_settings' => ['icon' => 'globe',   'label' => 'Setting Website',   'url' => BASE_URL . '/modules/sunsea/website-settings.php'],
+    // Urutan = urutan di sidebar, dikelompokkan per alur kerja (lihat $sunseaNavSections). Kunci tetap sama (hak akses per role memakai kunci ini).
+    'dashboard'     => ['icon' => 'home',        'label' => 'Beranda',            'url' => BASE_URL . '/modules/sunsea/dashboard.php'],
+    'quotations'    => ['icon' => 'file-text',   'label' => 'Penawaran',          'url' => BASE_URL . '/modules/sunsea/quotations.php'],
+    'bookings'      => ['icon' => 'briefcase',   'label' => 'Pemesanan',          'url' => BASE_URL . '/modules/sunsea/bookings.php'],
+    'calendar'      => ['icon' => 'calendar',    'label' => 'Kalender',           'url' => BASE_URL . '/modules/sunsea/calendar.php'],
+    'invoices'      => ['icon' => 'credit-card', 'label' => 'Invoice',            'url' => BASE_URL . '/modules/sunsea/invoices.php'],
+    'finance'       => ['icon' => 'dollar-sign', 'label' => 'Kas & Biaya',        'url' => BASE_URL . '/modules/sunsea/finance.php'],
+    'laporan'       => ['icon' => 'bar-chart-2', 'label' => 'Laporan',            'url' => BASE_URL . '/modules/sunsea/laporan.php'],
+    'packages'      => ['icon' => 'package',     'label' => 'Paket Wisata',       'url' => BASE_URL . '/modules/sunsea/packages.php'],
+    'database'      => ['icon' => 'database',    'label' => 'Data Mitra',         'url' => BASE_URL . '/modules/sunsea/database.php'],
+    'coordinators'  => ['icon' => 'user-check',  'label' => 'Koordinator',        'url' => BASE_URL . '/modules/sunsea/coordinators.php'],
+    'email'         => ['icon' => 'mail',        'label' => 'Email Kantor',       'url' => BASE_URL . '/modules/email/index.php'],
+    'website_settings' => ['icon' => 'globe',    'label' => 'Website',            'url' => BASE_URL . '/modules/sunsea/website-settings.php'],
+    'settings'      => ['icon' => 'settings',    'label' => 'Pengaturan',         'url' => BASE_URL . '/modules/sunsea/settings.php'],
+    'owner_dashboard' => ['icon' => 'smartphone', 'label' => 'Aplikasi Owner (HP)', 'url' => BASE_URL . '/modules/sunsea/owner-dashboard.php'],
+    'subscription_billing' => ['icon' => 'credit-card', 'label' => 'Langganan Sistem', 'url' => BASE_URL . '/modules/sunsea/subscription-billing.php'],
 ];
 
-// Sub-menu grouping: parent key => list of child keys shown in a collapsible dropdown
-$sunseaNavGroups = [
-    'bookings' => ['calendar', 'packages'],
-    'settings' => ['database', 'coordinators', 'website_settings'],
+// Sub-menu grouping: parent key => list of child keys shown in a collapsible dropdown (sekarang tidak dipakai: semua menu tampil langsung per kelompok)
+$sunseaNavGroups = [];
+
+// Judul kelompok di sidebar: kunci menu pertama tiap kelompok => judul
+$sunseaNavSections = [
+    'quotations' => 'Penjualan',
+    'finance'    => 'Keuangan',
+    'packages'   => 'Data',
+    'email'      => 'Lainnya',
 ];
 
 $activePage = $activePage ?? '';
@@ -278,6 +284,11 @@ if (empty($sunseaNavItemsVisible)) {
             color: var(--ss-gray-3);
             padding: 8px 8px 4px;
             margin-bottom: 4px;
+        }
+
+        /* jarak antar kelompok menu (Penjualan, Keuangan, Data, Lainnya) */
+        .ss-nav-item + .ss-nav-label, .ss-nav-group + .ss-nav-label {
+            margin-top: 10px;
         }
 
         .ss-nav-item {
@@ -1434,14 +1445,24 @@ if (empty($sunseaNavItemsVisible)) {
         </div>
 
         <nav class="ss-nav">
-            <div class="ss-nav-label">Menu Utama</div>
             <?php
             $__childOfGroup = [];
+            $__sectionOf = [];
+            $__lastSection = "";
+            $__sec = "";
+            foreach (array_keys($sunseaNavItems) as $__k) {
+                $__sec = $sunseaNavSections[$__k] ?? $__sec;
+                $__sectionOf[$__k] = $__sec;
+            }
             foreach ($sunseaNavGroups as $__gk => $__children) {
                 foreach ($__children as $__c) $__childOfGroup[$__c] = $__gk;
             }
             foreach ($sunseaNavItemsVisible as $key => $item):
                 if (isset($__childOfGroup[$key])) continue; // rendered nested under its parent group below
+                // Judul kelompok muncul sebelum menu pertama yang terlihat dari kelompok itu (juga bila menu pertamanya disembunyikan untuk role ini)
+                if (($__sec = $__sectionOf[$key] ?? "") !== "" && $__sec !== $__lastSection): $__lastSection = $__sec; ?>
+                    <div class="ss-nav-label"><?php echo htmlspecialchars($__sec); ?></div>
+                <?php endif;
 
                 if (isset($sunseaNavGroups[$key])) {
                     $__childKeys = array_values(array_intersect($sunseaNavGroups[$key], array_keys($sunseaNavItemsVisible)));
