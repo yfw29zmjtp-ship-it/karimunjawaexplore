@@ -617,264 +617,49 @@ include 'layout-header.php';
 </div>
 
 <style>
-    #bookingDetailBody .bd-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 0;
-        font-size: 12px;
-        margin-bottom: 14px;
-        background: #fff;
-        border: 1px solid var(--ss-ocean);
-        border-radius: 8px;
-        overflow: hidden;
+    /* Detail Reservasi (popup kalender): kepala + 4 info, lalu 2 kolom "Uang dari Tamu" dan "Biaya & Untung" */
+    #bookingDetailBody { background: var(--ss-gray-1); }
+    #bookingDetailBody .rd { max-width: 1180px; margin: 0 auto; }
+    #bookingDetailBody .rd-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+    #bookingDetailBody .rd-name { font-size: 20px; font-weight: 800; color: var(--ss-text); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    #bookingDetailBody .rd-sub { font-size: 12.5px; color: var(--ss-muted); margin-top: 3px; }
+    #bookingDetailBody .rd-sub a { color: var(--ss-ocean); text-decoration: none; font-weight: 600; }
+    #bookingDetailBody .rd-pill { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 99px; letter-spacing: .2px; }
+    #bookingDetailBody .rd-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    #bookingDetailBody .rd-info { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
+    #bookingDetailBody .rd-info > div { background: #fff; border-radius: 12px; padding: 12px 14px; box-shadow: 0 1px 2px rgba(15, 23, 42, .05); }
+    #bookingDetailBody .rd-k { font-size: 11px; font-weight: 600; color: var(--ss-muted); text-transform: uppercase; letter-spacing: .5px; }
+    #bookingDetailBody .rd-v { font-size: 14px; font-weight: 700; color: var(--ss-text); margin-top: 4px; line-height: 1.35; }
+    #bookingDetailBody .rd-v small { display: block; font-size: 12px; font-weight: 500; color: var(--ss-muted); }
+    #bookingDetailBody .rd-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: start; }
+    #bookingDetailBody .rd-card { background: #fff; border-radius: 14px; padding: 16px 18px; box-shadow: 0 1px 2px rgba(15, 23, 42, .05); margin-bottom: 14px; }
+    #bookingDetailBody .rd-card h4 { margin: 0 0 12px; font-size: 14px; font-weight: 800; color: var(--ss-text); display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    #bookingDetailBody .rd-card h4 .ic { font-size: 16px; margin-right: 6px; }
+    #bookingDetailBody .rd-big { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+    #bookingDetailBody .rd-big > div { border-radius: 10px; padding: 10px 12px; background: var(--ss-gray-1); }
+    #bookingDetailBody .rd-big .rd-v { font-size: 16px; }
+    #bookingDetailBody .rd-bar { height: 8px; border-radius: 99px; background: var(--ss-gray-2); overflow: hidden; margin: 2px 0 6px; }
+    #bookingDetailBody .rd-bar > span { display: block; height: 100%; border-radius: 99px; }
+    #bookingDetailBody .rd-note { font-size: 12px; color: var(--ss-muted); }
+    #bookingDetailBody .rd-list { display: flex; flex-direction: column; }
+    #bookingDetailBody .rd-row { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 9px 0; border-bottom: 1px dashed var(--ss-gray-2); font-size: 13px; }
+    #bookingDetailBody .rd-row:last-child { border-bottom: 0; }
+    #bookingDetailBody .rd-row .l { color: var(--ss-text); }
+    #bookingDetailBody .rd-row .l small { display: block; color: var(--ss-muted); font-size: 11.5px; margin-top: 1px; }
+    #bookingDetailBody .rd-row .r { font-weight: 700; white-space: nowrap; }
+    #bookingDetailBody .rd-row.total { border-top: 1px solid var(--ss-gray-2); border-bottom: 0; margin-top: 2px; font-weight: 800; }
+    #bookingDetailBody .rd-sec { font-size: 12px; font-weight: 700; color: var(--ss-muted); text-transform: uppercase; letter-spacing: .5px; margin: 14px 0 4px; }
+    #bookingDetailBody .rd-empty { font-size: 12.5px; color: var(--ss-muted); padding: 10px 12px; border-radius: 10px; background: var(--ss-gray-1); }
+    #bookingDetailBody .rd-warn { font-size: 12.5px; color: #92400E; padding: 10px 12px; border-radius: 10px; background: #FFFBEB; border: 1px solid #FDE68A; margin-bottom: 10px; }
+    #bookingDetailBody .rd-tag { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 99px; white-space: nowrap; }
+    #bookingDetailBody .rd-tag.ok { background: #DCFCE7; color: #166534; }
+    #bookingDetailBody .rd-tag.no { background: #FEF3C7; color: #92400E; }
+    @media (max-width: 1000px) {
+        #bookingDetailBody .rd-info { grid-template-columns: repeat(2, 1fr); }
+        #bookingDetailBody .rd-cols { grid-template-columns: 1fr; }
     }
-
-    #bookingDetailBody .bd-grid>div {
-        padding: 8px 12px;
-        border-right: 1px solid #FDE4CE;
-        border-bottom: 1px solid #FDE4CE;
-    }
-
-    #bookingDetailBody .bd-grid>div:nth-child(3n) {
-        border-right: none;
-    }
-
-    #bookingDetailBody .bd-grid>div:nth-last-child(-n+3) {
-        border-bottom: none;
-    }
-
-    #bookingDetailBody .bd-grid strong {
-        display: block;
-        color: var(--ss-muted);
-        font-weight: 600;
-        font-size: 9px;
-        text-transform: uppercase;
-        letter-spacing: .4px;
-        margin-bottom: 2px;
-    }
-
-    #bookingDetailBody .bd-grid .bd-val {
-        display: block;
-        font-size: 12.5px;
-        font-weight: 700;
-        color: #0f172a;
-    }
-
-    #bookingDetailBody .bd-section-title {
-        font-size: 13px;
-        font-weight: 700;
-        margin: 16px 0 8px;
-        color: #0f172a;
-        padding-top: 4px;
-        border-top: 1px solid var(--ss-gray-1);
-    }
-
-    #bookingDetailBody .bd-cols {
-        display: grid;
-        grid-template-columns: 1fr 440px;
-        gap: 0 18px;
-        align-items: start;
-    }
-
-    #bookingDetailBody .bd-col .bd-section-title {
-        margin-top: 0;
-        padding-top: 0;
-        border-top: none;
-    }
-
-    #bookingDetailBody .bd-col-expense {
-        background: #fff;
-        border: 1px solid var(--ss-ocean);
-        border-radius: 8px;
-        padding: 16px 18px;
-        min-width: 0;
-    }
-
-    #bookingDetailBody .bd-col-expense .bd-section-title {
-        margin-top: 0;
-        padding-top: 0;
-        border-top: none;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 8px;
-        flex-wrap: wrap;
-    }
-
-    #bookingDetailBody .bd-col-expense table.ss-table {
-        font-size: 13px;
-    }
-
-    #bookingDetailBody .bd-col-expense table.ss-table th {
-        font-size: 11px;
-        padding: 7px 9px;
-    }
-
-    #bookingDetailBody .bd-col-expense table.ss-table td {
-        padding: 8px 9px;
-    }
-
-    #bookingDetailBody table.ss-table {
-        font-size: 12px;
-        margin-bottom: 0;
-    }
-
-    #bookingDetailBody table.ss-table th {
-        font-size: 10.5px;
-        padding: 5px 8px;
-    }
-
-    #bookingDetailBody table.ss-table td {
-        padding: 5px 8px;
-    }
-
-    #bookingDetailBody .bd-summary {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 10px;
-        margin-top: 14px;
-    }
-
-    #bookingDetailBody .bd-summary-box {
-        border-radius: 8px;
-        padding: 10px 12px;
-    }
-
-    #bookingDetailBody .bd-summary-box .bd-label {
-        font-size: 10.5px;
-        text-transform: uppercase;
-        letter-spacing: .3px;
-        opacity: .8;
-    }
-
-    #bookingDetailBody .bd-summary-box .bd-value {
-        font-size: 17px;
-        font-weight: 700;
-        margin-top: 3px;
-    }
-
-    #bookingDetailBody .bd-chart-row {
-        display: grid;
-        grid-template-columns: 160px 1fr;
-        gap: 18px;
-        align-items: center;
-        margin-top: 14px;
-        padding: 12px;
-        background: var(--ss-gray-1);
-        border-radius: 8px;
-    }
-
-    #bookingDetailBody .bd-donut {
-        width: 150px;
-        height: 150px;
-        border-radius: 50%;
-        position: relative;
-        margin: 0 auto;
-        box-shadow: 0 10px 22px -8px rgba(0, 0, 0, .28), inset 0 2px 4px rgba(255, 255, 255, .35), inset 0 -3px 6px rgba(0, 0, 0, .15);
-    }
-
-    #bookingDetailBody .bd-donut-center {
-        position: absolute;
-        inset: 38px;
-        background: radial-gradient(circle at 35% 30%, #ffffff, #f4f6f8);
-        border-radius: 50%;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        box-shadow: 0 3px 10px rgba(0, 0, 0, .14), inset 0 1px 2px rgba(255, 255, 255, .8);
-    }
-
-    #bookingDetailBody .bd-donut-center .pct {
-        font-size: 17px;
-        font-weight: 700;
-    }
-
-    #bookingDetailBody .bd-donut-center .lbl {
-        font-size: 9.5px;
-        color: var(--ss-muted);
-        text-transform: uppercase;
-        letter-spacing: .3px;
-    }
-
-    #bookingDetailBody .bd-legend {
-        font-size: 12px;
-    }
-
-    #bookingDetailBody .bd-legend-item {
-        display: flex;
-        align-items: center;
-        gap: 7px;
-        padding: 4px 0;
-    }
-
-    #bookingDetailBody .bd-legend-dot {
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        flex-shrink: 0;
-    }
-
-    #bookingDetailBody .bd-mitra-list {
-        margin-top: 6px;
-    }
-
-    #bookingDetailBody .bd-mitra-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 7px 10px;
-        border-radius: 6px;
-        font-size: 12px;
-        margin-bottom: 5px;
-    }
-
-    #bookingDetailBody .bd-mitra-item.paid {
-        background: #F0FDF4;
-        color: #15803d;
-    }
-
-    #bookingDetailBody .bd-mitra-item.unpaid {
-        background: #FFF7ED;
-        color: #C2410C;
-    }
-
-    @media (max-width: 640px) {
-        #bookingDetailBody .bd-grid {
-            grid-template-columns: repeat(2, 1fr);
-        }
-
-        #bookingDetailBody .bd-grid>div {
-            border-right: 1px solid #FDE4CE;
-        }
-
-        #bookingDetailBody .bd-grid>div:nth-child(3n) {
-            border-right: 1px solid #FDE4CE;
-        }
-
-        #bookingDetailBody .bd-grid>div:nth-child(2n) {
-            border-right: none;
-        }
-
-        #bookingDetailBody .bd-grid>div:nth-last-child(-n+3) {
-            border-bottom: 1px solid #FDE4CE;
-        }
-
-        #bookingDetailBody .bd-grid>div:nth-last-child(-n+2) {
-            border-bottom: none;
-        }
-
-        #bookingDetailBody .bd-summary {
-            grid-template-columns: 1fr;
-        }
-
-        #bookingDetailBody .bd-cols {
-            grid-template-columns: 1fr;
-        }
-
-        #bookingDetailBody .bd-chart-row {
-            grid-template-columns: 1fr;
-        }
+    @media (max-width: 560px) {
+        #bookingDetailBody .rd-big { grid-template-columns: 1fr; }
     }
 </style>
 
@@ -899,152 +684,151 @@ include 'layout-header.php';
                 var fmt = function(n) {
                     return 'Rp ' + Math.round(parseFloat(n) || 0).toLocaleString('id-ID');
                 };
-                var statusLabels = {
-                    draft: 'Draft',
-                    confirmed: 'Confirmed',
-                    ongoing: 'Ongoing',
-                    completed: 'Completed',
-                    cancelled: 'Cancelled'
+                var esc = function(s) {
+                    return String(s == null ? '' : s).replace(/[&<>"']/g, function(c) {
+                        return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c];
+                    });
                 };
-                var marginColor = data.margin >= 0 ? 'var(--ss-success)' : 'var(--ss-danger)';
+                var bulan = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+                var tgl = function(d) {
+                    var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(d || '');
+                    return m ? (+m[3]) + ' ' + bulan[+m[2] - 1] + ' ' + m[1] : esc(d || '-');
+                };
+                var statusInfo = {
+                    draft: ['Draft', '#F1F5F9', '#475569'],
+                    confirmed: ['Terkonfirmasi', '#DBEAFE', '#1E40AF'],
+                    ongoing: ['Sedang berjalan', '#FEF3C7', '#92400E'],
+                    completed: ['Selesai', '#DCFCE7', '#166534'],
+                    cancelled: ['Batal', '#FEE2E2', '#991B1B']
+                };
+                var st = statusInfo[b.status] || [b.status, '#F1F5F9', '#475569'];
 
-                var html = '';
-                html += '<div style="margin-bottom:12px;display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">';
-                html += '<div><div style="font-size:17px;font-weight:700;">' + b.customer_name + '</div>';
-                html += '<div style="font-size:11.5px;color:var(--ss-muted);">' + b.booking_no + (b.customer_phone ? ' \u00b7 ' + b.customer_phone : '') + '</div></div>';
-                html += '<span class="ss-badge" style="align-self:center;">' + (statusLabels[b.status] || b.status) + '</span>';
-                html += '</div>';
-                html += '<div style="height:1px;background:var(--ss-gray-1);margin:0 0 14px;"></div>';
-
-
-                html += '<div class="bd-cols">';
-
-                html += '<div class="bd-col">';
-
-                html += '<div class="bd-grid">';
-                html += '<div><strong>Tanggal Check-in</strong><span class="bd-val">' + b.start_date + ' s/d ' + b.end_date + '</span></div>';
-                html += '<div><strong>Durasi</strong><span class="bd-val">' + data.durationLabel + '</span></div>';
-                html += '<div><strong>Total Pax</strong><span class="bd-val">' + b.pax_count + ' orang</span></div>';
-                html += '<div><strong>Paket</strong><span class="bd-val">' + (b.package_name || '-') + '</span></div>';
-                html += '<div><strong>Penginapan</strong><span class="bd-val">' + data.accommodationInfo + '</span></div>';
-                html += '<div><strong>Total RAB/Penawaran</strong><span class="bd-val" style="color:var(--ss-ocean);">' + fmt(data.totalRab) + '</span></div>';
-                html += '</div>';
-
-                html += '<div class="bd-summary">';
-                html += '<div class="bd-summary-box" style="background:var(--ss-gray-1);"><div class="bd-label">Total RAB/Penawaran</div><div class="bd-value">' + fmt(data.totalRab) + '</div></div>';
-                html += '<div class="bd-summary-box" style="background:#FEF2F2;"><div class="bd-label" style="color:var(--ss-danger);">Total Pengeluaran</div><div class="bd-value" style="color:var(--ss-danger);">' + fmt(data.totalExpense) + '</div></div>';
-                html += '<div class="bd-summary-box" style="background:#F0FDF4;"><div class="bd-label" style="color:' + marginColor + ';">Margin</div><div class="bd-value" style="color:' + marginColor + ';">' + fmt(data.margin) + '</div></div>';
-                html += '</div>';
-
-                // Donut chart: proporsi margin (profit) vs pengeluaran, dihitung dari RAB yang sama dengan angka persen di tengah.
-                var incomeVal = parseFloat(data.totalRab) || 0;
+                var rab = parseFloat(data.totalRab) || 0;
                 var expenseVal = parseFloat(data.totalExpense) || 0;
-                var profitPct = incomeVal > 0 ? (data.margin / incomeVal * 100) : 0;
-                var profitPctColor = profitPct >= 0 ? 'var(--ss-success)' : 'var(--ss-danger)';
-                var profitShare = Math.max(0, Math.min(100, profitPct));
+                var margin = parseFloat(data.margin) || 0;
+                var billed = parseFloat(data.totalInvoiceAmount) || rab;
+                var paid = parseFloat(data.totalPaid) || 0;
+                var remaining = parseFloat(data.remainingPayment) || 0;
+                var paidPct = billed > 0 ? Math.max(0, Math.min(100, paid / billed * 100)) : 0;
+                var lunas = billed > 0 && remaining <= 0;
+                var marginPct = rab > 0 ? margin / rab * 100 : 0;
+                var marginColor = margin >= 0 ? 'var(--ss-success)' : 'var(--ss-danger)';
+                var phone = String(b.customer_phone || '').replace(/\D+/g, '');
+                var waNo = phone.indexOf('0') === 0 ? '62' + phone.slice(1) : phone;
 
-                html += '<div class="bd-chart-row">';
-                html += '<div class="bd-donut" style="background:conic-gradient(#16a34a 0% ' + profitShare + '%, #dc2626 ' + profitShare + '% 100%);">';
-                html += '<div class="bd-donut-center"><div class="pct" style="color:' + profitPctColor + ';">' + profitPct.toFixed(1) + '%</div><div class="lbl">Profit</div></div>';
-                html += '</div>';
-                html += '<div class="bd-legend">';
-                html += '<div class="bd-legend-item"><span class="bd-legend-dot" style="background:#16a34a;"></span> Pemasukan (RAB) &mdash; ' + fmt(incomeVal) + '</div>';
-                html += '<div class="bd-legend-item"><span class="bd-legend-dot" style="background:#dc2626;"></span> Pengeluaran &mdash; ' + fmt(expenseVal) + '</div>';
-                html += '<div style="margin-top:6px;color:var(--ss-muted);font-size:11px;">Margin bersih: <strong style="color:' + marginColor + ';">' + fmt(data.margin) + '</strong></div>';
-                html += '</div>';
+                var html = '<div class="rd">';
+
+                // ── Kepala: nama, status, kode & telepon, tombol ──
+                html += '<div class="rd-head"><div>';
+                html += '<div class="rd-name">' + esc(b.customer_name) + ' <span class="rd-pill" style="background:' + st[1] + ';color:' + st[2] + ';">' + esc(st[0]) + '</span></div>';
+                html += '<div class="rd-sub">' + esc(b.booking_no) + (phone ? ' · <a href="https://wa.me/' + waNo + '" target="_blank" rel="noopener">WhatsApp ' + esc(b.customer_phone) + '</a>' : '') + '</div>';
+                html += '</div><div class="rd-actions">';
+                html += '<a href="bookings.php?view=' + (+b.id) + '" class="ss-btn ss-btn-outline ss-btn-sm">Buka Pemesanan</a>';
+                html += '<a href="finance.php?customer_id=' + (+b.customer_id) + '" class="ss-btn ss-btn-outline ss-btn-sm">Lihat di Kas & Biaya</a>';
+                html += '</div></div>';
+
+                // ── 4 info utama ──
+                html += '<div class="rd-info">';
+                html += '<div><div class="rd-k">Tanggal</div><div class="rd-v">' + tgl(b.start_date) + '<small>s/d ' + tgl(b.end_date) + '</small></div></div>';
+                html += '<div><div class="rd-k">Durasi & Tamu</div><div class="rd-v">' + esc(data.durationLabel) + '<small>' + (+b.pax_count || 0) + ' orang</small></div></div>';
+                html += '<div><div class="rd-k">Paket</div><div class="rd-v">' + esc(b.package_name || 'Tanpa paket') + '</div></div>';
+                html += '<div><div class="rd-k">Penginapan</div><div class="rd-v">' + esc(data.accommodationInfo || '-') + '</div></div>';
                 html += '</div>';
 
-                html += '<div class="bd-section-title">Item Booking (RAB)</div>';
-                if (data.items.length === 0) {
-                    html += '<div style="font-size:12px;color:var(--ss-muted);">Belum ada item.</div>';
-                } else {
-                    html += '<table class="ss-table"><thead><tr><th>Komponen</th><th style="width:80px;text-align:center;">Qty</th><th style="width:115px;white-space:nowrap;">Subtotal</th></tr></thead><tbody>';
-                    data.items.forEach(function(it) {
-                        var qtyNum = parseFloat(it.qty);
-                        var qtyStr = (qtyNum % 1 === 0 ? qtyNum.toFixed(0) : qtyNum);
-                        html += '<tr><td>' + it.component_name + (it.is_done == 1 ? ' <span style="color:var(--ss-success);">\u2713</span>' : '') + '</td>' +
-                            '<td style="text-align:center;white-space:nowrap;">' + qtyStr + ' ' + (it.unit || '') + '</td>' +
-                            '<td style="font-weight:600;white-space:nowrap;">' + fmt(it.total_sell) + '</td></tr>';
-                    });
-                    html += '</tbody></table>';
-                }
-                html += '</div>';
+                html += '<div class="rd-cols">';
 
-                // Riwayat DP/pembayaran: kalau tamu bayar bertahap (DP 1, DP 2, dst) semua baris tampil di sini.
-                var paidColor = data.remainingPayment <= 0 && data.totalInvoiceAmount > 0 ? 'var(--ss-success)' : 'var(--ss-warning, #d97706)';
-                html += '<div class="bd-section-title">Riwayat Pembayaran</div>';
+                // ── Kolom kiri: uang dari tamu ──
+                html += '<div>';
+                html += '<div class="rd-card"><h4><span><span class="ic">💰</span>Uang dari Tamu</span>' +
+                    '<span class="rd-tag ' + (lunas ? 'ok' : 'no') + '">' + (lunas ? 'Lunas' : (paid > 0 ? 'Sudah DP' : 'Belum bayar')) + '</span></h4>';
+                html += '<div class="rd-big">';
+                html += '<div><div class="rd-k">Total Tagihan</div><div class="rd-v">' + fmt(billed) + '</div></div>';
+                html += '<div style="background:#ECFDF5;"><div class="rd-k">Sudah Dibayar</div><div class="rd-v" style="color:var(--ss-success);">' + fmt(paid) + '</div></div>';
+                html += '<div style="background:' + (remaining > 0 ? '#FFFBEB' : '#ECFDF5') + ';"><div class="rd-k">Sisa</div><div class="rd-v" style="color:' + (remaining > 0 ? '#B45309' : 'var(--ss-success)') + ';">' + fmt(remaining) + '</div></div>';
+                html += '</div>';
+                html += '<div class="rd-bar"><span style="width:' + paidPct.toFixed(1) + '%;background:var(--ss-success);"></span></div>';
+                html += '<div class="rd-note">' + Math.round(paidPct) + '% sudah dibayar</div>';
+
+                html += '<div class="rd-sec">Riwayat pembayaran</div>';
                 if (!data.payments || data.payments.length === 0) {
-                    html += '<div style="font-size:12px;color:var(--ss-muted);">Belum ada pembayaran/DP tercatat untuk booking ini.</div>';
+                    html += '<div class="rd-empty">Belum ada pembayaran / DP yang tercatat.</div>';
                 } else {
-                    html += '<table class="ss-table"><thead><tr><th style="white-space:nowrap;">Tanggal</th><th>Metode</th><th style="width:115px;white-space:nowrap;">Jumlah</th></tr></thead><tbody>';
+                    html += '<div class="rd-list">';
                     data.payments.forEach(function(py, idx) {
-                        var payLabel = (idx === data.payments.length - 1 && data.remainingPayment <= 0) ? 'Pelunasan' : (idx === 0 ? 'DP 1' : 'DP ' + (idx + 1));
-                        html += '<tr><td style="white-space:nowrap;">' + py.payment_date + '</td>' +
-                            '<td>' + payLabel + (py.method ? ' <small style="color:var(--ss-muted);">(' + py.method + ')</small>' : '') + '</td>' +
-                            '<td style="font-weight:600;color:var(--ss-success);white-space:nowrap;">' + fmt(py.amount) + '</td></tr>';
+                        var payLabel = (idx === data.payments.length - 1 && remaining <= 0) ? 'Pelunasan' : 'DP ' + (idx + 1);
+                        html += '<div class="rd-row"><span class="l">' + payLabel + '<small>' + tgl(py.payment_date) + (py.method ? ' · ' + esc(py.method) : '') + '</small></span>' +
+                            '<span class="r" style="color:var(--ss-success);">' + fmt(py.amount) + '</span></div>';
                     });
-                    html += '<tfoot><tr><td colspan="2" style="text-align:right;font-weight:700;">Total Dibayar</td>' +
-                        '<td style="font-weight:700;color:var(--ss-success);white-space:nowrap;">' + fmt(data.totalPaid) + '</td></tr>';
-                    html += '<tr><td colspan="2" style="text-align:right;font-weight:700;">Sisa Tagihan</td>' +
-                        '<td style="font-weight:700;color:' + paidColor + ';white-space:nowrap;">' + fmt(data.remainingPayment) + '</td></tr></tfoot>';
-                    html += '</table>';
+                    html += '</div>';
                 }
                 html += '</div>';
 
-                html += '<div class="bd-col bd-col-expense">';
-                html += '<div class="bd-section-title"><span>Pengeluaran Trip Ini (dari Finance)</span>';
-                if (data.expenses.length > 0) {
-                    html += '<button type="button" class="ss-btn ss-btn-outline ss-btn-sm" onclick="printBookingExpenses()">Cetak / Simpan PDF</button>';
+                html += '<div class="rd-card"><h4><span><span class="ic">🧾</span>Rincian Harga (RAB)</span></h4>';
+                if (!data.items || data.items.length === 0) {
+                    html += '<div class="rd-empty">Belum ada item.</div>';
+                } else {
+                    html += '<div class="rd-list">';
+                    data.items.forEach(function(it) {
+                        var q = parseFloat(it.qty) || 0;
+                        html += '<div class="rd-row"><span class="l">' + esc(it.component_name) + (it.is_done == 1 ? ' <span style="color:var(--ss-success);">✓</span>' : '') +
+                            '<small>' + (q % 1 === 0 ? q.toFixed(0) : q) + ' ' + esc(it.unit || '') + '</small></span>' +
+                            '<span class="r">' + fmt(it.total_sell) + '</span></div>';
+                    });
+                    html += '<div class="rd-row total"><span class="l">Total</span><span class="r">' + fmt(rab) + '</span></div>';
+                    html += '</div>';
                 }
+                html += '</div>';
+                html += '</div>';
+
+                // ── Kolom kanan: biaya & untung ──
+                html += '<div>';
+                html += '<div class="rd-card"><h4><span><span class="ic">📊</span>Biaya & Untung</span>';
+                if (data.expenses.length > 0) {
+                    html += '<button type="button" class="ss-btn ss-btn-outline ss-btn-sm" onclick="printBookingExpenses()">Cetak / PDF</button>';
+                }
+                html += '</h4>';
+                html += '<div class="rd-big">';
+                html += '<div><div class="rd-k">Harga Jual</div><div class="rd-v">' + fmt(rab) + '</div></div>';
+                html += '<div style="background:#FEF2F2;"><div class="rd-k">Biaya Trip</div><div class="rd-v" style="color:var(--ss-danger);">' + fmt(expenseVal) + '</div></div>';
+                html += '<div style="background:' + (margin >= 0 ? '#ECFDF5' : '#FEF2F2') + ';"><div class="rd-k">Untung</div><div class="rd-v" style="color:' + marginColor + ';">' + fmt(margin) + '<small>' + marginPct.toFixed(0) + '% dari harga jual</small></div></div>';
                 html += '</div>';
                 if (data.expenses.length === 0) {
-                    html += '<div style="font-size:12px;color:var(--ss-muted);">Belum ada pengeluaran dicatat di Finance untuk trip ini.</div>';
+                    html += '<div class="rd-warn">Biaya trip ini belum dicatat di Kas & Biaya, jadi untungnya belum final. Catat biaya (tiket, penginapan, guide, dll.) supaya angkanya benar.</div>';
                 } else {
-                    html += '<table class="ss-table"><thead><tr><th style="white-space:nowrap;">Tanggal</th><th>Keterangan</th><th style="width:100px;white-space:nowrap;">Jumlah</th></tr></thead><tbody>';
+                    html += '<div class="rd-sec">Pengeluaran (dari Kas & Biaya)</div><div class="rd-list">';
                     data.expenses.forEach(function(ex) {
-                        html += '<tr><td style="white-space:nowrap;">' + ex.transaction_date + '</td>' +
-                            '<td>' + ex.description + (ex.category ? '<br><small style="color:var(--ss-muted);">' + ex.category + '</small>' : '') + '</td>' +
-                            '<td style="font-weight:600;color:var(--ss-danger);white-space:nowrap;">' + fmt(ex.amount) + '</td></tr>';
+                        html += '<div class="rd-row"><span class="l">' + esc(ex.description) + '<small>' + tgl(ex.transaction_date) + (ex.category ? ' · ' + esc(ex.category) : '') + '</small></span>' +
+                            '<span class="r" style="color:var(--ss-danger);">' + fmt(ex.amount) + '</span></div>';
                     });
-                    html += '<tfoot><tr><td colspan="2" style="text-align:right;font-weight:700;">Total Pengeluaran</td>' +
-                        '<td style="font-weight:700;color:var(--ss-danger);white-space:nowrap;">' + fmt(expenseVal) + '</td></tr></tfoot>';
-                    html += '</table>';
+                    html += '<div class="rd-row total"><span class="l">Total biaya</span><span class="r" style="color:var(--ss-danger);">' + fmt(expenseVal) + '</span></div>';
+                    html += '</div>';
                 }
                 html += '</div>';
 
+                // Checklist layanan mitra: data terstruktur dari detail layanan paket (component_code != 'paket')
+                html += '<div class="rd-card"><h4><span><span class="ic">🤝</span>Pembayaran ke Mitra</span></h4>';
+                if (!data.mitraItems || data.mitraItems.length === 0) {
+                    html += '<div class="rd-empty">Belum ada layanan mitra. Isi "Detail Layanan dalam Paket" di Paket Wisata (tiket kapal, penginapan, rental, dll.) supaya tagihan mitra tampil di sini.</div>';
+                } else {
+                    html += '<div class="rd-list">';
+                    data.mitraItems.forEach(function(it) {
+                        var isPaid = it.is_paid_mitra == 1;
+                        html += '<div class="rd-row"><span class="l">' + esc(it.component_name) + '</span>' +
+                            '<span class="r">' + fmt(it.total_cost) + ' <span class="rd-tag ' + (isPaid ? 'ok' : 'no') + '">' + (isPaid ? 'Sudah dibayar' : 'Belum dibayar') + '</span></span></div>';
+                    });
+                    html += '</div><div class="rd-note" style="margin-top:8px;">Tandai pembayaran mitra di <a href="bookings.php?view=' + (+b.id) + '">halaman Pemesanan</a> → Pembayaran ke Mitra.</div>';
+                }
+                html += '</div>';
                 html += '</div>';
 
-                // Simpan konteks untuk tombol Cetak/Simpan PDF (hindari embed JSON di atribut onclick).
+                html += '</div></div>';
+
+                // Konteks untuk tombol Cetak / PDF (hindari JSON di atribut onclick)
                 window.__bookingDetailPrintCtx = {
                     booking: b,
                     expenses: data.expenses,
                     totalExpense: expenseVal
                 };
-
-
-
-                // Checklist layanan mitra: pakai data terstruktur dari detail layanan paket
-                // (component_code != 'paket'), bukan tebakan kata kunci dari teks pengeluaran.
-                html += '<div class="bd-section-title">Checklist Pembayaran ke Mitra</div>';
-                html += '<div class="bd-mitra-list">';
-                if (!data.mitraItems || data.mitraItems.length === 0) {
-                    html += '<div style="font-size:12px;color:var(--ss-muted);">Belum ada detail layanan mitra. Isi "Detail Layanan dalam Paket" di menu Paket Wisata (tiket kapal, penginapan, rental, dll) agar tagihan mitra tampil di sini.</div>';
-                } else {
-                    data.mitraItems.forEach(function(it) {
-                        var isPaid = it.is_paid_mitra == 1;
-                        html += '<div class="bd-mitra-item ' + (isPaid ? 'paid' : 'unpaid') + '">';
-                        html += '<span>' + (isPaid ? '\u2713' : '\u26a0') + ' ' + it.component_name + '</span>';
-                        html += '<strong>' + (isPaid ? fmt(it.total_cost) + ' (sudah dibayar)' : fmt(it.total_cost) + ' (belum dibayar)') + '</strong>';
-                        html += '</div>';
-                    });
-                    html += '<div style="margin-top:6px;color:var(--ss-muted);font-size:11px;">Tandai pembayaran mitra di halaman <a href="bookings.php?view=' + b.id + '">Detail Booking</a> &rarr; Pembayaran ke Mitra.</div>';
-                }
-                html += '</div>';
-
-                html += '<div style="margin-top:16px;display:flex;gap:8px;">';
-                html += '<a href="bookings.php?view=' + b.id + '" class="ss-btn ss-btn-outline ss-btn-sm">Buka Halaman Booking</a>';
-                html += '<a href="finance.php?customer_id=' + b.customer_id + '" class="ss-btn ss-btn-outline ss-btn-sm">Lihat di Finance</a>';
-                html += '</div>';
 
                 body.innerHTML = html;
                 if (window.feather) feather.replace();
