@@ -619,23 +619,24 @@ include 'layout-header.php';
 <style>
     /* Detail Reservasi (popup kalender): kepala + 4 info, lalu 2 kolom "Uang dari Tamu" dan "Biaya & Untung" */
     #bookingDetailBody { background: var(--ss-gray-1); }
-    #bookingDetailBody .rd { max-width: 1180px; margin: 0 auto; }
+    #bookingDetailBody .rd { width: 100%; }
     #bookingDetailBody .rd-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
     #bookingDetailBody .rd-name { font-size: 20px; font-weight: 800; color: var(--ss-text); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
     #bookingDetailBody .rd-sub { font-size: 12.5px; color: var(--ss-muted); margin-top: 3px; }
     #bookingDetailBody .rd-sub a { color: var(--ss-ocean); text-decoration: none; font-weight: 600; }
     #bookingDetailBody .rd-pill { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 99px; letter-spacing: .2px; }
     #bookingDetailBody .rd-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-    #bookingDetailBody .rd-info { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
+    #bookingDetailBody .rd-info { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
     #bookingDetailBody .rd-info > div { background: #fff; border-radius: 12px; padding: 12px 14px; box-shadow: 0 1px 2px rgba(15, 23, 42, .05); }
     #bookingDetailBody .rd-k { font-size: 11px; font-weight: 600; color: var(--ss-muted); text-transform: uppercase; letter-spacing: .5px; }
     #bookingDetailBody .rd-v { font-size: 14px; font-weight: 700; color: var(--ss-text); margin-top: 4px; line-height: 1.35; }
     #bookingDetailBody .rd-v small { display: block; font-size: 12px; font-weight: 500; color: var(--ss-muted); }
-    #bookingDetailBody .rd-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: start; }
+    #bookingDetailBody .rd-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; align-items: start; }
+    #bookingDetailBody .rd-cols > div, #bookingDetailBody .rd-info > div, #bookingDetailBody .rd-big > div { min-width: 0; }
     #bookingDetailBody .rd-card { background: #fff; border-radius: 14px; padding: 16px 18px; box-shadow: 0 1px 2px rgba(15, 23, 42, .05); margin-bottom: 14px; }
     #bookingDetailBody .rd-card h4 { margin: 0 0 12px; font-size: 14px; font-weight: 800; color: var(--ss-text); display: flex; justify-content: space-between; align-items: center; gap: 8px; }
     #bookingDetailBody .rd-card h4 .ic { font-size: 16px; margin-right: 6px; }
-    #bookingDetailBody .rd-big { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+    #bookingDetailBody .rd-big { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 12px; }
     #bookingDetailBody .rd-big > div { border-radius: 10px; padding: 10px 12px; background: var(--ss-gray-1); }
     #bookingDetailBody .rd-big .rd-v { font-size: 16px; }
     #bookingDetailBody .rd-bar { height: 8px; border-radius: 99px; background: var(--ss-gray-2); overflow: hidden; margin: 2px 0 6px; }
@@ -655,11 +656,20 @@ include 'layout-header.php';
     #bookingDetailBody .rd-tag.ok { background: #DCFCE7; color: #166534; }
     #bookingDetailBody .rd-tag.no { background: #FEF3C7; color: #92400E; }
     @media (max-width: 1000px) {
-        #bookingDetailBody .rd-info { grid-template-columns: repeat(2, 1fr); }
-        #bookingDetailBody .rd-cols { grid-template-columns: 1fr; }
+        #bookingDetailBody .rd-info { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        #bookingDetailBody .rd-cols { grid-template-columns: minmax(0, 1fr); }
     }
-    @media (max-width: 560px) {
-        #bookingDetailBody .rd-big { grid-template-columns: 1fr; }
+    @media (max-width: 640px) {
+        #bookingDetailOverlay #bookingDetailBody { padding: 12px !important; }
+        #bookingDetailBody .rd-name { font-size: 18px; }
+        #bookingDetailBody .rd-actions { width: 100%; }
+        #bookingDetailBody .rd-actions .ss-btn { flex: 1; text-align: center; justify-content: center; }
+        #bookingDetailBody .rd-info { gap: 8px; }
+        #bookingDetailBody .rd-card { padding: 14px; border-radius: 12px; }
+        #bookingDetailBody .rd-big { grid-template-columns: minmax(0, 1fr); }
+        #bookingDetailBody .rd-big > div { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+        #bookingDetailBody .rd-big .rd-v { margin-top: 0; text-align: right; }
+        #bookingDetailBody .rd-row { flex-wrap: wrap; }
     }
 </style>
 
