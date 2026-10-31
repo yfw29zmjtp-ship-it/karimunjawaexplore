@@ -1295,11 +1295,6 @@ $prefillPaxCount = max(1, (int)($_GET['pax_count'] ?? 1));
         <a href="invoices.php" class="ss-btn ss-btn-outline ss-btn-sm"><i data-feather="arrow-left"></i> Kembali</a>
         <a href="invoices.php?action=edit&id=<?php echo $invoice['id']; ?>" class="ss-btn ss-btn-primary ss-btn-sm"><i data-feather="edit-3"></i> Edit Invoice</a>
         <a href="invoices.php?action=print&id=<?php echo $invoice['id']; ?>" target="_blank" class="ss-btn ss-btn-outline ss-btn-sm"><i data-feather="printer"></i> Cetak</a>
-        <?php if (in_array($invoice['status'], ['issued', 'partial'])): ?>
-            <button onclick="document.getElementById('paymentModal').style.display='flex'" class="ss-btn ss-btn-primary ss-btn-sm">
-                <i data-feather="dollar-sign"></i> Catat Pembayaran
-            </button>
-        <?php endif; ?>
         <?php if ($linkedBooking): ?>
             <a href="bookings.php?view=<?php echo $linkedBooking['id']; ?>" class="ss-btn ss-btn-outline ss-btn-sm" style="color:#15803D;border-color:#15803D;"><i data-feather="check-circle"></i> Terhubung Booking <?php echo htmlspecialchars($linkedBooking['booking_no']); ?></a>
         <?php else: ?>
@@ -1312,140 +1307,148 @@ $prefillPaxCount = max(1, (int)($_GET['pax_count'] ?? 1));
     </div>
 
 
-    <div class="ss-card" style="max-width:900px;margin-bottom:16px;">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;">
-            <div>
-                <div class="ss-card-title">Invoice - <?php echo htmlspecialchars($invoice['invoice_no']); ?></div>
-                <div class="ss-card-sub">
-                    <?php echo htmlspecialchars($invoice['customer_name']); ?>
-                    &middot; Invoice <?php echo date('d M Y', strtotime($invoice['issued_at'] ?: $invoice['created_at'])); ?>
-                    <?php if ($invoice['trip_date']): ?>
-                        &middot; Trip <?php echo date('d M Y', strtotime($invoice['trip_date'])); ?><?php echo $invoice['trip_end_date'] ? ' - ' . date('d M Y', strtotime($invoice['trip_end_date'])) : ''; ?>
-                    <?php endif; ?>
-                    &middot; <?php echo (int)$invoice['pax_count']; ?> pax
-                    &middot; Jatuh Tempo <?php echo $invoice['due_date'] ? date('d M Y', strtotime($invoice['due_date'])) : '-'; ?>
+    <?php
+    // Detail Invoice: kiri = invoice (rincian & total), kanan = status pembayaran (progres, kurang bayar, riwayat DP)
+    $ivTotal = (float)$invoice['total_amount'];
+    $ivPaid = (float)$invoice['paid_amount'];
+    $ivRemain = max(0, (float)$invoice['remaining_amount']);
+    $ivPct = $ivTotal > 0 ? max(0, min(100, $ivPaid / $ivTotal * 100)) : 0;
+    $ivStatusLabel = ['draft' => 'Draft', 'issued' => 'Belum Bayar', 'partial' => 'Sudah DP', 'paid' => 'Lunas', 'overdue' => 'Terlambat', 'cancelled' => 'Batal'];
+    $ivStatusColor = ['draft' => ['#F1F5F9', '#475569'], 'issued' => ['#FEF3C7', '#92400E'], 'partial' => ['#FEF3C7', '#92400E'], 'paid' => ['#DCFCE7', '#166534'], 'overdue' => ['#FEE2E2', '#991B1B'], 'cancelled' => ['#F1F5F9', '#64748B']];
+    [$ivBg, $ivFg] = $ivStatusColor[$invoice['status']] ?? ['#F1F5F9', '#475569'];
+    $ivKasDiff = round($invoiceRiilDiterima - $ivPaid);
+    ?>
+    <style>
+        .iv-wrap { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+        .iv-wrap > div { min-width: 0; }
+        .iv-meta { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 14px 0 16px; }
+        .iv-meta > div { background: var(--ss-gray-1); border-radius: 10px; padding: 10px 12px; min-width: 0; }
+        .iv-k { font-size: 11px; font-weight: 600; color: var(--ss-muted); text-transform: uppercase; letter-spacing: .4px; }
+        .iv-v { font-size: 13.5px; font-weight: 700; margin-top: 3px; }
+        .iv-pill { font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 99px; white-space: nowrap; }
+        .iv-tot { margin-left: auto; width: 100%; max-width: 360px; margin-top: 14px; }
+        .iv-tot > div { display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px; }
+        .iv-tot .grand { border-top: 2px solid var(--ss-ocean); margin-top: 4px; padding-top: 10px; font-size: 16px; font-weight: 800; }
+        .iv-pay-big { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; margin-bottom: 12px; }
+        .iv-pay-big > div { display: flex; justify-content: space-between; align-items: center; border-radius: 10px; padding: 11px 14px; background: var(--ss-gray-1); }
+        .iv-pay-big strong { font-size: 17px; }
+        .iv-bar { height: 8px; border-radius: 99px; background: var(--ss-gray-2); overflow: hidden; }
+        .iv-bar span { display: block; height: 100%; background: var(--ss-success); border-radius: 99px; }
+        .iv-note { font-size: 12px; color: var(--ss-muted); margin: 6px 0 4px; }
+        .iv-warn { font-size: 12px; color: #92400E; background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 10px; padding: 9px 12px; margin-top: 10px; }
+        .iv-sec { font-size: 12px; font-weight: 700; color: var(--ss-muted); text-transform: uppercase; letter-spacing: .5px; margin: 16px 0 4px; }
+        .iv-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px dashed var(--ss-gray-2); font-size: 13px; }
+        .iv-row:last-child { border-bottom: 0; }
+        .iv-row small { display: block; color: var(--ss-muted); font-size: 11.5px; margin-top: 1px; }
+        .iv-row .amt { font-weight: 700; color: var(--ss-success); white-space: nowrap; }
+        .iv-row button { background: none; border: none; cursor: pointer; color: var(--ss-ocean); padding: 2px; }
+        .iv-row button svg { width: 15px; height: 15px; }
+        @media (max-width: 1000px) { .iv-wrap { grid-template-columns: minmax(0, 1fr); } }
+        @media (max-width: 640px) { .iv-meta { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    </style>
+
+    <div class="iv-wrap">
+        <!-- KIRI: invoice -->
+        <div class="ss-card">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">
+                <div>
+                    <div class="ss-card-title" style="font-size:17px;"><?php echo htmlspecialchars($invoice['invoice_no']); ?></div>
+                    <div class="ss-card-sub" style="font-size:13px;"><?php echo htmlspecialchars($invoice['customer_name']); ?></div>
                 </div>
+                <span class="iv-pill" style="background:<?php echo $ivBg; ?>;color:<?php echo $ivFg; ?>;"><?php echo htmlspecialchars($ivStatusLabel[$invoice['status']] ?? ucfirst($invoice['status'])); ?></span>
             </div>
-            <span class="ss-status ss-status-<?php echo $invoice['status']; ?>" style="font-size:13px;padding:5px 14px;"><?php echo ucfirst($invoice['status']); ?></span>
-        </div>
 
-        <div class="ss-table-wrap">
-            <table class="ss-table">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Keterangan</th>
-                        <th>Qty</th>
-                        <th>Sat.</th>
-                        <th>Harga</th>
-                        <th>Subtotal</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($invItems as $i => $item): ?>
-                        <tr>
-                            <td><?php echo $i + 1; ?></td>
-                            <td><?php echo htmlspecialchars($item['description']); ?></td>
-                            <td><?php echo $item['qty'] == intval($item['qty']) ? (int)$item['qty'] : $item['qty']; ?></td>
-                            <td><?php echo htmlspecialchars($item['unit']); ?></td>
-                            <td><?php echo sunseaRupiah((float)$item['unit_price']); ?></td>
-                            <td style="font-weight:600;"><?php echo sunseaRupiah((float)$item['subtotal']); ?></td>
-                        </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-        </div>
+            <div class="iv-meta">
+                <div><div class="iv-k">Tanggal Invoice</div><div class="iv-v"><?php echo date('d M Y', strtotime($invoice['issued_at'] ?: $invoice['created_at'])); ?></div></div>
+                <div><div class="iv-k">Trip</div><div class="iv-v"><?php echo $invoice['trip_date'] ? date('d M', strtotime($invoice['trip_date'])) . ($invoice['trip_end_date'] ? ' – ' . date('d M Y', strtotime($invoice['trip_end_date'])) : date(' Y', strtotime($invoice['trip_date']))) : '-'; ?></div></div>
+                <div><div class="iv-k">Tamu</div><div class="iv-v"><?php echo (int)$invoice['pax_count']; ?> pax</div></div>
+                <div><div class="iv-k">Jatuh Tempo</div><div class="iv-v"><?php echo $invoice['due_date'] ? date('d M Y', strtotime($invoice['due_date'])) : '-'; ?></div></div>
+            </div>
 
-        <div style="display:flex;justify-content:flex-end;margin-top:14px;">
-            <div style="width:320px;">
-                <div style="display:flex;justify-content:space-between;padding:6px 0;"><span style="color:var(--ss-muted)">Subtotal</span><strong><?php echo sunseaRupiah((float)$invoice['subtotal']); ?></strong></div>
-                <?php if ($invoice['discount_amount'] > 0): ?>
-                    <div style="display:flex;justify-content:space-between;padding:6px 0;"><span style="color:var(--ss-muted)">Diskon</span><strong style="color:var(--ss-success)">-<?php echo sunseaRupiah((float)$invoice['discount_amount']); ?></strong></div>
-                <?php endif; ?>
-                <div style="display:flex;justify-content:space-between;padding:6px 0;"><span style="color:var(--ss-muted)">PPN <?php echo (float)$invoice['tax_pct']; ?>%</span><strong><?php echo sunseaRupiah((float)$invoice['tax_amount']); ?></strong></div>
-                <div style="display:flex;justify-content:space-between;padding:8px 0;border-top:2px solid var(--ss-ocean);font-size:16px;"><span>TOTAL</span><strong style="color:var(--ss-ocean)"><?php echo sunseaRupiah((float)$invoice['total_amount']); ?></strong></div>
-                <?php if ($invoice['paid_amount'] > 0): ?>
-                    <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;"><span style="color:var(--ss-muted)">Terbayar</span><strong style="color:var(--ss-success)"><?php echo sunseaRupiah((float)$invoice['paid_amount']); ?></strong></div>
-                    <div style="display:flex;justify-content:space-between;padding:8px 14px;margin-top:4px;background:<?php echo $invoice['remaining_amount'] > 0 ? '#FEE2E2' : '#D1FAE5'; ?>;border-radius:8px;font-weight:800;color:<?php echo $invoice['remaining_amount'] > 0 ? 'var(--ss-danger)' : 'var(--ss-success)'; ?>;">
-                        <span><?php echo $invoice['remaining_amount'] > 0 ? 'Sisa Tagihan' : '✓ Lunas'; ?></span>
-                        <span><?php echo sunseaRupiah((float)$invoice['remaining_amount']); ?></span>
-                    </div>
-                <?php endif; ?>
-            </div>
-        </div>
-    </div>
-
-    <div class="ss-card" style="max-width:900px;margin-bottom:16px;">
-        <div class="ss-card-title" style="margin-bottom:14px;">Ringkasan Uang Masuk</div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
-            <div style="background:#EFF6FF;border-radius:10px;padding:14px;">
-                <div style="font-size:12px;color:var(--ss-muted);margin-bottom:4px;">Estimasi Diterima</div>
-                <div style="font-size:18px;font-weight:800;color:#1D4ED8;"><?php echo sunseaRupiah((float)$invoice['paid_amount']); ?></div>
-            </div>
-            <div style="background:#ECFDF5;border-radius:10px;padding:14px;">
-                <div style="font-size:12px;color:var(--ss-muted);margin-bottom:4px;">Riil Diterima (Kas)</div>
-                <div style="font-size:18px;font-weight:800;color:var(--ss-success);"><?php echo sunseaRupiah($invoiceRiilDiterima); ?></div>
-            </div>
-            <div style="background:<?php echo $invoice['remaining_amount'] > 0 ? '#FEF2F2' : '#F1F5F9'; ?>;border-radius:10px;padding:14px;">
-                <div style="font-size:12px;color:var(--ss-muted);margin-bottom:4px;">Piutang</div>
-                <div style="font-size:18px;font-weight:800;color:<?php echo $invoice['remaining_amount'] > 0 ? 'var(--ss-danger)' : 'var(--ss-success)'; ?>;"><?php echo sunseaRupiah((float)$invoice['remaining_amount']); ?></div>
-            </div>
-        </div>
-    </div>
-
-    <?php if (!empty($payments)): ?>
-        <div class="ss-card" style="max-width:900px;">
-            <div class="ss-card-title" style="margin-bottom:14px;">Riwayat Pembayaran (Rekap DP)</div>
             <div class="ss-table-wrap">
                 <table class="ss-table">
                     <thead>
                         <tr>
-                            <th>Tahap</th>
-                            <th>Tanggal</th>
-                            <th>Jumlah</th>
-                            <th>Metode</th>
-                            <th>Referensi</th>
-                            <th style="width:60px;">Aksi</th>
+                            <th style="width:36px;">#</th>
+                            <th>Keterangan</th>
+                            <th style="text-align:center;">Qty</th>
+                            <th style="text-align:right;">Harga</th>
+                            <th style="text-align:right;">Subtotal</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach ($payments as $pIdx => $p):
-                            $isLastPayment = $pIdx === count($payments) - 1;
-                            $payStage = ($isLastPayment && (float)$invoice['remaining_amount'] <= 0) ? 'Pelunasan' : ($pIdx === 0 ? 'DP 1' : 'DP ' . ($pIdx + 1));
-                        ?>
+                        <?php foreach ($invItems as $i => $item): ?>
                             <tr>
-                                <td><strong><?php echo $payStage; ?></strong></td>
-                                <td><?php echo date('d M Y', strtotime($p['payment_date'])); ?></td>
-                                <td style="font-weight:600;color:var(--ss-success);"><?php echo sunseaRupiah((float)$p['amount']); ?></td>
-                                <td><?php echo ucfirst($p['method']); ?></td>
-                                <td><?php echo htmlspecialchars($p['reference'] ?: '-'); ?></td>
-                                <td>
-                                    <button type="button" title="Edit pembayaran" onclick='openEditPayment(<?php echo json_encode([
-                                                                                                                "id" => (int)$p["id"],
-                                                                                                                "amount" => (float)$p["amount"],
-                                                                                                                "date" => $p["payment_date"],
-                                                                                                                "method" => $p["method"],
-                                                                                                                "reference" => $p["reference"],
-                                                                                                                "notes" => $p["notes"],
-                                                                                                            ]); ?>)' style="background:none;border:none;cursor:pointer;color:var(--ss-ocean);"><i data-feather="edit-2"></i></button>
-                                </td>
+                                <td><?php echo $i + 1; ?></td>
+                                <td><?php echo htmlspecialchars($item['description']); ?></td>
+                                <td style="text-align:center;white-space:nowrap;"><?php echo $item['qty'] == intval($item['qty']) ? (int)$item['qty'] : $item['qty']; ?> <?php echo htmlspecialchars($item['unit']); ?></td>
+                                <td style="text-align:right;white-space:nowrap;"><?php echo sunseaRupiah((float)$item['unit_price']); ?></td>
+                                <td style="text-align:right;white-space:nowrap;font-weight:600;"><?php echo sunseaRupiah((float)$item['subtotal']); ?></td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
-                    <tfoot>
-                        <tr style="border-top:2px solid var(--ss-gray-2);">
-                            <td colspan="2" style="text-align:right;"><strong>Total Dibayar</strong></td>
-                            <td colspan="3" style="font-weight:700;color:var(--ss-success);"><?php echo sunseaRupiah((float)$invoice['paid_amount']); ?></td>
-                        </tr>
-                        <tr>
-                            <td colspan="2" style="text-align:right;"><strong><?php echo (float)$invoice['remaining_amount'] > 0 ? 'Sisa Tagihan' : 'Status'; ?></strong></td>
-                            <td colspan="3" style="font-weight:700;color:<?php echo (float)$invoice['remaining_amount'] > 0 ? 'var(--ss-danger)' : 'var(--ss-success)'; ?>;"><?php echo (float)$invoice['remaining_amount'] > 0 ? sunseaRupiah((float)$invoice['remaining_amount']) : '✓ Lunas'; ?></td>
-                        </tr>
-                    </tfoot>
                 </table>
             </div>
+
+            <div class="iv-tot">
+                <div><span style="color:var(--ss-muted)">Subtotal</span><strong><?php echo sunseaRupiah((float)$invoice['subtotal']); ?></strong></div>
+                <?php if ($invoice['discount_amount'] > 0): ?>
+                    <div><span style="color:var(--ss-muted)">Diskon</span><strong style="color:var(--ss-success)">-<?php echo sunseaRupiah((float)$invoice['discount_amount']); ?></strong></div>
+                <?php endif; ?>
+                <?php if ((float)$invoice['tax_amount'] > 0): ?>
+                    <div><span style="color:var(--ss-muted)">PPN <?php echo (float)$invoice['tax_pct']; ?>%</span><strong><?php echo sunseaRupiah((float)$invoice['tax_amount']); ?></strong></div>
+                <?php endif; ?>
+                <div class="grand"><span>Total</span><span style="color:var(--ss-ocean)"><?php echo sunseaRupiah($ivTotal); ?></span></div>
+            </div>
         </div>
-    <?php endif; ?>
+
+        <!-- KANAN: pembayaran -->
+        <div class="ss-card">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px;">
+                <div class="ss-card-title">💰 Pembayaran Tamu</div>
+                <?php if (in_array($invoice['status'], ['issued', 'partial'])): ?>
+                    <button onclick="document.getElementById('paymentModal').style.display='flex'" class="ss-btn ss-btn-primary ss-btn-sm"><i data-feather="plus"></i> Catat Pembayaran</button>
+                <?php endif; ?>
+            </div>
+            <div class="iv-pay-big">
+                <div><span>Total Tagihan</span><strong><?php echo sunseaRupiah($ivTotal); ?></strong></div>
+                <div style="background:#ECFDF5;"><span>Sudah Dibayar</span><strong style="color:var(--ss-success);"><?php echo sunseaRupiah($ivPaid); ?></strong></div>
+                <div style="background:<?php echo $ivRemain > 0 ? '#FFFBEB' : '#ECFDF5'; ?>;"><span>Tamu Kurang Bayar</span><strong style="color:<?php echo $ivRemain > 0 ? '#B45309' : 'var(--ss-success)'; ?>;"><?php echo sunseaRupiah($ivRemain); ?></strong></div>
+            </div>
+            <div class="iv-bar"><span style="width:<?php echo number_format($ivPct, 1, '.', ''); ?>%;"></span></div>
+            <div class="iv-note"><?php echo round($ivPct); ?>% sudah dibayar<?php echo $ivRemain > 0 ? ' · tamu masih kurang bayar ' . sunseaRupiah($ivRemain) : ' · tamu sudah lunas'; ?></div>
+            <?php if (abs($ivKasDiff) >= 1): ?>
+                <div class="iv-warn">Uang yang tercatat masuk di Kas & Biaya: <strong><?php echo sunseaRupiah($invoiceRiilDiterima); ?></strong> (<?php echo $ivKasDiff > 0 ? 'lebih' : 'kurang'; ?> <?php echo sunseaRupiah(abs($ivKasDiff)); ?> dari pembayaran di invoice). Cek pencatatan kasnya.</div>
+            <?php endif; ?>
+
+            <div class="iv-sec">Riwayat pembayaran</div>
+            <?php if (empty($payments)): ?>
+                <div class="iv-note" style="background:var(--ss-gray-1);border-radius:10px;padding:10px 12px;">Belum ada pembayaran / DP.</div>
+            <?php else: ?>
+                <div>
+                    <?php foreach ($payments as $pIdx => $p):
+                        $isLastPayment = $pIdx === count($payments) - 1;
+                        $payStage = ($isLastPayment && $ivRemain <= 0) ? 'Pelunasan' : 'DP ' . ($pIdx + 1);
+                    ?>
+                        <div class="iv-row">
+                            <span><strong><?php echo $payStage; ?></strong><small><?php echo date('d M Y', strtotime($p['payment_date'])); ?> · <?php echo htmlspecialchars(ucfirst((string)$p['method'])); ?><?php echo $p['reference'] ? ' · ' . htmlspecialchars($p['reference']) : ''; ?></small></span>
+                            <span style="display:flex;align-items:center;gap:8px;">
+                                <span class="amt"><?php echo sunseaRupiah((float)$p['amount']); ?></span>
+                                <button type="button" title="Edit pembayaran" onclick='openEditPayment(<?php echo json_encode([
+                                    "id" => (int)$p["id"],
+                                    "amount" => (float)$p["amount"],
+                                    "date" => $p["payment_date"],
+                                    "method" => $p["method"],
+                                    "reference" => $p["reference"],
+                                    "notes" => $p["notes"],
+                                ], JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP); ?>)'><i data-feather="edit-2"></i></button>
+                            </span>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+        </div>
+    </div>
 
     <!-- Payment Modal -->
     <div id="paymentModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:999;align-items:center;justify-content:center;">
