@@ -757,10 +757,10 @@ include 'layout-header.php';
                 html += '<div class="rd-big">';
                 html += '<div><div class="rd-k">Total Tagihan</div><div class="rd-v">' + fmt(billed) + '</div></div>';
                 html += '<div style="background:#ECFDF5;"><div class="rd-k">Sudah Dibayar</div><div class="rd-v" style="color:var(--ss-success);">' + fmt(paid) + '</div></div>';
-                html += '<div style="background:' + (remaining > 0 ? '#FFFBEB' : '#ECFDF5') + ';"><div class="rd-k">Sisa</div><div class="rd-v" style="color:' + (remaining > 0 ? '#B45309' : 'var(--ss-success)') + ';">' + fmt(remaining) + '</div></div>';
+                html += '<div style="background:' + (remaining > 0 ? '#FFFBEB' : '#ECFDF5') + ';"><div class="rd-k">Sisa Tagihan</div><div class="rd-v" style="color:' + (remaining > 0 ? '#B45309' : 'var(--ss-success)') + ';">' + fmt(remaining) + '</div></div>';
                 html += '</div>';
                 html += '<div class="rd-bar"><span style="width:' + paidPct.toFixed(1) + '%;background:var(--ss-success);"></span></div>';
-                html += '<div class="rd-note">' + Math.round(paidPct) + '% sudah dibayar</div>';
+                html += '<div class="rd-note">' + Math.round(paidPct) + '% sudah dibayar' + (remaining > 0 ? ' · sisa ' + fmt(remaining) + ' masih harus ditagih ke tamu' : '') + '</div>';
 
                 html += '<div class="rd-sec">Riwayat pembayaran</div>';
                 if (!data.payments || data.payments.length === 0) {
@@ -803,7 +803,7 @@ include 'layout-header.php';
                 html += '<div class="rd-big">';
                 html += '<div><div class="rd-k">Harga Jual</div><div class="rd-v">' + fmt(rab) + '</div></div>';
                 html += '<div style="background:#FEF2F2;"><div class="rd-k">Biaya Trip</div><div class="rd-v" style="color:var(--ss-danger);">' + fmt(expenseVal) + '</div></div>';
-                html += '<div style="background:' + (margin >= 0 ? '#ECFDF5' : '#FEF2F2') + ';"><div class="rd-k">Untung</div><div class="rd-v" style="color:' + marginColor + ';">' + fmt(margin) + '<small>' + marginPct.toFixed(0) + '% dari harga jual</small></div></div>';
+                html += '<div style="background:' + (margin >= 0 ? '#ECFDF5' : '#FEF2F2') + ';"><div class="rd-k">Untung</div><div class="rd-v" style="color:' + marginColor + ';">' + fmt(margin) + '<small>' + marginPct.toFixed(0) + '% · harga jual − biaya</small></div></div>';
                 html += '</div>';
                 if (data.expenses.length === 0) {
                     html += '<div class="rd-warn">Biaya trip ini belum dicatat di Kas & Biaya, jadi untungnya belum final. Catat biaya (tiket, penginapan, guide, dll.) supaya angkanya benar.</div>';
