@@ -648,6 +648,9 @@ include 'layout-header.php';
     #bookingDetailBody .rd-row .l { color: var(--ss-text); }
     #bookingDetailBody .rd-row .l small { display: block; color: var(--ss-muted); font-size: 11.5px; margin-top: 1px; }
     #bookingDetailBody .rd-row .r { font-weight: 700; white-space: nowrap; }
+    /* daftar panjang (pengeluaran) digulir di dalam kartu; total tetap terlihat di bawahnya */
+    #bookingDetailBody .rd-scroll { max-height: 300px; overflow-y: auto; padding-right: 6px; border-bottom: 1px solid var(--ss-gray-2); scrollbar-width: thin; }
+    #bookingDetailBody .rd-scroll .rd-row:last-child { border-bottom: 0; }
     #bookingDetailBody .rd-row.total { border-top: 1px solid var(--ss-gray-2); border-bottom: 0; margin-top: 2px; font-weight: 800; }
     #bookingDetailBody .rd-sec { font-size: 12px; font-weight: 700; color: var(--ss-muted); text-transform: uppercase; letter-spacing: .5px; margin: 14px 0 4px; }
     #bookingDetailBody .rd-empty { font-size: 12.5px; color: var(--ss-muted); padding: 10px 12px; border-radius: 10px; background: var(--ss-gray-1); }
@@ -805,12 +808,12 @@ include 'layout-header.php';
                 if (data.expenses.length === 0) {
                     html += '<div class="rd-warn">Biaya trip ini belum dicatat di Kas & Biaya, jadi untungnya belum final. Catat biaya (tiket, penginapan, guide, dll.) supaya angkanya benar.</div>';
                 } else {
-                    html += '<div class="rd-sec">Pengeluaran (dari Kas & Biaya)</div><div class="rd-list">';
+                    html += '<div class="rd-sec">Pengeluaran (dari Kas & Biaya) · ' + data.expenses.length + ' item</div><div class="rd-list rd-scroll">';
                     data.expenses.forEach(function(ex) {
                         html += '<div class="rd-row"><span class="l">' + esc(ex.description) + '<small>' + tgl(ex.transaction_date) + (ex.category ? ' · ' + esc(ex.category) : '') + '</small></span>' +
                             '<span class="r" style="color:var(--ss-danger);">' + fmt(ex.amount) + '</span></div>';
                     });
-                    html += '<div class="rd-row total"><span class="l">Total biaya</span><span class="r" style="color:var(--ss-danger);">' + fmt(expenseVal) + '</span></div>';
+                    html += '</div><div class="rd-list"><div class="rd-row total"><span class="l">Total biaya</span><span class="r" style="color:var(--ss-danger);">' + fmt(expenseVal) + '</span></div>';
                     html += '</div>';
                 }
                 html += '</div>';
