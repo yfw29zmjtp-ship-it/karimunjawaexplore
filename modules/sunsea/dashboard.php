@@ -97,7 +97,8 @@ try {
     $currentYear = (int)date('Y');
 
     for ($m = 11; $m >= 0; $m--) {
-        $date = new DateTime();
+        // Mulai dari tanggal 1: "-1 months" pada tanggal 31 melompati bulan pendek (Okt 31 → Sep 31 = 1 Okt), label bulan jadi dobel
+        $date = new DateTime("first day of this month");
         $date->modify("-{$m} months");
         $monthKey = $date->format('Y-m');
         $monthLabels[] = $date->format('M');
@@ -105,7 +106,6 @@ try {
         $count = (int)$pdo->query("
             SELECT COALESCE(SUM(pax_count),0) FROM booking_orders
             WHERE status='confirmed' 
-              AND YEAR(start_date)={$currentYear}
               AND DATE_FORMAT(start_date,'%Y-%m')='{$monthKey}'
         ")->fetchColumn();
         $monthlyGuests[] = $count;
@@ -150,7 +150,8 @@ try {
     $paxMonthLabels = [];
     $paxMonthlyTotals = [];
     for ($m = 11; $m >= 0; $m--) {
-        $date = new DateTime();
+        // Mulai dari tanggal 1: "-1 months" pada tanggal 31 melompati bulan pendek (Okt 31 → Sep 31 = 1 Okt), label bulan jadi dobel
+        $date = new DateTime("first day of this month");
         $date->modify("-{$m} months");
         $monthKey = $date->format('Y-m');
         $paxMonthLabels[] = $date->format('M Y');
