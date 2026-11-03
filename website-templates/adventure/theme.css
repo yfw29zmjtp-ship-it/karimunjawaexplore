@@ -1,0 +1,20 @@
+/* Adventure: gelap, hijau tosca + kuning, sudut tegas. Hanya menimpa variabel & beberapa gaya. */
+:root {
+  --we-ocean: #14b8a6;
+  --we-ocean-dark: #0f766e;
+  --we-brand: #f59e0b;
+  --we-brand-dark: #b45309;
+  --we-text: #e2e8f0;
+  --we-muted: #94a3b8;
+  --we-border: #1e293b;
+  --we-bg: #0b1220;
+  --we-footer-bg: #060a14;
+  --we-footer-bg-dark: #03060d;
+}
+body.we-body { background: #0b1220; color: var(--we-text); font-family: "Segoe UI", Roboto, Arial, sans-serif; }
+.we-t-adventure .we-navbar { background: rgba(6, 10, 20, .92); border-bottom: 1px solid #1e293b; }
+.we-t-adventure .we-nav-links a, .we-t-adventure .we-logo { color: #e2e8f0; }
+.we-t-adventure .we-section { background: #0b1220; }
+.we-t-adventure .we-section-alt { background: #0f172a; }
+.we-t-adventure h1, .we-t-adventure h2, .we-t-adventure h3 { color: #f8fafc; letter-spacing: .3px; text-transform: none; }
+.we-t-adventure .we-btn, .we-t-adventure .we-nav-cta, .we-t-adventure .we-card { border-radius: 4px; }

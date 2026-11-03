@@ -5,6 +5,9 @@
  * and $pageTitle / $activeNav to be set by the calling page.
  */
 $activeNav = $activeNav ?? '';
+// Template aktif boleh mengganti seluruh header (lihat website-templates/)
+if ($__weTplHeader = weTemplateFile($pdo, 'layout-header.php')) { require $__weTplHeader; return; }
+$weTplCss = weTemplateCssUrl($pdo);
 $weFaviconPath = sunseaSetting($pdo, 'website_favicon', '');
 ?>
 <!DOCTYPE html>
@@ -20,9 +23,10 @@ $weFaviconPath = sunseaSetting($pdo, 'website_favicon', '');
     <?php endif; ?>
     <link rel="stylesheet" href="<?php echo sunseaAssetUrl('assets/website/style.css'); ?>">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <?php if ($weTplCss): ?><link rel="stylesheet" href="<?php echo htmlspecialchars(sunseaAssetUrl($weTplCss)); ?>"><?php endif; ?>
 </head>
 
-<body class="we-body">
+<body class="we-body we-t-<?php echo htmlspecialchars(weTemplate($pdo)); ?>">
 
     <header class="we-navbar">
         <div class="we-container we-nav-inner">

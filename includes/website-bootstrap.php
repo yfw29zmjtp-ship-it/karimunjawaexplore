@@ -11,6 +11,7 @@ require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/functions.php';
 require_once __DIR__ . '/../modules/sunsea/db-helper.php';
+require_once __DIR__ . '/website-template.php';
 
 $pdo = getSunseaConnection();
 sunseaEnsureWebsiteContentSchema($pdo);

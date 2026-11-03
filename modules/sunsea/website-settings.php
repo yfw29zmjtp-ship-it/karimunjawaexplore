@@ -10,6 +10,7 @@ require_once '../../config/database.php';
 require_once '../../includes/auth.php';
 require_once '../../includes/functions.php';
 require_once 'db-helper.php';
+require_once '../../includes/website-template.php';
 
 $auth = new Auth();
 $auth->requireLogin();
@@ -207,6 +208,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $tab = 'branding';
     }
 
+    // Template website: hanya developer yang boleh memilih/mengganti (klien tidak; ganti template = layanan berbayar).
+    if ($postTab === 'template' && ($_SESSION['role'] ?? '') === 'developer') {
+        $pick = (string)($_POST['web_template'] ?? '');
+        if (isset(weTemplateList()[$pick])) {
+            sunseaSetSetting($pdo, 'web_template', $pick);
+            $flashMsg = 'Template website diganti ke "' . weTemplateList()[$pick]['name'] . '".';
+            $flashType = 'success';
+        }
+        $tab = 'template';
+    }
+
     if ($postTab === 'social') {
         sunseaSetSetting($pdo, 'website_social_facebook', trim($_POST['social_facebook'] ?? ''));
         sunseaSetSetting($pdo, 'website_social_instagram', trim($_POST['social_instagram'] ?? ''));
@@ -287,6 +299,12 @@ include 'layout-header.php';
         <?php echo $tab === 'social' ? 'border-bottom-color:#0C4A6E;color:#0C4A6E;' : 'color:#666;'; ?>">
         📱 Sosial Media
     </a>
+    <?php if (($_SESSION['role'] ?? '') === 'developer'): ?>
+    <a href="?tab=template" style="padding:10px 24px;font-weight:600;text-decoration:none;border-bottom:2px solid transparent;margin-bottom:-2px;
+        <?php echo $tab === 'template' ? 'border-bottom-color:#0C4A6E;color:#0C4A6E;' : 'color:#666;'; ?>">
+        🧩 Template
+    </a>
+    <?php endif; ?>
     <a href="settings.php" style="padding:10px 24px;font-weight:600;text-decoration:none;color:#666;">
         ⚙️ Pengaturan Sistem &rarr;
     </a>
@@ -397,6 +415,23 @@ include 'layout-header.php';
             <div>
                 <button type="submit" style="padding:10px 24px;background:#0C4A6E;color:white;border:none;border-radius:5px;font-weight:700;cursor:pointer;font-size:14px;">💾 Simpan</button>
             </div>
+        </form>
+    </div>
+<?php endif; ?>
+
+<?php if ($tab === 'template' && ($_SESSION['role'] ?? '') === 'developer'): $curTpl = weTemplate($pdo); ?>
+    <div style="background:#fff;border:1px solid #dde5ef;border-radius:8px;padding:20px;max-width:720px;">
+        <div style="font-size:16px;font-weight:700;color:#0C4A6E;margin-bottom:6px;">🧩 Template Website</div>
+        <div style="font-size:12px;color:#64748b;margin-bottom:14px;">Hanya developer yang bisa mengganti. Warna, font, dan tata letak website publik mengikuti template ini; isi (paket, galeri, blog) tetap sama.</div>
+        <form method="POST" style="display:flex;flex-direction:column;gap:10px;">
+            <input type="hidden" name="tab" value="template">
+            <?php foreach (weTemplateList() as $slug => $t): ?>
+                <label style="display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid <?php echo $slug === $curTpl ? '#0C4A6E' : '#dde5ef'; ?>;border-radius:8px;cursor:pointer;">
+                    <input type="radio" name="web_template" value="<?php echo htmlspecialchars($slug); ?>" <?php echo $slug === $curTpl ? 'checked' : ''; ?> style="margin-top:3px;">
+                    <span><b><?php echo htmlspecialchars($t['name']); ?></b><?php echo $slug === $curTpl ? ' <small style="color:#059669">(aktif)</small>' : ''; ?><br><small style="color:#64748b"><?php echo htmlspecialchars($t['description']); ?></small></span>
+                </label>
+            <?php endforeach; ?>
+            <button type="submit" style="align-self:flex-start;padding:9px 18px;background:#0C4A6E;color:#fff;border:0;border-radius:6px;font-weight:600;cursor:pointer;">💾 Terapkan Template</button>
         </form>
     </div>
 <?php endif; ?>

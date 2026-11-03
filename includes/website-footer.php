@@ -1,3 +1,7 @@
+<?php
+// Template aktif boleh mengganti seluruh footer (lihat website-templates/)
+if ($__weTplFooter = weTemplateFile($pdo, 'layout-footer.php')) { require $__weTplFooter; return; }
+?>
     <footer class="we-footer">
         <div class="we-container">
             <div class="we-footer-grid">
