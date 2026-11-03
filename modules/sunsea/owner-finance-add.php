@@ -67,21 +67,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Hanya tampilkan tamu yang masih "aktif": ada invoice yang belum lunas, ATAU
-// tanggal trip-nya belum lewat. Tamu yang reservasinya sudah selesai (tanggal
-// trip sudah lewat DAN invoice-nya sudah lunas) disembunyikan supaya dropdown
-// tidak kepanjangan.
+// Pilihan tamu: hanya tamu yang punya booking (draft/confirmed/berjalan/selesai, bukan batal) di bulan ini.
 $customers = $pdo->query("
-    SELECT DISTINCT c.id, c.name, c.phone
-    FROM customers c
-    JOIN invoices i ON i.customer_id = c.id
-    WHERE c.is_active = 1
-      AND i.status != 'cancelled'
-      AND NOT (
-          i.status = 'paid'
-          AND COALESCE(i.trip_end_date, i.trip_date) IS NOT NULL
-          AND COALESCE(i.trip_end_date, i.trip_date) < CURDATE()
-      )
+    SELECT c.id, c.name, c.phone FROM customers c
+    WHERE c.is_active = 1 AND EXISTS (SELECT 1 FROM booking_orders b WHERE b.customer_id = c.id AND b.status IN ('draft','confirmed','ongoing','completed')
+          AND b.start_date <= LAST_DAY(CURDATE()) AND b.end_date >= DATE_FORMAT(CURDATE(), '%Y-%m-01'))
     ORDER BY c.name
 ")->fetchAll();
 

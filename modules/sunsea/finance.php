@@ -272,7 +272,13 @@ $perGuest = $pdo->prepare("
 $perGuest->execute([$dateFrom, $dateTo]);
 $perGuest = $perGuest->fetchAll();
 
-$customers = $pdo->query("SELECT id, name, phone FROM customers WHERE is_active=1 ORDER BY name")->fetchAll();
+// Pilihan tamu di form transaksi: hanya tamu yang punya booking (draft/confirmed/berjalan/selesai, bukan batal) di bulan ini.
+$customers = $pdo->query("
+    SELECT c.id, c.name, c.phone FROM customers c
+    WHERE c.is_active = 1 AND EXISTS (SELECT 1 FROM booking_orders b WHERE b.customer_id = c.id AND b.status IN ('draft','confirmed','ongoing','completed')
+          AND b.start_date <= LAST_DAY(CURDATE()) AND b.end_date >= DATE_FORMAT(CURDATE(), '%Y-%m-01'))
+    ORDER BY c.name
+")->fetchAll();
 // Dropdown filter Tamu: hanya tamu yang punya booking sudah confirmed (termasuk ongoing/completed),
 // plus tamu yang sedang dipilih supaya filter aktif tetap terlihat.
 $filterCustStmt = $pdo->prepare("
@@ -287,6 +293,8 @@ $bookings  = $pdo->query("
     SELECT bo.id, bo.booking_no, bo.customer_id, c.name AS customer_name
     FROM booking_orders bo
     JOIN customers c ON c.id = bo.customer_id
+    WHERE bo.status IN ('draft','confirmed','ongoing','completed')
+      AND bo.start_date <= LAST_DAY(CURDATE()) AND bo.end_date >= DATE_FORMAT(CURDATE(), '%Y-%m-01')
     ORDER BY bo.id DESC
     LIMIT 300
 ")->fetchAll();
