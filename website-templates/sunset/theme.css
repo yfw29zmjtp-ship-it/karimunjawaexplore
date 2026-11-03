@@ -1,0 +1,25 @@
+/* Sunset: hangat, ramah, sudut besar membulat. */
+:root {
+  --we-ocean: #c2410c;
+  --we-ocean-dark: #9a3412;
+  --we-brand: #0f766e;
+  --we-brand-dark: #7c2d12;
+  --we-text: #3b2f2a;
+  --we-muted: #86766d;
+  --we-border: #f0e2d6;
+  --we-bg: #fff8f1;
+  --we-footer-bg: #3b1d12;
+  --we-footer-bg-dark: #29120a;
+}
+body.we-body { background: #fffdfb; font-family: "Trebuchet MS", "Segoe UI", system-ui, Arial, sans-serif; }
+.we-t-sunset .we-navbar { background: #fffdfb; border-bottom: 1px solid var(--we-border); }
+.we-t-sunset .we-nav-cta, .we-t-sunset .we-btn { border-radius: 14px; }
+.we-t-sunset .we-hero { padding: 90px 0 80px; border-radius: 0 0 44px 44px; }
+.we-t-sunset .we-hero h1 { font-size: 42px; }
+.we-t-sunset .we-section { padding: 70px 0; }
+.we-t-sunset .we-section-title h2 { color: var(--we-ocean-dark); font-size: 29px; }
+.we-t-sunset .we-card { border-radius: 26px; border: 1px solid var(--we-border); box-shadow: 0 6px 22px rgba(154, 52, 18, .07); }
+.we-t-sunset .we-card:hover { box-shadow: 0 14px 32px rgba(154, 52, 18, .14); }
+.we-t-sunset .we-card-btn { border-radius: 14px; }
+.we-t-sunset .we-footer { border-top: 0; border-radius: 44px 44px 0 0; }
+.we-t-sunset .we-card-img { background: linear-gradient(135deg, var(--we-ocean), var(--we-ocean-dark)); }

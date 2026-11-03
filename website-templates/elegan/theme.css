@@ -1,0 +1,30 @@
+/* Elegan: premium, huruf serif, aksen emas, sudut tegas. */
+:root {
+  --we-ocean: #1f3a4d;
+  --we-ocean-dark: #12232f;
+  --we-brand: #b08d57;
+  --we-brand-dark: #1c2b36;
+  --we-text: #2b2b2b;
+  --we-muted: #77716a;
+  --we-border: #e8e1d6;
+  --we-bg: #faf7f2;
+  --we-footer-bg: #14202a;
+  --we-footer-bg-dark: #0d151c;
+}
+body.we-body { background: #fff; font-family: "Segoe UI", system-ui, Roboto, Arial, sans-serif; }
+.we-t-elegan h1, .we-t-elegan h2, .we-t-elegan h3, .we-t-elegan .we-logo, .we-t-elegan .we-card-title { font-family: Georgia, "Times New Roman", serif; font-weight: 600; }
+.we-t-elegan .we-navbar { border-bottom: 1px solid var(--we-border); }
+.we-t-elegan .we-nav-links { font-size: 12.5px; letter-spacing: 1.4px; text-transform: uppercase; font-weight: 600; }
+.we-t-elegan .we-nav-cta, .we-t-elegan .we-btn, .we-t-elegan .we-card, .we-t-elegan .we-card-btn { border-radius: 0; }
+.we-t-elegan .we-nav-cta { padding: 10px 20px; letter-spacing: 1.2px; }
+.we-t-elegan .we-hero { padding: 120px 0 104px; }
+.we-t-elegan .we-hero h1 { font-size: 46px; font-weight: 500; letter-spacing: .5px; }
+.we-t-elegan .we-hero p { font-size: 17px; letter-spacing: .3px; }
+.we-t-elegan .we-btn { text-transform: uppercase; letter-spacing: 1.4px; font-size: 12.5px; padding: 14px 30px; }
+.we-t-elegan .we-section { padding: 84px 0; }
+.we-t-elegan .we-section-title h2 { font-size: 32px; font-weight: 500; }
+.we-t-elegan .we-section-title h2::after { content: ""; display: block; width: 56px; height: 1px; background: var(--we-brand); margin: 16px auto 0; }
+.we-t-elegan .we-card { border: 1px solid var(--we-border); box-shadow: none; }
+.we-t-elegan .we-card:hover { box-shadow: 0 14px 34px rgba(28, 43, 54, .10); transform: translateY(-3px); }
+.we-t-elegan .we-footer { border-top: 1px solid var(--we-brand); }
+.we-t-elegan .we-card-img { background: linear-gradient(135deg, var(--we-ocean), var(--we-ocean-dark)); }

@@ -1,0 +1,27 @@
+/* Lagoon: segar, bersih, banyak ruang putih, tombol bulat. */
+:root {
+  --we-ocean: #0d9488;
+  --we-ocean-dark: #115e59;
+  --we-brand: #f97316;
+  --we-brand-dark: #134e4a;
+  --we-text: #1f2937;
+  --we-muted: #6b7280;
+  --we-border: #e6eef0;
+  --we-bg: #f3faf9;
+  --we-footer-bg: #0f2f2e;
+  --we-footer-bg-dark: #0a2120;
+}
+body.we-body { font-family: "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif; }
+.we-t-lagoon .we-navbar { border-bottom: 0; box-shadow: 0 2px 18px rgba(15, 47, 46, .08); }
+.we-t-lagoon .we-nav-cta, .we-t-lagoon .we-btn { border-radius: 999px; }
+.we-t-lagoon .we-nav-links a:not(.we-nav-cta):not(.we-nav-admin):hover { color: var(--we-ocean); }
+.we-t-lagoon .we-hero { padding: 96px 0 84px; }
+.we-t-lagoon .we-hero h1 { font-size: 44px; letter-spacing: -.5px; line-height: 1.15; }
+.we-t-lagoon .we-section { padding: 76px 0; }
+.we-t-lagoon .we-section-title h2 { font-size: 30px; letter-spacing: -.3px; }
+.we-t-lagoon .we-section-title h2::after { content: ""; display: block; width: 44px; height: 4px; border-radius: 4px; background: var(--we-brand); margin: 12px auto 0; }
+.we-t-lagoon .we-card { border: 0; border-radius: 20px; box-shadow: 0 8px 28px rgba(15, 47, 46, .08); }
+.we-t-lagoon .we-card:hover { box-shadow: 0 16px 38px rgba(15, 47, 46, .14); transform: translateY(-4px); }
+.we-t-lagoon .we-card-btn { border-radius: 999px; }
+.we-t-lagoon .we-footer { border-top: 0; }
+.we-t-lagoon .we-card-img { background: linear-gradient(135deg, var(--we-ocean), var(--we-ocean-dark)); }
